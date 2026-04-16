@@ -17,13 +17,14 @@ Canvas {
         ctx.reset()
         ctx.strokeStyle = root.iconColor
         ctx.fillStyle = root.iconColor
-        ctx.lineWidth = 1.55
-        ctx.lineCap = "round"
-        ctx.lineJoin = "round"
 
         const w = root.width
         const h = root.height
         const scale = Math.min(w, h) / 20.0
+
+        ctx.lineWidth = 1.55 * scale
+        ctx.lineCap = "round"
+        ctx.lineJoin = "round"
 
         if (root.iconName === "test") {
             ctx.strokeRect(4 * scale, 4 * scale, 4 * scale, 4 * scale)
@@ -55,57 +56,57 @@ Canvas {
             ctx.arc(15.5 * scale, 7 * scale, 1.0 * scale, 0, Math.PI * 2)
             ctx.fill()
         } else if (root.iconName === "device") {
-            ctx.strokeRect(5.5, 3.5, 9, 12)
+            ctx.strokeRect(5.5 * scale, 3.5 * scale, 9 * scale, 12 * scale)
             ctx.beginPath()
-            ctx.moveTo(8, 7)
-            ctx.lineTo(12, 7)
-            ctx.moveTo(8, 10)
-            ctx.lineTo(12, 10)
-            ctx.moveTo(8, 13)
-            ctx.lineTo(10.5, 13)
+            ctx.moveTo(8 * scale, 7 * scale)
+            ctx.lineTo(12 * scale, 7 * scale)
+            ctx.moveTo(8 * scale, 10 * scale)
+            ctx.lineTo(12 * scale, 10 * scale)
+            ctx.moveTo(8 * scale, 13 * scale)
+            ctx.lineTo(10.5 * scale, 13 * scale)
             ctx.stroke()
         } else if (root.iconName === "diagnostics") {
             ctx.beginPath()
-            ctx.arc(10, 10, 5.5, 0, Math.PI * 2)
+            ctx.arc(10 * scale, 10 * scale, 5.5 * scale, 0, Math.PI * 2)
             ctx.stroke()
             ctx.beginPath()
-            ctx.moveTo(10, 10)
-            ctx.lineTo(13.5, 7.5)
+            ctx.moveTo(10 * scale, 10 * scale)
+            ctx.lineTo(13.5 * scale, 7.5 * scale)
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(10, 10, 1.15, 0, Math.PI * 2)
+            ctx.arc(10 * scale, 10 * scale, 1.15 * scale, 0, Math.PI * 2)
             ctx.fill()
         } else if (root.iconName === "library") {
-            ctx.strokeRect(4.5, 4.5, 11, 11)
+            ctx.strokeRect(4.5 * scale, 4.5 * scale, 11 * scale, 11 * scale)
             ctx.beginPath()
-            ctx.moveTo(8, 4.5)
-            ctx.lineTo(8, 15.5)
-            ctx.moveTo(12, 4.5)
-            ctx.lineTo(12, 15.5)
+            ctx.moveTo(8 * scale, 4.5 * scale)
+            ctx.lineTo(8 * scale, 15.5 * scale)
+            ctx.moveTo(12 * scale, 4.5 * scale)
+            ctx.lineTo(12 * scale, 15.5 * scale)
             ctx.stroke()
         } else if (root.iconName === "chevron-down") {
             ctx.beginPath()
-            ctx.moveTo(6, 8)
-            ctx.lineTo(10, 12)
-            ctx.lineTo(14, 8)
+            ctx.moveTo(6 * scale, 8 * scale)
+            ctx.lineTo(10 * scale, 12 * scale)
+            ctx.lineTo(14 * scale, 8 * scale)
             ctx.stroke()
         } else if (root.iconName === "chevron-up") {
             ctx.beginPath()
-            ctx.moveTo(6, 12)
-            ctx.lineTo(10, 8)
-            ctx.lineTo(14, 12)
+            ctx.moveTo(6 * scale, 12 * scale)
+            ctx.lineTo(10 * scale, 8 * scale)
+            ctx.lineTo(14 * scale, 12 * scale)
             ctx.stroke()
         } else if (root.iconName === "chevron-left") {
             ctx.beginPath()
-            ctx.moveTo(12, 6)
-            ctx.lineTo(8, 10)
-            ctx.lineTo(12, 14)
+            ctx.moveTo(12 * scale, 6 * scale)
+            ctx.lineTo(8 * scale, 10 * scale)
+            ctx.lineTo(12 * scale, 14 * scale)
             ctx.stroke()
         } else if (root.iconName === "chevron-right") {
             ctx.beginPath()
-            ctx.moveTo(8, 6)
-            ctx.lineTo(12, 10)
-            ctx.lineTo(8, 14)
+            ctx.moveTo(8 * scale, 6 * scale)
+            ctx.lineTo(12 * scale, 10 * scale)
+            ctx.lineTo(8 * scale, 14 * scale)
             ctx.stroke()
         } else if (root.iconName === "check") {
             ctx.beginPath()
@@ -115,14 +116,14 @@ Canvas {
             ctx.stroke()
         } else if (root.iconName === "close") {
             ctx.beginPath()
-            ctx.moveTo(6, 6)
-            ctx.lineTo(14, 14)
-            ctx.moveTo(14, 6)
-            ctx.lineTo(6, 14)
+            ctx.moveTo(6 * scale, 6 * scale)
+            ctx.lineTo(14 * scale, 14 * scale)
+            ctx.moveTo(14 * scale, 6 * scale)
+            ctx.lineTo(6 * scale, 14 * scale)
             ctx.stroke()
         } else {
             ctx.beginPath()
-            ctx.arc(10, 10, 5, 0, Math.PI * 2)
+            ctx.arc(10 * scale, 10 * scale, 5 * scale, 0, Math.PI * 2)
             ctx.stroke()
         }
     }
