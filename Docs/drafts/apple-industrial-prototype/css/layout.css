@@ -1,0 +1,50 @@
+.draft-shell {
+  display: grid;
+  grid-template-columns: 184px 1fr;
+  min-height: 100vh;
+}
+
+.workspace {
+  display: grid;
+  grid-template-rows: 72px 1fr auto auto;
+  min-width: 0;
+}
+
+.surface {
+  min-height: 0;
+  padding: var(--space-3);
+}
+
+.page { height: 100%; }
+
+.test-grid {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr) 292px;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.primary-panel {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.metrics-stack { display: grid; gap: var(--space-3); }
+.metrics-grid { display: grid; gap: var(--space-3); }
+.metrics-grid--hero { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.metrics-grid--detail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.inspector-panel {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.placeholder {
+  max-width: 760px;
+  margin: 72px auto 0;
+  padding: 36px;
+}

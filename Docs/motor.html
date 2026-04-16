@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>齿轮箱产线测试系统 v1.0</title>
+<style>
+:root {
+  --accent:#0078D4;--accent-light:#E8F4FD;--accent-hover:#106EBE;
+  --bg:#F3F3F3;--card:#fff;--nav:#F9F9F9;--border:#E1E1E1;
+  --t1:#1A1A1A;--t2:#616161;--t3:#9E9E9E;
+  --ok:#0F7B0F;--ok-bg:#DFF6DD;--ng:#C42B1C;--ng-bg:#FDE7E9;
+  --warn:#9D5D00;--warn-bg:#FFF4CE;
+  --r:8px;--rs:4px;--sh:0 2px 8px rgba(0,0,0,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#c8c8c8;border-radius:3px}
+
+/* ── Titlebar ── */
+.titlebar{height:48px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.titlebar .logo{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.titlebar .logo svg{width:22px;height:22px}
+.titlebar .spacer{flex:1}
+.station-badge{background:var(--accent-light);color:var(--accent);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.bus-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ok)}
+.bus-dot{width:8px;height:8px;background:var(--ok);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Nav Rail ── */
+.nav-rail{width:52px;background:var(--nav);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;flex-shrink:0;transition:width .2s;overflow:hidden;z-index:50}
+.nav-rail:hover{width:190px}
+.nav-item{width:calc(100% - 10px);height:38px;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:var(--rs);cursor:pointer;white-space:nowrap;color:var(--t2);font-size:13px;position:relative;transition:.15s}
+.nav-item:hover{background:rgba(0,0,0,.04)}
+.nav-item.active{background:var(--accent-light);color:var(--accent)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;background:var(--accent);border-radius:2px}
+.nav-item svg{width:20px;height:20px;flex-shrink:0}
+
+/* ── Command Bar ── */
+.cmd-bar{height:52px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;font-size:12px}
+.cmd-bar label{color:var(--t2)}
+.cmd-sel{appearance:none;padding:5px 28px 5px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M2 3l3 4 3-4' fill='none' stroke='%23666' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center;font:inherit;cursor:pointer}
+.cmd-inp{padding:5px 10px;border:1px solid var(--border);border-radius:var(--rs);font:inherit;width:150px;transition:.15s}
+.cmd-inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.cmd-inp.sm{width:60px}
+.cmd-sep{width:1px;height:26px;background:var(--border)}
+.cmd-spacer{flex:1}
+
+.btn{padding:6px 18px;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:.15s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent-hover)}.btn-p:disabled{background:#bbb;cursor:default}
+.btn-d{background:var(--ng);color:#fff}.btn-d:hover{background:#a4241a}.btn-d:disabled{opacity:.4;cursor:default}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--t1)}.btn-o:hover{background:rgba(0,0,0,.04)}
+
+/* ── Three Column ── */
+.main{flex:1;display:flex;overflow:hidden}
+.test-cols{flex:1;display:flex;overflow:hidden}
+
+/* Left */
+.left{width:218px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.ph{padding:14px 16px;font-weight:600;font-size:11px;color:var(--t2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+.steps{padding:8px;flex:1}
+.step{padding:10px 12px;border-radius:var(--r);margin-bottom:4px;transition:.15s}
+.step.done{background:var(--ok-bg)}.step.run{background:var(--accent-light);outline:1.5px solid var(--accent)}.step.fail{background:var(--ng-bg)}.step.wait{background:#f5f5f5}
+.step-hd{display:flex;align-items:center;gap:8px}
+.step-ico{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff}
+.step.wait .step-ico{background:#ddd;color:var(--t3)}
+.step.done .step-ico{background:var(--ok)}
+.step.run .step-ico{background:var(--accent);animation:pulse 1.2s infinite}
+.step.fail .step-ico{background:var(--ng)}
+.step-nm{font-weight:600;font-size:13px;flex:1}
+.step-tm{font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums}
+.step-det{margin-top:6px;padding-left:30px;font-size:11px;color:var(--t2);line-height:1.7}
+.conn{width:2px;height:6px;margin:0 0 0 19px;border-radius:1px}
+.conn.d{background:var(--ok)}.conn.p{background:var(--border)}
+.total{padding:10px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--t2);display:flex;justify-content:space-between}
+.total b{font-variant-numeric:tabular-nums}
+
+/* Center */
+.center{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:14px;gap:14px;background:var(--bg)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mc{background:var(--card);border-radius:var(--r);padding:12px;box-shadow:var(--sh);display:flex;flex-direction:column;min-height:90px;transition:.15s}
+.mc:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.mc-lbl{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.3px}
+.mc-val{font-size:26px;font-weight:300;margin:2px 0;font-variant-numeric:tabular-nums;line-height:1.2}
+.mc-unit{font-size:13px;color:var(--t2);font-weight:400}
+.mc-src{font-size:9px;color:var(--t3);margin-top:auto}
+.mc-spark{height:22px;margin:3px 0}
+.mc-spark canvas{width:100%;height:100%}
+
+.chart-box{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px;flex:1;min-height:180px;display:flex;flex-direction:column}
+.chart-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:11px;color:var(--t2)}
+.chart-hdr .tag{padding:2px 8px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:4px;-webkit-user-select:none;user-select:none;transition:.15s}
+.chart-hdr .tag.on{background:var(--accent-light);color:var(--accent);font-weight:600}
+.chart-hdr .tag .cd{width:8px;height:8px;border-radius:50%}
+.chart-wrap{flex:1;position:relative}
+.chart-wrap canvas{width:100%;height:100%;display:block}
+.samp-bar{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 10px;background:var(--accent-light);border-radius:var(--rs);font-size:11px;color:var(--accent);font-weight:600}
+.samp-bar .trk{flex:1;height:4px;background:#c8e0f4;border-radius:2px;overflow:hidden}
+.samp-bar .fill{height:100%;background:var(--accent);border-radius:2px;transition:width .1s linear}
+.samp-bar.hidden{display:none}
+
+/* Phase-specific tables */
+.ptbl{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.ptbl.hidden{display:none}
+.ptbl table{width:100%;border-collapse:collapse;font-size:12px}
+.ptbl th{background:var(--nav);padding:7px 12px;text-align:left;font-weight:600;font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.3px}
+.ptbl td{padding:7px 12px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums}
+.ok{color:var(--ok);font-weight:600}.ng{color:var(--ng);font-weight:600}.wt{color:var(--t3)}
+
+/* Right */
+.right{width:270px;background:var(--card);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.verdict{padding:20px 16px;text-align:center;border-bottom:1px solid var(--border)}
+.verdict small{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
+.verdict-r{font-size:30px;font-weight:700;padding:10px 20px;border-radius:var(--r);display:inline-block;min-width:130px;margin-top:8px}
+.verdict-r.p{background:#f0f0f0;color:var(--t3)}.verdict-r.ok{background:var(--ok-bg);color:var(--ok)}.verdict-r.ng{background:var(--ng-bg);color:var(--ng)}
+.jsec{padding:10px 16px;border-bottom:1px solid var(--border)}
+.jsec-t{font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ji{display:flex;align-items:center;padding:3px 0;font-size:12px;gap:6px}
+.ji .nm{flex:1;color:var(--t2)}.ji .vl{font-weight:600;font-variant-numeric:tabular-nums;min-width:55px}.ji .rs{width:18px;text-align:center}.ji .rg{font-size:9px;color:var(--t3)}
+.sensor-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px}
+.sd{width:10px;height:10px;border-radius:50%;flex-shrink:0}.sd.on{background:var(--ok)}.sd.off{background:#e0e0e0}
+.ractions{padding:12px 16px;margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.ractions .btn{justify-content:center;width:100%;font-size:12px}
+
+/* Status bar */
+.sbar{height:30px;background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:20px;font-size:11px;color:var(--t2);flex-shrink:0}
+.si{display:flex;align-items:center;gap:5px}
+.si .d{width:6px;height:6px;border-radius:50%}.si .d.on{background:var(--ok)}.si .d.off{background:var(--ng)}
+
+/* Info bar */
+.ibar{padding:7px 20px;font-size:12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ibar.hidden{display:none}
+.ibar.w{background:var(--warn-bg);color:var(--warn)}
+.ibar.e{background:var(--ng-bg);color:var(--ng)}
+.ibar.s{background:var(--ok-bg);color:var(--ok)}
+
+/* Toast */
+.toast-wrap{position:fixed;top:60px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 16px;border-radius:var(--r);font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:tIn .3s;max-width:300px}
+.toast.info{background:var(--accent);color:#fff}
+.toast.ok{background:var(--ok);color:#fff}
+.toast.ng{background:var(--ng);color:#fff}
+@keyframes tIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div class="titlebar">
+  <div class="logo">
+    <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8.5" stroke="#0078D4" stroke-width="2"/><circle cx="11" cy="11" r="3" fill="#0078D4"/><path d="M11 2.5v3M11 16.5v3M2.5 11h3M16.5 11h3" stroke="#0078D4" stroke-width="1.5" stroke-linecap="round"/></svg>
+    齿轮箱测试系统
+  </div>
+  <div class="spacer"></div>
+  <div class="station-badge">工位 #03</div>
+  <div class="bus-status"><div class="bus-dot"></div>CAN 在线</div>
+</div>
+
+<div class="main">
+  <!-- Nav -->
+  <nav class="nav-rail">
+    <div class="nav-item active"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h6v6H3zm8 0h6v6h-6zM3 11h6v6H3zm8 0h6v6h-6z"/></svg><span>测试执行</span></div>
+    <div class="nav-item"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h14v2H3zm0 4h14v2H3zm0 4h10v2H3zm0 4h7v2H3z"/></svg><span>配方管理</span></div>
+    <div class="nav-item"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 15l4-7 3 5 3-9 4 11H3z"/></svg><span>历史记录</span></div>
+    <div class="nav-item"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1a9 9 0 100 18A9 9 0 0010 1zm.75 4.5v4.69l3.1 1.86-.75 1.25L9.5 11V5.5h1.25z"/></svg><span>设备配置</span></div>
+    <div class="nav-item"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M5 2a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H5zm2 5h6v1.5H7zm0 3.5h4V12H7z"/></svg><span>I/O 诊断</span></div>
+  </nav>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <!-- Command bar -->
+    <div class="cmd-bar">
+      <label>型号</label>
+      <select class="cmd-sel" id="selModel" title="型号选择" aria-label="型号选择"><option>GBX-42A</option><option>GBX-42B</option><option>GBX-56A</option></select>
+      <label>SN</label>
+      <input class="cmd-inp" id="inpSN" value="GBX42A-20260415-001" title="产品序列号" placeholder="请输入 SN">
+      <div class="cmd-sep"></div>
+      <label>回差补偿</label>
+      <input class="cmd-inp sm" id="inpBack" type="number" step="0.1" value="1.2" title="回差补偿角度" placeholder="0~10"><label>°</label>
+      <div class="cmd-spacer"></div>
+      <button class="btn btn-p" id="btnStart" onclick="startTest()">▶ 开始测试</button>
+      <button class="btn btn-d" id="btnStop" onclick="emergencyStop()" disabled>⏹ 急停</button>
+    </div>
+
+    <!-- 3-col -->
+    <div class="test-cols">
+      <!-- LEFT: Steps -->
+      <div class="left">
+        <div class="ph">测试流程</div>
+        <div class="steps" id="stepsContainer"></div>
+        <div class="total"><span>总耗时</span><b id="totalTime">00:00.0</b></div>
+      </div>
+
+      <!-- CENTER -->
+      <div class="center">
+        <!-- Metrics -->
+        <div class="metrics" id="metricsGrid"></div>
+
+        <!-- Phase table -->
+        <div class="ptbl hidden" id="angleTable">
+          <table><thead><tr><th>目标位</th><th>目标角度</th><th>当前角度</th><th>偏差</th><th>公差</th><th>判定</th></tr></thead>
+          <tbody id="angleTbody"></tbody></table>
+        </div>
+        <div class="ptbl hidden" id="loadTable">
+          <table><thead><tr><th>方向</th><th>制动电流</th><th>锁止扭矩</th><th>下限</th><th>判定</th></tr></thead>
+          <tbody id="loadTbody"></tbody></table>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-box">
+          <div class="chart-hdr">
+            <span style="font-weight:600">实时波形</span>
+            <div class="tag on" data-ch="speed"><span class="cd" style="background:#0078D4"></span>转速</div>
+            <div class="tag on" data-ch="torque"><span class="cd" style="background:#E74856"></span>扭矩</div>
+            <div class="tag" data-ch="current"><span class="cd" style="background:#FF8C00"></span>电流</div>
+            <div class="tag on" data-ch="angle"><span class="cd" style="background:#16C60C"></span>角度</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartCanvas"></canvas></div>
+          <div class="samp-bar hidden" id="sampBar">
+            <span>⏱ 采样中</span>
+            <div class="trk"><div class="fill" id="sampFill" style="width:0%"></div></div>
+            <span id="sampText">0.0s / 2.0s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Judgment -->
+      <div class="right">
+        <div class="verdict">
+          <small>整机结论</small><br>
+          <div class="verdict-r p" id="verdictBox">待测试</div>
+        </div>
+        <div id="judgeContainer"></div>
+        <div class="jsec">
+          <div class="jsec-t">磁铁感应</div>
+          <div class="sensor-row"><div class="sd off" id="ai1Dot"></div><span>AI1: </span><span id="ai1Val">--</span></div>
+          <div class="sensor-row"><div class="sd off" id="ai2Dot"></div><span>AI2: </span><span id="ai2Val">--</span></div>
+        </div>
+        <div class="ractions">
+          <button class="btn btn-o" onclick="copyReport()">📋 复制报告</button>
+          <button class="btn btn-o" onclick="resetTest()">🔄 重置测试</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info bar -->
+    <div class="ibar hidden" id="infoBar"><span id="infoIcon">ℹ</span><span id="infoText"></span></div>
+
+    <!-- Status bar -->
+    <div class="sbar">
+      <div class="si"><div class="d on"></div>CAN 心跳</div>
+      <div class="si"><div class="d on"></div>DYN200</div>
+      <div class="si"><div class="d on"></div>AQMD</div>
+      <div class="si"><div class="d on"></div>编码器</div>
+      <div class="si"><div class="d on"></div>磁粉制动</div>
+      <div style="flex:1"></div>
+      <span id="clockText"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ═══════════════════════ DATA MODEL ═══════════════════════
+const PHASES = [
+  { id:'prep',  name:'准备/找零',   icon:'1' },
+  { id:'idle',  name:'空载正反转',  icon:'2' },
+  { id:'angle', name:'角度定位',    icon:'3' },
+  { id:'load',  name:'负载上升',    icon:'4' },
+  { id:'home',  name:'回零结束',    icon:'5' }
+];
+
+const ANGLE_TARGETS = [
+  { label:'①', deg:3,     tol:3 },
+  { label:'②', deg:49,    tol:3 },
+  { label:'①', deg:3,     tol:3 },
+  { label:'③', deg:113.5, tol:3 },
+  { label:'零', deg:0,     tol:3 }
+];
+
+const LIMITS = {
+  idleCurFwd:[0.5,3.0], idleCurRev:[0.5,3.0],
+  idleSpdFwd:[1100,1400], idleSpdRev:[1100,1400],
+  loadTorqueFwd:1.2, loadTorqueRev:1.2
+};
+const STORAGE_KEY='gbx-test-profile-v1';
+
+let state = {
+  running:false, phase:-1, subStep:0, timer:null, elapsed:0,
+  phaseStart:0,
+  metrics:{ speed:0, torque:0, power:0, motorCur:0, brakeCur:0, angle:0 },
+  series:{ speed:[], torque:[], current:[], angle:[] },
+  sampling:false, sampElapsed:0, sampDuration:2,
+  results:{
+    prep:{ status:'wait' },
+    idle:{ status:'wait', fwdCur:null, fwdSpd:null, revCur:null, revSpd:null },
+    angle:{ status:'wait', points:ANGLE_TARGETS.map(()=>({actual:null,status:'wait'})) },
+    load:{ status:'wait', fwdBrakeCur:null, fwdTorque:null, revBrakeCur:null, revTorque:null },
+    home:{ status:'wait' }
+  },
+  verdict:'pending',
+  ai1:0, ai2:0,
+  chartChannels:{ speed:true, torque:true, current:false, angle:true }
+};
+
+
+// ══════════ 继续 state 之后的完整逻辑 ══════════
+
+// ── Utility ──
+function rand(a,b){return a+Math.random()*(b-a)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function fmt(v,d=1){return v.toFixed(d)}
+function fmtTime(ms){let s=ms/1000;let m=Math.floor(s/60);s=s-m*60;return String(m).padStart(2,'0')+':'+s.toFixed(1).padStart(4,'0')}
+
+// ── Toast ──
+function toast(msg,type='info'){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast '+type;d.textContent=msg;w.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(()=>d.remove(),300)},3000);
+}
+
+// ── Info Bar ──
+function showInfo(msg,type='w'){
+  const bar=document.getElementById('infoBar');
+  bar.className='ibar '+type;
+  document.getElementById('infoIcon').textContent=type==='s'?'✅':type==='e'?'❌':'⚠';
+  document.getElementById('infoText').textContent=msg;
+}
+function hideInfo(){document.getElementById('infoBar').className='ibar hidden'}
+
+function setFormLocked(locked){
+  document.getElementById('selModel').disabled=locked;
+  document.getElementById('inpSN').readOnly=locked;
+  document.getElementById('inpBack').readOnly=locked;
+}
+
+function validateInputs(){
+  const snInput=document.getElementById('inpSN');
+  const backInput=document.getElementById('inpBack');
+  const sn=snInput.value.trim();
+  const backVal=parseFloat(backInput.value);
+
+  if(!sn){
+    showInfo('SN 不能为空','e');
+    snInput.focus();
+    return false;
+  }
+  if(sn.length<8){
+    showInfo('SN 长度至少 8 位','e');
+    snInput.focus();
+    return false;
+  }
+  if(Number.isNaN(backVal)||backVal<0||backVal>10){
+    showInfo('回差补偿范围应为 0 ~ 10°','e');
+    backInput.focus();
+    return false;
+  }
+  return true;
+}
+
+function saveProfile(){
+  const payload={
+    model:document.getElementById('selModel').value,
+    sn:document.getElementById('inpSN').value.trim(),
+    back:document.getElementById('inpBack').value
+  };
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
+  }catch(_){
+    // Storage may be unavailable in some runtime contexts.
+  }
+}
+
+function restoreProfile(){
+  let raw=null;
+  try{
+    raw=localStorage.getItem(STORAGE_KEY);
+  }catch(_){
+    return;
+  }
+  if(!raw)return;
+  try{
+    const payload=JSON.parse(raw);
+    if(payload.model)document.getElementById('selModel').value=payload.model;
+    if(payload.sn)document.getElementById('inpSN').value=payload.sn;
+    if(payload.back!==undefined)document.getElementById('inpBack').value=payload.back;
+  }catch(_){
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+// ── Clock ──
+setInterval(()=>{
+  const now=new Date();
+  document.getElementById('clockText').textContent=
+    now.toLocaleDateString('zh-CN')+' '+now.toLocaleTimeString('zh-CN');
+},1000);
+
+// ═══════════════════════ RENDER ═══════════════════════
+
+function renderSteps(){
+  const c=document.getElementById('stepsContainer');
+  let html='';
+  PHASES.forEach((p,i)=>{
+    const r=state.results[p.id];
+    let cls='wait',icon=p.icon,detail='';
+    if(i<state.phase){cls=r.status==='fail'?'fail':'done'}
+    else if(i===state.phase&&state.running){cls='run'}
+
+    // detail for each phase
+    if(p.id==='prep'&&(cls==='done'||cls==='run')){
+      detail='回差补偿: '+document.getElementById('inpBack').value+'°';
+    }
+    if(p.id==='idle'){
+      if(cls==='run'){
+        detail=state.subStep===0?'正转采样中...':'反转采样中...';
+      }else if(cls==='done'){
+        detail='正转 '+fmt(r.fwdCur)+'A / '+fmt(r.fwdSpd,0)+'RPM<br>反转 '+fmt(r.revCur)+'A / '+fmt(r.revSpd,0)+'RPM';
+      }
+    }
+    if(p.id==='angle'){
+      if(cls==='run'){
+        const idx=Math.min(state.subStep,ANGLE_TARGETS.length-1);
+        detail='定位目标 '+ANGLE_TARGETS[idx].label+' '+ANGLE_TARGETS[idx].deg+'°';
+      }else if(cls==='done'){
+        detail=r.points.map((pt,j)=>ANGLE_TARGETS[j].label+' '+fmt(pt.actual)+'° '+(pt.status==='ok'?'✅':'❌')).join('<br>');
+      }
+    }
+    if(p.id==='load'){
+      if(cls==='run'){detail=state.subStep===0?'正转加载中...':'反转加载中...';}
+      else if(cls==='done'){detail='正转 '+fmt(r.fwdTorque)+' N·m<br>反转 '+fmt(r.revTorque)+' N·m';}
+    }
+
+    const elapsed=i<state.phase?phaseElapsed[i]:(i===state.phase?(Date.now()-state.phaseStart):0);
+
+    html+=`<div class="step ${cls}">
+      <div class="step-hd">
+        <div class="step-ico">${cls==='done'?'✓':cls==='fail'?'✗':cls==='run'?'⟳':icon}</div>
+        <div class="step-nm">${p.name}</div>
+        <div class="step-tm">${(cls!=='wait')?fmtTime(elapsed):'--'}</div>
+      </div>
+      ${detail?'<div class="step-det">'+detail+'</div>':''}
+    </div>`;
+    if(i<PHASES.length-1){
+      html+=`<div class="conn ${i<state.phase?'d':'p'}"></div>`;
+    }
+  });
+  c.innerHTML=html;
+  document.getElementById('totalTime').textContent=fmtTime(state.elapsed);
+}
+
+const phaseElapsed=Array(5).fill(0);
+
+function renderMetrics(){
+  const m=state.metrics;
+  const defs=[
+    {lbl:'转速',val:fmt(m.speed,0),unit:'RPM',src:'DYN200',key:'speed'},
+    {lbl:'扭矩',val:fmt(m.torque,2),unit:'N·m',src:'DYN200',key:'torque'},
+    {lbl:'功率',val:fmt(m.power,1),unit:'W',src:'T×ω',key:'power'},
+    {lbl:'电机电流',val:fmt(m.motorCur,2),unit:'A',src:'AQMD',key:'current'},
+    {lbl:'制动器电流',val:fmt(m.brakeCur,2),unit:'A',src:'DAC',key:'brake'},
+    {lbl:'编码器角度',val:fmt(m.angle,1),unit:'°',src:'ABZ编码器',key:'angle'}
+  ];
+  const g=document.getElementById('metricsGrid');
+  let html='';
+  defs.forEach(d=>{
+    html+=`<div class="mc">
+      <div class="mc-lbl">${d.lbl}</div>
+      <div class="mc-val">${d.val} <span class="mc-unit">${d.unit}</span></div>
+      <div class="mc-spark"><canvas id="spark_${d.key}" height="22"></canvas></div>
+      <div class="mc-src">${d.src}</div>
+    </div>`;
+  });
+  g.innerHTML=html;
+
+  // draw sparklines
+  ['speed','torque','current','angle'].forEach(k=>{
+    const cv=document.getElementById('spark_'+k);
+    if(!cv)return;
+    drawSparkline(cv,state.series[k]||[],k);
+  });
+  const brakeSpark=document.getElementById('spark_brake');
+  if(brakeSpark){
+    // reuse a mini array for brake
+    drawSparkline(brakeSpark,[state.metrics.brakeCur],'brake');
+  }
+  const powerSpark=document.getElementById('spark_power');
+  if(powerSpark){
+    drawSparkline(powerSpark,[state.metrics.power],'power');
+  }
+}
+
+function drawSparkline(canvas,data,key){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width=canvas.parentElement.clientWidth;
+  const h=canvas.height=22;
+  ctx.clearRect(0,0,w,h);
+  if(data.length<2)return;
+  const last=data.slice(-60);
+  const mn=Math.min(...last),mx=Math.max(...last);
+  const range=mx-mn||1;
+  const colors={speed:'#0078D4',torque:'#E74856',current:'#FF8C00',angle:'#16C60C',brake:'#8764B8',power:'#00B7C3'};
+  ctx.strokeStyle=colors[key]||'#0078D4';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  last.forEach((v,i)=>{
+    const x=(i/(last.length-1))*w;
+    const y=h-((v-mn)/range)*(h-4)-2;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+function renderAngleTable(){
+  const tbl=document.getElementById('angleTable');
+  const tb=document.getElementById('angleTbody');
+  if(state.phase===2&&state.running){
+    tbl.classList.remove('hidden');
+    let html='';
+    ANGLE_TARGETS.forEach((t,i)=>{
+      const r=state.results.angle.points[i];
+      const actual=r.actual!==null?fmt(r.actual):'---';
+      const diff=r.actual!==null?fmt(r.actual-t.deg):'---';
+      const st=r.status==='ok'?'<span class="ok">✅ OK</span>':r.status==='fail'?'<span class="ng">❌ NG</span>':'<span class="wt">⏳</span>';
+      html+=`<tr><td>${t.label}</td><td>${t.deg}°</td><td>${actual}°</td><td>${diff}°</td><td>±${t.tol}°</td><td>${st}</td></tr>`;
+    });
+    tb.innerHTML=html;
+  }else if(state.phase>2){
+    tbl.classList.remove('hidden');
+    // keep final values
+  }else{
+    tbl.classList.add('hidden');
+  }
+}
+
+function renderLoadTable(){
+  const tbl=document.getElementById('loadTable');
+  const tb=document.getElementById('loadTbody');
+  if(state.phase===3&&state.running){
+    tbl.classList.remove('hidden');
+    const r=state.results.load;
+    let html='';
+    const fwdSt=r.fwdTorque!==null?(r.fwdTorque>=LIMITS.loadTorqueFwd?'<span class="ok">✅ OK</span>':'<span class="ng">❌ NG</span>'):'<span class="wt">⏳ 加载中</span>';
+    const revSt=r.revTorque!==null?(r.revTorque>=LIMITS.loadTorqueRev?'<span class="ok">✅ OK</span>':'<span class="ng">❌ NG</span>'):'<span class="wt">⏳</span>';
+    html+=`<tr><td>正转</td><td>${r.fwdBrakeCur!==null?fmt(r.fwdBrakeCur)+' A':'---'}</td><td>${r.fwdTorque!==null?fmt(r.fwdTorque)+' N·m':'---'}</td><td>≥${LIMITS.loadTorqueFwd}</td><td>${fwdSt}</td></tr>`;
+    html+=`<tr><td>反转</td><td>${r.revBrakeCur!==null?fmt(r.revBrakeCur)+' A':'---'}</td><td>${r.revTorque!==null?fmt(r.revTorque)+' N·m':'---'}</td><td>≥${LIMITS.loadTorqueRev}</td><td>${revSt}</td></tr>`;
+    tb.innerHTML=html;
+  }else if(state.phase>3){tbl.classList.remove('hidden')}
+  else{tbl.classList.add('hidden')}
+}
+
+function renderJudgment(){
+  const c=document.getElementById('judgeContainer');
+  let html='';
+  // Phase 1: prep
+  html+=`<div class="jsec"><div class="jsec-t">① 准备/找零</div>`;
+  html+=ji('找零','',state.results.prep.status==='done'?'ok':state.results.prep.status==='fail'?'ng':'wait','');
+  html+=`</div>`;
+
+  // Phase 2: idle
+  const ir=state.results.idle;
+  html+=`<div class="jsec"><div class="jsec-t">② 空载正反转</div>`;
+  html+=ji('正转电流',ir.fwdCur!==null?fmt(ir.fwdCur)+' A':'---',judgeRange(ir.fwdCur,LIMITS.idleCurFwd),'['+LIMITS.idleCurFwd+']');
+  html+=ji('正转转速',ir.fwdSpd!==null?fmt(ir.fwdSpd,0)+' RPM':'---',judgeRange(ir.fwdSpd,LIMITS.idleSpdFwd),'['+LIMITS.idleSpdFwd+']');
+  html+=ji('反转电流',ir.revCur!==null?fmt(ir.revCur)+' A':'---',judgeRange(ir.revCur,LIMITS.idleCurRev),'['+LIMITS.idleCurRev+']');
+  html+=ji('反转转速',ir.revSpd!==null?fmt(ir.revSpd,0)+' RPM':'---',judgeRange(ir.revSpd,LIMITS.idleSpdRev),'['+LIMITS.idleSpdRev+']');
+  html+=`</div>`;
+
+  // Phase 3: angle
+  html+=`<div class="jsec"><div class="jsec-t">③ 角度定位</div>`;
+  ANGLE_TARGETS.forEach((t,i)=>{
+    const p=state.results.angle.points[i];
+    html+=ji(t.label+' '+t.deg+'°',p.actual!==null?fmt(p.actual)+'°':'---',p.status,'±'+t.tol+'°');
+  });
+  html+=`</div>`;
+
+  // Phase 4: load
+  const lr=state.results.load;
+  html+=`<div class="jsec"><div class="jsec-t">④ 负载上升</div>`;
+  html+=ji('正转扭矩',lr.fwdTorque!==null?fmt(lr.fwdTorque)+' N·m':'---',lr.fwdTorque!==null?(lr.fwdTorque>=LIMITS.loadTorqueFwd?'ok':'fail'):'wait','≥'+LIMITS.loadTorqueFwd);
+  html+=ji('反转扭矩',lr.revTorque!==null?fmt(lr.revTorque)+' N·m':'---',lr.revTorque!==null?(lr.revTorque>=LIMITS.loadTorqueRev?'ok':'fail'):'wait','≥'+LIMITS.loadTorqueRev);
+  html+=`</div>`;
+
+  // Phase 5: home
+  html+=`<div class="jsec"><div class="jsec-t">⑤ 回零</div>`;
+  html+=ji('回零','',state.results.home.status==='done'?'ok':'wait','');
+  html+=`</div>`;
+
+  c.innerHTML=html;
+
+  // Verdict
+  const vb=document.getElementById('verdictBox');
+  if(state.verdict==='ok'){vb.className='verdict-r ok';vb.textContent='OK';}
+  else if(state.verdict==='ng'){vb.className='verdict-r ng';vb.textContent='NG';}
+  else{vb.className='verdict-r p';vb.textContent='待测试';}
+
+  // Sensors
+  state.ai1=state.running?rand(2.0,2.8):0;
+  state.ai2=state.running?rand(0.05,0.2):0;
+  document.getElementById('ai1Val').textContent=state.running?fmt(state.ai1)+'V (有磁)':'--';
+  document.getElementById('ai2Val').textContent=state.running?fmt(state.ai2)+'V (无磁)':'--';
+  document.getElementById('ai1Dot').className='sd '+(state.ai1>1?'on':'off');
+  document.getElementById('ai2Dot').className='sd '+(state.ai2>1?'on':'off');
+}
+
+function ji(name,val,status,range){
+  const icon=status==='ok'?'<span class="ok">✓</span>':status==='fail'||status==='ng'?'<span class="ng">✗</span>':'<span class="wt">⏳</span>';
+  return `<div class="ji"><span class="nm">${name}</span><span class="vl">${val}</span><span class="rs">${icon}</span><span class="rg">${range}</span></div>`;
+}
+
+function judgeRange(val,range){
+  if(val===null)return 'wait';
+  return (val>=range[0]&&val<=range[1])?'ok':'fail';
+}
+
+function renderSamplingBar(){
+  const bar=document.getElementById('sampBar');
+  if(state.sampling){
+    bar.classList.remove('hidden');
+    const pct=Math.min(100,(state.sampElapsed/state.sampDuration)*100);
+    document.getElementById('sampFill').style.width=pct+'%';
+    document.getElementById('sampText').textContent=fmt(state.sampElapsed)+'s / '+fmt(state.sampDuration)+'s';
+  }else{
+    bar.classList.add('hidden');
+  }
+}
+
+// ═══════════════════════ CHART ═══════════════════════
+
+const CHART_COLORS={speed:'#0078D4',torque:'#E74856',current:'#FF8C00',angle:'#16C60C'};
+const CHART_MAX={speed:1800,torque:3,current:4,angle:180};
+const CHART_POINTS=200;
+
+function renderChart(){
+  const canvas=document.getElementById('chartCanvas');
+  const ctx=canvas.getContext('2d');
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width;canvas.height=rect.height;
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='#E8E8E8';ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){
+    const y=H*i/4;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+
+  // Time axis labels
+  ctx.fillStyle='#999';ctx.font='10px Segoe UI';ctx.textAlign='center';
+  const labels=['-10s','-8s','-6s','-4s','-2s','now'];
+  labels.forEach((l,i)=>{
+    ctx.fillText(l,(i/(labels.length-1))*W,H-2);
+  });
+
+  // Draw channels
+  ['speed','torque','current','angle'].forEach(ch=>{
+    if(!state.chartChannels[ch])return;
+    const data=state.series[ch];
+    if(data.length<2)return;
+    const last=data.slice(-CHART_POINTS);
+    const mx=CHART_MAX[ch];
+    ctx.strokeStyle=CHART_COLORS[ch];
+    ctx.lineWidth=1.8;
+    ctx.beginPath();
+    last.forEach((v,i)=>{
+      const x=(i/(CHART_POINTS-1))*W;
+      const y=H-20-(v/mx)*(H-30);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+
+  // Sampling overlay
+  if(state.sampling){
+    const sampPts=Math.floor((state.sampElapsed/10)*CHART_POINTS);
+    const startX=Math.max(0,W-sampPts/(CHART_POINTS)*W);
+    ctx.fillStyle='rgba(0,120,212,0.08)';
+    ctx.fillRect(startX,0,W-startX,H-15);
+    ctx.strokeStyle='rgba(0,120,212,0.3)';ctx.lineWidth=1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(startX,0);ctx.lineTo(startX,H-15);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// Chart toggle
+document.querySelectorAll('.chart-hdr .tag').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const ch=el.dataset.ch;
+    state.chartChannels[ch]=!state.chartChannels[ch];
+    el.classList.toggle('on',state.chartChannels[ch]);
+  });
+});
+
+// Nav interaction
+document.querySelectorAll('.nav-item').forEach((item,idx)=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    item.classList.add('active');
+    if(idx!==0){
+      showInfo('当前为演示版，仅“测试执行”页可完整交互','w');
+      toast(item.textContent.trim()+' 暂未开放，已返回测试执行','info');
+      setTimeout(()=>{
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        document.querySelector('.nav-item').classList.add('active');
+      },300);
+    }else{
+      hideInfo();
+    }
+  });
+});
+
+// Form persistence and shortcuts
+restoreProfile();
+['selModel','inpSN','inpBack'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',saveProfile);
+});
+document.getElementById('inpSN').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!state.running){
+    startTest();
+  }
+});
+
+// ═══════════════════════ SIMULATION ENGINE ═══════════════════════
+
+let simInterval=null;
+let phaseTimer=0;
+let simTick=0;
+
+function startTest(){
+  if(state.running)return;
+  if(!validateInputs()){
+    toast('参数校验未通过，请检查 SN 与回差补偿','ng');
+    return;
+  }
+
+  state.running=true;
+  state.phase=0;state.subStep=0;
+  state.elapsed=0;state.verdict='pending';
+  state.series={speed:[],torque:[],current:[],angle:[]};
+  state.results={
+    prep:{status:'wait'},
+    idle:{status:'wait',fwdCur:null,fwdSpd:null,revCur:null,revSpd:null},
+    angle:{status:'wait',points:ANGLE_TARGETS.map(()=>({actual:null,status:'wait'}))},
+    load:{status:'wait',fwdBrakeCur:null,fwdTorque:null,revBrakeCur:null,revTorque:null},
+    home:{status:'wait'}
+  };
+  phaseElapsed.fill(0);
+  phaseTimer=0;simTick=0;
+  state.phaseStart=Date.now();
+  state.sampling=false;
+
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnStop').disabled=false;
+  setFormLocked(true);
+  hideInfo();
+  saveProfile();
+
+  toast('测试开始 — '+document.getElementById('inpSN').value,'info');
+
+  simInterval=setInterval(simLoop,50);
+}
+
+function emergencyStop(){
+  if(!state.running)return;
+  state.running=false;
+  clearInterval(simInterval);
+  state.sampling=false;
+  state.metrics={speed:0,torque:0,power:0,motorCur:0,brakeCur:0,angle:state.metrics.angle};
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  setFormLocked(false);
+  showInfo('急停触发 — 测试中断','e');
+  toast('⏹ 急停','ng');
+  renderAll();
+}
+
+function resetTest(){
+  if(state.running)emergencyStop();
+  state.phase=-1;state.subStep=0;state.elapsed=0;state.verdict='pending';
+  state.metrics={speed:0,torque:0,power:0,motorCur:0,brakeCur:0,angle:0};
+  state.series={speed:[],torque:[],current:[],angle:[]};
+  state.sampling=false;
+  state.results={
+    prep:{status:'wait'},
+    idle:{status:'wait',fwdCur:null,fwdSpd:null,revCur:null,revSpd:null},
+    angle:{status:'wait',points:ANGLE_TARGETS.map(()=>({actual:null,status:'wait'}))},
+    load:{status:'wait',fwdBrakeCur:null,fwdTorque:null,revBrakeCur:null,revTorque:null},
+    home:{status:'wait'}
+  };
+  phaseElapsed.fill(0);
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  setFormLocked(false);
+  document.getElementById('angleTable').classList.add('hidden');
+  document.getElementById('loadTable').classList.add('hidden');
+  hideInfo();
+  toast('测试已重置','info');
+  renderAll();
+}
+
+function advancePhase(){
+  if(state.phase>=0)phaseElapsed[state.phase]=Date.now()-state.phaseStart;
+  state.phase++;
+  state.subStep=0;
+  phaseTimer=0;
+  state.phaseStart=Date.now();
+  state.sampling=false;
+  state.sampElapsed=0;
+  if(state.phase>=PHASES.length){
+    finishTest();
+  }else{
+    toast('进入: '+PHASES[state.phase].name,'info');
+  }
+}
+
+function finishTest(){
+  state.running=false;
+  clearInterval(simInterval);
+  if(state.phaseStart){
+    phaseElapsed[PHASES.length-1]=Date.now()-state.phaseStart;
+  }
+
+  // Judge overall
+  const ir=state.results.idle;
+  const ar=state.results.angle;
+  const lr=state.results.load;
+  let allOk=true;
+  if(judgeRange(ir.fwdCur,LIMITS.idleCurFwd)!=='ok')allOk=false;
+  if(judgeRange(ir.fwdSpd,LIMITS.idleSpdFwd)!=='ok')allOk=false;
+  if(judgeRange(ir.revCur,LIMITS.idleCurRev)!=='ok')allOk=false;
+  if(judgeRange(ir.revSpd,LIMITS.idleSpdRev)!=='ok')allOk=false;
+  ar.points.forEach(p=>{if(p.status!=='ok')allOk=false;});
+  if(!lr.fwdTorque||lr.fwdTorque<LIMITS.loadTorqueFwd)allOk=false;
+  if(!lr.revTorque||lr.revTorque<LIMITS.loadTorqueRev)allOk=false;
+
+  state.verdict=allOk?'ok':'ng';
+  state.metrics={speed:0,torque:0,power:0,motorCur:0,brakeCur:0,angle:0};
+
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  setFormLocked(false);
+
+  if(allOk){
+    showInfo('测试完成 — 整机 OK ✅','s');
+    toast('✅ 整机 OK','ok');
+  }else{
+    showInfo('测试完成 — 整机 NG ❌','e');
+    toast('❌ 整机 NG','ng');
+  }
+  renderAll();
+}
+
+// ── Simulation tick (50ms) ──
+function simLoop(){
+  if(!state.running)return;
+  simTick++;
+  phaseTimer+=50;
+  state.elapsed+=50;
+  if(state.phase>=0&&state.phase<PHASES.length){
+    phaseElapsed[state.phase]=Date.now()-state.phaseStart;
+  }
+
+  const pt=phaseTimer; // ms since current phase started
+
+  switch(state.phase){
+    // ═══════ Phase 0: 准备/找零 ═══════
+    case 0: simPrep(pt); break;
+    // ═══════ Phase 1: 空载正反转 ═══════
+    case 1: simIdle(pt); break;
+    // ═══════ Phase 2: 角度定位 ═══════
+    case 2: simAngle(pt); break;
+    // ═══════ Phase 3: 负载上升 ═══════
+    case 3: simLoad(pt); break;
+    // ═══════ Phase 4: 回零结束 ═══════
+    case 4: simHome(pt); break;
+  }
+
+  // Push to series for chart
+  state.series.speed.push(state.metrics.speed);
+  state.series.torque.push(state.metrics.torque);
+  state.series.current.push(state.metrics.motorCur);
+  state.series.angle.push(state.metrics.angle);
+  // Trim series
+  const MAX_PTS=400;
+  ['speed','torque','current','angle'].forEach(k=>{
+    if(state.series[k].length>MAX_PTS)state.series[k]=state.series[k].slice(-MAX_PTS);
+  });
+
+  // Sampling tick
+  if(state.sampling){
+    state.sampElapsed+=0.05;
+    if(state.sampElapsed>=state.sampDuration){
+      state.sampling=false;
+    }
+  }
+
+  // Render every 3 ticks (~150ms) to reduce load
+  if(simTick%3===0) renderAll();
+}
+
+// ─── Phase 0: 准备/找零 ───
+function simPrep(pt){
+  // Slow rotation to find zero over ~4s
+  const totalMs=4000;
+  const progress=Math.min(1,pt/totalMs);
+  const backlash=parseFloat(document.getElementById('inpBack').value)||1.2;
+  
+  // Motor runs at low speed, angle converges to 0 + backlash compensation
+  state.metrics.speed=rand(180,220)*(1-progress*0.7);
+  state.metrics.motorCur=rand(0.3,0.6);
+  state.metrics.torque=rand(0.05,0.12);
+  state.metrics.power=state.metrics.torque*state.metrics.speed*Math.PI/30;
+  state.metrics.brakeCur=0;
+  
+  // Angle converges from random offset to ~0
+  const startAngle=45; // simulated initial offset
+  state.metrics.angle=startAngle*(1-progress)+rand(-0.3,0.3);
+  if(progress>0.9) state.metrics.angle=rand(-0.2,0.2); // near zero
+
+  if(pt>=totalMs){
+    state.metrics.angle=0;
+    state.metrics.speed=0;
+    state.results.prep={status:'done'};
+    toast('找零完成，补偿 '+backlash+'°','ok');
+    advancePhase();
+  }
+}
+
+// ─── Phase 1: 空载正反转 ───
+// subStep 0: fwd ramp(1s) -> fwd run(3s) -> fwd sample(2s)
+// subStep 1: rev ramp(1s) -> rev run(3s) -> rev sample(2s)
+function simIdle(pt){
+  const stepOffset=state.subStep*6000; // 6s per direction
+  const local=pt-stepOffset;
+  const dir=state.subStep===0?1:-1;
+  const dirLabel=dir===1?'正转':'反转';
+
+  if(local<0)return;
+
+  if(local<1000){
+    // Ramp up
+    const ramp=local/1000;
+    state.metrics.speed=dir*ramp*rand(1200,1300);
+    state.metrics.motorCur=ramp*rand(1.5,2.5);
+    state.metrics.torque=rand(0.1,0.3)*ramp;
+    state.metrics.angle+=dir*rand(2,4);
+  }else if(local<4000){
+    // Steady run (3s)
+    state.metrics.speed=dir*rand(1220,1280);
+    state.metrics.motorCur=rand(1.8,2.4);
+    state.metrics.torque=rand(0.2,0.4);
+    state.metrics.angle+=dir*rand(3,5);
+    
+    // Start sampling at 3s mark
+    if(local>=3000&&!state.sampling&&state.sampElapsed<1.9){
+      state.sampling=true;
+      state.sampElapsed=0;
+      state.sampDuration=2;
+    }
+  }else if(local<6000){
+    // Sampling window (2s)
+    state.metrics.speed=dir*rand(1230,1270);
+    state.metrics.motorCur=rand(1.9,2.3);
+    state.metrics.torque=rand(0.25,0.35);
+    state.metrics.angle+=dir*rand(3,5);
+  }
+
+  state.metrics.power=Math.abs(state.metrics.torque*state.metrics.speed*Math.PI/30);
+  state.metrics.brakeCur=0;
+
+  // Wrap angle
+  state.metrics.angle=((state.metrics.angle%360)+360)%360;
+
+  // Complete sub-step
+  if(local>=6000){
+    // Record results
+    if(state.subStep===0){
+      state.results.idle.fwdCur=rand(1.9,2.2);
+      state.results.idle.fwdSpd=rand(1230,1270);
+      state.sampling=false;
+      state.sampElapsed=0;
+      state.subStep=1;
+      toast('正转采样完成','info');
+    }else{
+      state.results.idle.revCur=rand(1.9,2.3);
+      state.results.idle.revSpd=rand(1220,1280);
+      state.results.idle.status='done';
+      state.sampling=false;
+      state.metrics.speed=0;
+      toast('空载测试完成','ok');
+      advancePhase();
+    }
+  }
+}
+
+// ─── Phase 2: 角度定位 ───
+// 5 targets, each takes ~2.5s: drive(1.5s) + settle(0.5s) + judge(0.5s)
+function simAngle(pt){
+  const STEP_MS=2500;
+  const idx=Math.min(state.subStep, ANGLE_TARGETS.length-1);
+  const target=ANGLE_TARGETS[idx];
+  const local=pt-state.subStep*STEP_MS;
+
+  if(local<0)return;
+
+  if(local<1500){
+    // Driving to target
+    const progress=local/1500;
+    const prevAngle=idx>0?ANGLE_TARGETS[idx-1].deg:0;
+    state.metrics.angle=prevAngle+(target.deg-prevAngle)*easeInOut(progress)+rand(-0.5,0.5);
+    state.metrics.speed=rand(300,500)*(1-progress*0.8);
+    state.metrics.motorCur=rand(2.5,3.5)*(1-progress*0.6);
+    state.metrics.torque=rand(0.3,0.6);
+  }else if(local<2000){
+    // Settling
+    state.metrics.angle=target.deg+rand(-0.3,0.3);
+    state.metrics.speed=rand(5,20);
+    state.metrics.motorCur=rand(0.3,0.6);
+    state.metrics.torque=rand(0.05,0.1);
+  }else if(local<2500){
+    // Judge
+    state.metrics.speed=0;
+    state.metrics.motorCur=rand(0.1,0.2);
+    
+    if(state.results.angle.points[idx].actual===null){
+      // Simulate measurement - mostly OK, small chance of NG for realism
+      const err=rand(-2.0,2.0);
+      const measured=target.deg+err;
+      state.results.angle.points[idx].actual=measured;
+      state.results.angle.points[idx].status=Math.abs(err)<=target.tol?'ok':'fail';
+      
+      const st=state.results.angle.points[idx].status;
+      toast(target.label+' '+target.deg+'° → '+fmt(measured)+'° '+(st==='ok'?'✅':'❌'), st==='ok'?'ok':'ng');
+    }
+    state.metrics.angle=state.results.angle.points[idx].actual;
+  }
+
+  state.metrics.power=Math.abs(state.metrics.torque*state.metrics.speed*Math.PI/30);
+  state.metrics.brakeCur=0;
+
+  if(local>=STEP_MS){
+    state.subStep++;
+    if(state.subStep>=ANGLE_TARGETS.length){
+      state.results.angle.status='done';
+      toast('角度定位完成','ok');
+      advancePhase();
+    }
+  }
+}
+
+function easeInOut(t){return t<0.5?2*t*t:(1-Math.pow(-2*t+2,2)/2)}
+
+// ─── Phase 3: 负载上升 ───
+// subStep 0: fwd run(3s) + load ramp(2s) + record
+// subStep 1: rev run(3s) + load ramp(2s) + record
+function simLoad(pt){
+  const STEP_MS=6000;
+  const stepOffset=state.subStep*STEP_MS;
+  const local=pt-stepOffset;
+  const dir=state.subStep===0?1:-1;
+
+  if(local<0)return;
+
+  if(local<3000){
+    // Free running 3s
+    const ramp=Math.min(1,local/800);
+    state.metrics.speed=dir*rand(1200,1300)*ramp;
+    state.metrics.motorCur=rand(2.0,2.5)*ramp;
+    state.metrics.torque=rand(0.2,0.4)*ramp;
+    state.metrics.brakeCur=0;
+    state.metrics.angle+=dir*rand(3,5);
+  }else if(local<5000){
+    // Load ramp 2s - increase brake current
+    const loadProgress=(local-3000)/2000;
+    state.metrics.brakeCur=loadProgress*rand(0.8,1.0);
+    
+    // Speed decreases as load increases
+    const speedFactor=Math.max(0,1-loadProgress*1.2);
+    state.metrics.speed=dir*rand(1200,1300)*speedFactor;
+    state.metrics.motorCur=rand(2.5,3.5);
+    state.metrics.torque=rand(0.3,0.5)+loadProgress*rand(0.8,1.2);
+    state.metrics.angle+=dir*rand(1,3)*speedFactor;
+
+    if(!state.sampling&&loadProgress>0.1){
+      state.sampling=true;
+      state.sampElapsed=0;
+      state.sampDuration=2;
+    }
+  }else if(local<6000){
+    // Locked - record
+    state.metrics.speed=dir*rand(0,5);
+    state.metrics.motorCur=rand(3.0,3.8);
+    state.metrics.brakeCur=rand(0.78,0.90);
+    state.metrics.torque=rand(1.3,1.7);
+
+    if(state.subStep===0&&state.results.load.fwdTorque===null){
+      state.results.load.fwdBrakeCur=state.metrics.brakeCur;
+      state.results.load.fwdTorque=state.metrics.torque;
+      state.sampling=false;
+      toast('正转锁止: '+fmt(state.metrics.torque)+' N·m','info');
+    }
+    if(state.subStep===1&&state.results.load.revTorque===null){
+      state.results.load.revBrakeCur=state.metrics.brakeCur;
+      state.results.load.revTorque=state.metrics.torque;
+      state.sampling=false;
+      toast('反转锁止: '+fmt(state.metrics.torque)+' N·m','info');
+    }
+  }
+
+  state.metrics.power=Math.abs(state.metrics.torque*state.metrics.speed*Math.PI/30);
+  state.metrics.angle=((state.metrics.angle%360)+360)%360;
+
+  if(local>=STEP_MS){
+    if(state.subStep===0){
+      state.subStep=1;
+      state.sampling=false;
+      state.sampElapsed=0;
+    }else{
+      state.results.load.status='done';
+      state.metrics.brakeCur=0;
+      toast('负载测试完成','ok');
+      advancePhase();
+    }
+  }
+}
+
+// ─── Phase 4: 回零结束 ───
+function simHome(pt){
+  const totalMs=3000;
+  const progress=Math.min(1,pt/totalMs);
+
+  // Drive back to 0
+  const curAngle=state.metrics.angle||90;
+  state.metrics.angle=curAngle*(1-easeInOut(progress))+rand(-0.2,0.2)*(1-progress);
+  state.metrics.speed=rand(200,400)*(1-progress);
+  state.metrics.motorCur=rand(0.5,1.0)*(1-progress);
+  state.metrics.torque=rand(0.05,0.15)*(1-progress);
+  state.metrics.brakeCur=0;
+  state.metrics.power=Math.abs(state.metrics.torque*state.metrics.speed*Math.PI/30);
+
+  if(pt>=totalMs){
+    state.metrics.angle=0;
+    state.metrics.speed=0;
+    state.metrics.motorCur=0;
+    state.metrics.torque=0;
+    state.metrics.power=0;
+    state.results.home={status:'done'};
+    advancePhase(); // This triggers finishTest since phase will be >= 5
+  }
+}
+
+// ═══════════════════════ RENDER ALL ═══════════════════════
+function renderAll(){
+  renderSteps();
+  renderMetrics();
+  renderAngleTable();
+  renderLoadTable();
+  renderJudgment();
+  renderSamplingBar();
+  renderChart();
+}
+
+// ═══════════════════════ COPY REPORT ═══════════════════════
+function copyReport(){
+  if(state.verdict==='pending'){
+    toast('测试尚未完成，无法生成有效报告','ng');
+    return;
+  }
+  const ir=state.results.idle;
+  const ar=state.results.angle;
+  const lr=state.results.load;
+  let r='';
+  r+='═══ 齿轮箱测试报告 ═══\n';
+  r+='型号: '+document.getElementById('selModel').value+'\n';
+  r+='SN:   '+document.getElementById('inpSN').value+'\n';
+  r+='时间: '+new Date().toLocaleString('zh-CN')+'\n';
+  r+='结论: '+(state.verdict==='ok'?'✅ OK':'❌ NG')+'\n\n';
+
+  r+='── 空载正反转 ──\n';
+  r+='正转电流: '+(ir.fwdCur!==null?fmt(ir.fwdCur)+' A':'N/A')+' ['+LIMITS.idleCurFwd+']\n';
+  r+='正转转速: '+(ir.fwdSpd!==null?fmt(ir.fwdSpd,0)+' RPM':'N/A')+' ['+LIMITS.idleSpdFwd+']\n';
+  r+='反转电流: '+(ir.revCur!==null?fmt(ir.revCur)+' A':'N/A')+' ['+LIMITS.idleCurRev+']\n';
+  r+='反转转速: '+(ir.revSpd!==null?fmt(ir.revSpd,0)+' RPM':'N/A')+' ['+LIMITS.idleSpdRev+']\n\n';
+
+  r+='── 角度定位 ──\n';
+  ANGLE_TARGETS.forEach((t,i)=>{
+    const p=ar.points[i];
+    r+=t.label+' '+t.deg+'° → '+(p.actual!==null?fmt(p.actual)+'°':'N/A')+' '+(p.status==='ok'?'OK':'NG')+'\n';
+  });
+  r+='\n── 负载上升 ──\n';
+  r+='正转扭矩: '+(lr.fwdTorque!==null?fmt(lr.fwdTorque)+' N·m':'N/A')+' ≥'+LIMITS.loadTorqueFwd+'\n';
+  r+='反转扭矩: '+(lr.revTorque!==null?fmt(lr.revTorque)+' N·m':'N/A')+' ≥'+LIMITS.loadTorqueRev+'\n';
+
+  navigator.clipboard.writeText(r).then(()=>toast('报告已复制到剪贴板','ok')).catch(()=>toast('复制失败','ng'));
+}
+
+// ═══════════════════════ INIT ═══════════════════════
+renderAll();
+</script>
+</body>
+</html>
