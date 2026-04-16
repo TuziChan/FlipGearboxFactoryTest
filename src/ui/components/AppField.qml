@@ -87,7 +87,9 @@ Item {
                     color: root.labelColor
                     muted: false
                     visible: root.label.length > 0
-                    opacity: root.disabledState ? 0.6 : 1
+                    opacity: root.disabledState ? 0.5 : 1
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
                 }
 
                 Item {
@@ -112,8 +114,9 @@ Item {
                 text: root.description
                 color: root.descriptionColor
                 opacity: root.disabledState ? 0.8 : 1
-                font.pixelSize: 11
+                font.pixelSize: 14
                 wrapMode: Text.WordWrap
+                lineHeight: 1.4
             }
         }
 
@@ -135,8 +138,9 @@ Item {
                 text: root.description
                 color: root.descriptionColor
                 opacity: root.disabledState ? 0.8 : 1
-                font.pixelSize: 11
+                font.pixelSize: 14
                 wrapMode: Text.WordWrap
+                lineHeight: 1.4
                 Layout.fillWidth: true
             }
 
@@ -152,8 +156,7 @@ Item {
                 visible: root.invalid && root.errorText.length > 0
                 text: root.errorText
                 color: root.theme.danger
-                font.pixelSize: 11
-                font.bold: true
+                font.pixelSize: 14
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }

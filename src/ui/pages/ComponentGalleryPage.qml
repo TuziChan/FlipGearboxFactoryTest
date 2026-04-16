@@ -795,18 +795,26 @@ Item {
                             objectName: "sampleAccordion"
                             width: parent.width
                             theme: root.theme
+                            selectionMode: "multiple"
                             model: [
                                 {
-                                    value: "runtime",
-                                    title: "运行时状态",
-                                    description: "检查当前工位执行状态",
-                                    content: "这里后续会接入更完整的运行时状态摘要。"
+                                    value: "keyboard",
+                                    title: "支持键盘操作吗？",
+                                    description: "验证 Enter / Space 是否可切换展开",
+                                    content: "支持。焦点落在触发器后，可使用 Enter 或 Space 切换当前项。"
                                 },
                                 {
-                                    value: "device",
-                                    title: "设备诊断",
-                                    description: "查看设备在线与告警信息",
-                                    content: "这里后续会接入总线与设备层诊断详情。"
+                                    value: "premium",
+                                    title: "高级功能说明",
+                                    description: "此项已禁用",
+                                    content: "升级到专业版以解锁此功能。",
+                                    disabled: true
+                                },
+                                {
+                                    value: "collapsible",
+                                    title: "支持单项折叠吗？",
+                                    description: "验证 single + collapsible 的组合行为",
+                                    content: "支持。single 模式下始终保持最多一项展开，并允许再次点击全部收起。"
                                 }
                             ]
                         }
@@ -814,7 +822,7 @@ Item {
                         Text {
                             color: root.theme.textMuted
                             font.pixelSize: 11
-                            text: "展开项数量: " + root.sampleAccordionExpandedCount
+                            text: "展开项数量: " + root.sampleAccordionExpandedCount + " (multiple 模式)"
                         }
                     }
 
@@ -881,14 +889,31 @@ Item {
                             objectName: "sampleAlert"
                             width: parent.width
                             theme: root.theme
-                            variant: "warning"
-                            title: "设备状态需确认"
-                            description: "检测到工位配置存在差异，建议在开始前检查设备连接与参数。"
+                            variant: "default"
+                            title: "新功能可用"
+                            description: "我们添加了深色模式支持。您可以在账户设置中启用它。"
 
                             icon: [
                                 Components.AppIcon {
-                                    name: "diagnostics"
-                                    color: root.theme.warn
+                                    name: "info"
+                                    color: root.theme.textPrimary
+                                    iconSize: 16
+                                }
+                            ]
+                        }
+
+                        Components.AppAlert {
+                            objectName: "sampleAlertDestructive"
+                            width: parent.width
+                            theme: root.theme
+                            variant: "destructive"
+                            title: "错误：连接失败"
+                            description: "无法连接到设备。请检查网络连接并重试。"
+
+                            icon: [
+                                Components.AppIcon {
+                                    name: "error"
+                                    color: root.theme.danger
                                     iconSize: 16
                                 }
                             ]

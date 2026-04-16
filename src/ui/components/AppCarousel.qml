@@ -10,6 +10,10 @@ Item {
     property var model: []
     property int currentIndex: 0
     property string orientation: "horizontal"
+    property bool showControls: true
+    property bool showIndicators: true
+    property string buttonVariant: "outline"
+    property string buttonSize: "icon-sm"
     readonly property bool canScrollPrev: root.currentIndex > 0
     readonly property bool canScrollNext: root.currentIndex < root.itemCount() - 1
 
@@ -57,64 +61,59 @@ Item {
     }
 
     implicitWidth: 320
-    implicitHeight: 210
+    implicitHeight: root.showControls ? 210 : 180
 
-    Rectangle {
+    Item {
+        id: viewport
         anchors.fill: parent
-        radius: root.theme.radiusLarge
-        color: root.theme.cardColor
-        border.width: 1
-        border.color: root.theme.dividerColor
-    }
+        clip: true
 
-    Column {
-        anchors.fill: parent
-        anchors.margins: 12
-        spacing: 10
+        Row {
+            id: slideRow
+            width: viewport.width * Math.max(1, root.itemCount())
+            height: viewport.height
+            x: -(root.currentIndex * viewport.width)
+            spacing: 0
 
-        Item {
-            id: viewport
-            width: parent.width
-            height: 140
-            clip: true
+            Behavior on x {
+                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+            }
 
-            Row {
-                id: slideRow
-                width: viewport.width * Math.max(1, root.itemCount())
-                height: viewport.height
-                x: -(root.currentIndex * viewport.width)
-                spacing: 0
+            Repeater {
+                model: root.itemCount()
 
-                Behavior on x {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-                }
+                delegate: Item {
+                    required property int index
+                    width: viewport.width
+                    height: viewport.height
 
-                Repeater {
-                    model: root.itemCount()
-
-                    delegate: Rectangle {
-                        required property int index
-                        width: viewport.width
-                        height: viewport.height
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 16
                         radius: root.theme.radiusMedium
-                        color: root.theme.surface
+                        color: root.theme.mutedColor
+                        border.width: 1
+                        border.color: root.theme.borderColor
 
                         Column {
                             anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 6
+                            anchors.margins: 16
+                            spacing: 8
 
                             Text {
+                                width: parent.width
                                 text: root.itemTitleAt(index)
                                 color: root.theme.textPrimary
-                                font.pixelSize: 14
-                                font.bold: true
+                                font.pixelSize: 16
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.WordWrap
                             }
 
                             Text {
+                                width: parent.width
                                 text: root.itemDescriptionAt(index)
                                 color: root.theme.textSecondary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 wrapMode: Text.WordWrap
                             }
                         }
@@ -122,48 +121,64 @@ Item {
                 }
             }
         }
+    }
 
-        RowLayout {
-            width: parent.width
+    AppButton {
+        visible: root.showControls
+        theme: root.theme
+        size: root.buttonSize
+        variant: root.buttonVariant
+        iconName: "chevron-left"
+        text: ""
+        disabled: !root.canScrollPrev
+        anchors.left: parent.left
+        anchors.leftMargin: -48
+        anchors.verticalCenter: parent.verticalCenter
+        onClicked: root.previous()
+    }
 
-            AppButton {
-                theme: root.theme
-                size: "icon-sm"
-                variant: "outline"
-                iconName: "chevron-left"
-                text: ""
-                disabled: !root.canScrollPrev
-                onClicked: root.previous()
-            }
+    AppButton {
+        visible: root.showControls
+        theme: root.theme
+        size: root.buttonSize
+        variant: root.buttonVariant
+        iconName: "chevron-right"
+        text: ""
+        disabled: !root.canScrollNext
+        anchors.right: parent.right
+        anchors.rightMargin: -48
+        anchors.verticalCenter: parent.verticalCenter
+        onClicked: root.next()
+    }
 
-            Item { Layout.fillWidth: true }
+    Row {
+        visible: root.showIndicators
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 16
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 8
 
-            Row {
-                spacing: 6
+        Repeater {
+            model: root.itemCount()
 
-                Repeater {
-                    model: root.itemCount()
+            delegate: Rectangle {
+                required property int index
+                width: 8
+                height: 8
+                radius: 4
+                color: root.currentIndex === index ? root.theme.accent : root.theme.mutedColor
+                border.width: 1
+                border.color: root.currentIndex === index ? "transparent" : root.theme.borderColor
 
-                    delegate: Rectangle {
-                        required property int index
-                        width: 6
-                        height: 6
-                        radius: 3
-                        color: root.currentIndex === index ? root.theme.accent : root.theme.muted
-                    }
+                Behavior on color {
+                    ColorAnimation { duration: 200 }
                 }
-            }
 
-            Item { Layout.fillWidth: true }
-
-            AppButton {
-                theme: root.theme
-                size: "icon-sm"
-                variant: "outline"
-                iconName: "chevron-right"
-                text: ""
-                disabled: !root.canScrollNext
-                onClicked: root.next()
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.goTo(index)
+                }
             }
         }
     }

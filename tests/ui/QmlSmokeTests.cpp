@@ -5,6 +5,37 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QVariant>
+#include <QDateTime>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+
+namespace {
+void appendDebugLog(const QString &runId,
+                    const QString &hypothesisId,
+                    const QString &location,
+                    const QString &message,
+                    const QJsonObject &data = QJsonObject())
+{
+    // #region agent log
+    QJsonObject payload{
+        {QStringLiteral("sessionId"), QStringLiteral("c6a42b")},
+        {QStringLiteral("runId"), runId},
+        {QStringLiteral("hypothesisId"), hypothesisId},
+        {QStringLiteral("location"), location},
+        {QStringLiteral("message"), message},
+        {QStringLiteral("data"), data},
+        {QStringLiteral("timestamp"), QDateTime::currentMSecsSinceEpoch()}
+    };
+    QFile file(QStringLiteral("F:/Work/FlipGearboxFactoryTest/debug-c6a42b.log"));
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        file.write(QJsonDocument(payload).toJson(QJsonDocument::Compact));
+        file.write("\n");
+        file.close();
+    }
+    // #endregion
+}
+}
 
 class QmlSmokeTests : public QObject
 {
@@ -673,7 +704,20 @@ void QmlSmokeTests::togglesAccordionAndCollapsible()
     QVERIFY2(QMetaObject::invokeMethod(gallery, "toggleSampleAccordion", Q_ARG(QVariant, QVariant(0))),
              "Component gallery should expose toggleSampleAccordion(index).");
     QCOMPARE(gallery->property("sampleAccordionExpandedCount").toInt(), 1);
-    QCOMPARE(gallery->property("sampleAccordionCurrentText").toString(), QStringLiteral("这里后续会接入更完整的运行时状态摘要。"));
+    QCOMPARE(gallery->property("sampleAccordionCurrentText").toString(),
+             QStringLiteral("支持。焦点落在触发器后，可使用 Enter 或 Space 切换当前项。"));
+
+    QVERIFY2(QMetaObject::invokeMethod(gallery, "toggleSampleAccordion", Q_ARG(QVariant, QVariant(2))),
+             "Accordion in multiple mode should allow expanding multiple items.");
+    QCOMPARE(gallery->property("sampleAccordionExpandedCount").toInt(), 2);
+
+    QVERIFY2(QMetaObject::invokeMethod(gallery, "toggleSampleAccordion", Q_ARG(QVariant, QVariant(1))),
+             "Accordion should not toggle disabled items.");
+    QCOMPARE(gallery->property("sampleAccordionExpandedCount").toInt(), 2);
+
+    QVERIFY2(QMetaObject::invokeMethod(gallery, "toggleSampleAccordion", Q_ARG(QVariant, QVariant(0))),
+             "Accordion should allow collapsing individual items in multiple mode.");
+    QCOMPARE(gallery->property("sampleAccordionExpandedCount").toInt(), 1);
 }
 
 void QmlSmokeTests::loadsIdentityAndFormComponents()
@@ -905,6 +949,11 @@ void QmlSmokeTests::operatesCalendarCarouselAndResizable()
 
     auto *gallery = window->findChild<QObject *>(QStringLiteral("componentGalleryPage"));
     QVERIFY2(gallery != nullptr, "Main shell should expose the component gallery page.");
+    appendDebugLog(QStringLiteral("pre-fix"),
+                   QStringLiteral("H1"),
+                   QStringLiteral("QmlSmokeTests.cpp:operatesCalendarCarouselAndResizable"),
+                   QStringLiteral("Gallery resolved for calendar/carousel/resizable"),
+                   QJsonObject{{QStringLiteral("galleryWidth"), gallery->property("width").toDouble()}});
     QVERIFY2(gallery->findChild<QObject *>(QStringLiteral("sampleCalendar")) != nullptr,
              "Component gallery should expose the sample calendar.");
     QVERIFY2(gallery->findChild<QObject *>(QStringLiteral("sampleCarousel")) != nullptr,
@@ -913,9 +962,21 @@ void QmlSmokeTests::operatesCalendarCarouselAndResizable()
              "Component gallery should expose the sample resizable panels.");
 
     const QString beforeMonth = gallery->property("sampleCalendarMonthLabel").toString();
+    appendDebugLog(QStringLiteral("pre-fix"),
+                   QStringLiteral("H2"),
+                   QStringLiteral("QmlSmokeTests.cpp:operatesCalendarCarouselAndResizable"),
+                   QStringLiteral("Before calendar month switch"),
+                   QJsonObject{{QStringLiteral("beforeMonth"), beforeMonth}});
     QVERIFY2(QMetaObject::invokeMethod(gallery, "goToNextSampleCalendarMonth"),
              "Component gallery should expose goToNextSampleCalendarMonth().");
-    QVERIFY(beforeMonth != gallery->property("sampleCalendarMonthLabel").toString());
+    const QString afterMonth = gallery->property("sampleCalendarMonthLabel").toString();
+    appendDebugLog(QStringLiteral("pre-fix"),
+                   QStringLiteral("H2"),
+                   QStringLiteral("QmlSmokeTests.cpp:operatesCalendarCarouselAndResizable"),
+                   QStringLiteral("After calendar month switch"),
+                   QJsonObject{{QStringLiteral("afterMonth"), afterMonth},
+                               {QStringLiteral("changed"), beforeMonth != afterMonth}});
+    QVERIFY(beforeMonth != afterMonth);
 
     QCOMPARE(gallery->property("sampleCarouselIndex").toInt(), 0);
     QVERIFY2(QMetaObject::invokeMethod(gallery, "goToNextSampleCarousel"),
@@ -956,6 +1017,15 @@ void QmlSmokeTests::operatesAspectRatioRangeSliderAndEnhancedTable()
     QVERIFY2(calendar != nullptr && carousel != nullptr && aspectRatio != nullptr && rangeSlider != nullptr,
              "Component gallery should expose the calendar/carousel/aspect-ratio/range-slider samples.");
     const qreal galleryWidth = gallery->property("width").toReal();
+    appendDebugLog(QStringLiteral("pre-fix"),
+                   QStringLiteral("H3"),
+                   QStringLiteral("QmlSmokeTests.cpp:operatesAspectRatioRangeSliderAndEnhancedTable"),
+                   QStringLiteral("Layout width snapshot"),
+                   QJsonObject{{QStringLiteral("galleryWidth"), galleryWidth},
+                               {QStringLiteral("calendarWidth"), calendar->width()},
+                               {QStringLiteral("carouselWidth"), carousel->width()},
+                               {QStringLiteral("aspectRatioWidth"), aspectRatio->width()},
+                               {QStringLiteral("rangeSliderWidth"), rangeSlider->width()}});
     QVERIFY2(calendar->width() < galleryWidth, "Calendar sample should use a compact intrinsic width.");
     QVERIFY2(carousel->width() < galleryWidth, "Carousel sample should not stretch across the full gallery width.");
     QVERIFY2(aspectRatio->width() < galleryWidth, "Aspect-ratio sample should demonstrate ratio in a bounded frame.");
@@ -967,7 +1037,13 @@ void QmlSmokeTests::operatesAspectRatioRangeSliderAndEnhancedTable()
                  "setSampleRangeSliderValues",
                  Q_ARG(QVariant, QVariant(QVariantList{QVariant(20), QVariant(80)}))),
              "Component gallery should expose setSampleRangeSliderValues(values).");
-    QCOMPARE(gallery->property("sampleRangeSliderValuesText").toString(), QStringLiteral("20-80"));
+    const QString rangeText = gallery->property("sampleRangeSliderValuesText").toString();
+    appendDebugLog(QStringLiteral("pre-fix"),
+                   QStringLiteral("H4"),
+                   QStringLiteral("QmlSmokeTests.cpp:operatesAspectRatioRangeSliderAndEnhancedTable"),
+                   QStringLiteral("Range slider text after update"),
+                   QJsonObject{{QStringLiteral("rangeText"), rangeText}});
+    QCOMPARE(rangeText, QStringLiteral("20-80"));
 
     QCOMPARE(gallery->property("sampleTableFooterText").toString(), QStringLiteral("总计 3 条"));
 }

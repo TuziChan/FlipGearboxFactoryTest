@@ -196,7 +196,7 @@ Item {
                                 radius: parent.radius
                                 color: "transparent"
                                 border.width: itemRoot.activeFocus ? 3 : 0
-                                border.color: Qt.rgba(root.theme.ring.r, root.theme.ring.g, root.theme.ring.b, 0.5)
+                                border.color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.5)
                                 visible: itemRoot.activeFocus
                             }
 

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     id: root
@@ -169,11 +170,35 @@ Item {
         padding: 4
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         onClosed: root.open = false
+
+        enter: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 100; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 100; easing.type: Easing.OutCubic }
+            }
+        }
+
+        exit: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 100; easing.type: Easing.InCubic }
+                NumberAnimation { property: "scale"; from: 1.0; to: 0.95; duration: 100; easing.type: Easing.InCubic }
+            }
+        }
+
         background: Rectangle {
             radius: root.theme.radiusMedium
-            color: root.theme.cardColor
+            color: root.theme.bgPopover
             border.width: 1
-            border.color: root.theme.dividerColor
+            border.color: Qt.rgba(0, 0, 0, 0.1)
+
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(0, 0, 0, 0.1)
+                shadowBlur: 0.5
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 2
+            }
         }
 
         contentItem: Column {

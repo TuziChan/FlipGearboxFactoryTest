@@ -34,12 +34,11 @@ Rectangle {
             Layout.preferredWidth: 20
             Layout.preferredHeight: 20
 
-            NavIcon {
+            AppIcon {
                 anchors.centerIn: parent
-                width: 20
-                height: 20
-                iconName: root.iconName
-                iconColor: root.active ? root.theme.accent : "#5E636A"
+                name: root.iconName
+                color: root.active ? root.theme.accent : "#5E636A"
+                iconSize: 20
             }
         }
 

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: root
@@ -31,12 +32,12 @@ Item {
 
     function openDrawer() {
         root.open = true
+        overlayAnimation.start()
         return true
     }
 
     function closeDrawer() {
-        root.open = false
-        root.closed()
+        closeOverlayAnimation.start()
         return true
     }
 
@@ -45,12 +46,45 @@ Item {
         objectName: root.objectName.length > 0 ? root.objectName + "Overlay" : ""
         anchors.fill: parent
         visible: root.open
-        color: Qt.rgba(0, 0, 0, 0.45)
-        z: 100
+        color: Qt.rgba(0, 0, 0, 0.1)
+        z: 50
+        opacity: 0
+
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blur: 0.4
+            blurMax: 32
+            blurMultiplier: 1.0
+        }
 
         MouseArea {
             anchors.fill: parent
             onClicked: root.closeDrawer()
+        }
+
+        NumberAnimation {
+            id: overlayAnimation
+            target: overlay
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: 100
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            id: closeOverlayAnimation
+            target: overlay
+            property: "opacity"
+            from: 1
+            to: 0
+            duration: 100
+            easing.type: Easing.InCubic
+            onFinished: {
+                root.open = false
+                root.closed()
+            }
         }
     }
 
@@ -58,58 +92,94 @@ Item {
         id: panel
         objectName: root.objectName.length > 0 ? root.objectName + "Panel" : ""
         visible: root.open || panelXAnimation.running || panelYAnimation.running
-        z: 101
-        width: root.side === "left" || root.side === "right" ? Math.min(parent ? parent.width * 0.75 : 320, 360) : (parent ? parent.width : 420)
-        height: root.side === "top" || root.side === "bottom" ? Math.min(parent ? parent.height * 0.55 : 280, 320) : (parent ? parent.height : 360)
+        z: 50
+        width: {
+            if (root.side === "left" || root.side === "right") {
+                return Math.min(parent ? parent.width * 0.75 : 320, 448)
+            }
+            return parent ? parent.width : 420
+        }
+        height: {
+            if (root.side === "top" || root.side === "bottom") {
+                return Math.min(parent ? parent.height * 0.8 : 280, parent ? parent.height * 0.8 : 600)
+            }
+            return parent ? parent.height : 360
+        }
         x: root.panelX()
         y: root.panelY()
-        radius: root.side === "bottom" || root.side === "top" ? root.theme.radiusLarge : 0
-        color: root.theme.cardColor
-        border.width: 1
-        border.color: root.theme.dividerColor
+        radius: {
+            if (root.side === "bottom") return root.theme.radiusLarge
+            if (root.side === "top") return root.theme.radiusLarge
+            if (root.side === "left") return root.theme.radiusLarge
+            if (root.side === "right") return root.theme.radiusLarge
+            return 0
+        }
+        color: root.theme.bgPopover
+        border.width: {
+            if (root.side === "bottom") return 1
+            if (root.side === "top") return 1
+            if (root.side === "left") return 1
+            if (root.side === "right") return 1
+            return 0
+        }
+        border.color: Qt.rgba(0, 0, 0, 0.1)
 
         Behavior on x {
-            NumberAnimation { id: panelXAnimation; duration: 180; easing.type: Easing.OutCubic }
+            NumberAnimation { id: panelXAnimation; duration: 200; easing.type: Easing.OutCubic }
         }
 
         Behavior on y {
-            NumberAnimation { id: panelYAnimation; duration: 180; easing.type: Easing.OutCubic }
+            NumberAnimation { id: panelYAnimation; duration: 200; easing.type: Easing.OutCubic }
         }
 
         Column {
             anchors.fill: parent
-            anchors.margins: 16
-            spacing: 10
+            anchors.margins: 0
+            spacing: 0
 
             Rectangle {
                 visible: root.side === "bottom"
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: 72
+                anchors.topMargin: 16
+                width: 100
                 height: 4
                 radius: 999
                 color: root.theme.textMuted
             }
 
-            Text {
-                visible: root.title.length > 0
-                text: root.title
-                color: root.theme.textPrimary
-                font.pixelSize: 16
-                font.bold: true
-            }
+            Column {
+                id: headerColumn
+                width: parent.width
+                padding: 16
+                spacing: 2
+                visible: root.title.length > 0 || root.description.length > 0
 
-            Text {
-                visible: root.description.length > 0
-                text: root.description
-                color: root.theme.textSecondary
-                font.pixelSize: 12
-                wrapMode: Text.WordWrap
+                Text {
+                    visible: root.title.length > 0
+                    text: root.title
+                    width: parent.width - 32
+                    color: root.theme.textPrimary
+                    font.pixelSize: 16
+                    font.weight: Font.Medium
+                    horizontalAlignment: root.side === "bottom" || root.side === "top" ? Text.AlignHCenter : Text.AlignLeft
+                }
+
+                Text {
+                    visible: root.description.length > 0
+                    text: root.description
+                    width: parent.width - 32
+                    color: root.theme.textSecondary
+                    font.pixelSize: 14
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: root.side === "bottom" || root.side === "top" ? Text.AlignHCenter : Text.AlignLeft
+                }
             }
 
             Column {
                 id: contentColumn
                 width: parent.width
-                spacing: 10
+                padding: 16
+                spacing: 16
             }
         }
     }

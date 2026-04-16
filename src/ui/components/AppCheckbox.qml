@@ -9,10 +9,11 @@ Item {
     property bool checked: false
     property bool disabled: false
     property bool invalid: false
+    property string size: "default"
     signal toggled(bool checked)
 
-    implicitWidth: 16
-    implicitHeight: 16
+    implicitWidth: root.size === "sm" ? 14 : 16
+    implicitHeight: root.size === "sm" ? 14 : 16
     activeFocusOnTab: !root.disabled
 
     function setChecked(nextChecked) {
@@ -30,36 +31,57 @@ Item {
     Rectangle {
         id: indicator
         anchors.fill: parent
-        radius: 4
-        color: root.checked ? root.theme.accent : root.theme.cardColor
-        border.width: 1
+        radius: root.theme.radiusSmall
+        color: root.checked ? root.theme.accent : root.theme.background
+        border.width: root.checked ? 0 : 1
         border.color: root.invalid
                       ? root.theme.danger
-                      : root.checked || root.activeFocus
-                        ? root.theme.accent
-                        : root.theme.stroke
+                      : root.activeFocus
+                        ? root.theme.ringColor
+                        : root.theme.borderColor
         opacity: root.disabled ? 0.5 : 1
+
+        Behavior on color {
+            ColorAnimation { duration: 150 }
+        }
+
+        Behavior on border.color {
+            ColorAnimation { duration: 150 }
+        }
 
         AppIcon {
             anchors.centerIn: parent
             visible: root.checked
             name: "check"
             color: root.theme.primaryForeground
-            iconSize: 12
-        }
+            iconSize: root.size === "sm" ? 10 : 12
+            opacity: root.checked ? 1 : 0
 
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: root.activeFocus ? 2 : 0
-            border.color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.25)
+            Behavior on opacity {
+                NumberAnimation { duration: 150 }
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -3
+        radius: root.theme.radiusSmall
+        color: "transparent"
+        border.width: root.activeFocus ? 3 : 0
+        border.color: Qt.rgba(root.theme.ringColor.r, root.theme.ringColor.g, root.theme.ringColor.b, 0.5)
+        visible: root.activeFocus
+
+        Behavior on border.width {
+            NumberAnimation { duration: 150 }
         }
     }
 
     MouseArea {
         anchors.fill: parent
+        anchors.margins: -8
         enabled: !root.disabled
+        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: root.toggle()
     }
 

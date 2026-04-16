@@ -13,6 +13,14 @@ Rectangle {
     required property var resultKey
     required property string pendingText
 
+    function rowAt(index) {
+        if (Array.isArray(root.rowModel))
+            return root.rowModel[index]
+        if (root.rowModel && typeof root.rowModel.get === "function")
+            return root.rowModel.get(index)
+        return null
+    }
+
     radius: root.theme.radiusLarge
     color: root.theme.cardColor
     border.color: root.theme.dividerColor
@@ -56,7 +64,7 @@ Rectangle {
 
             delegate: Rectangle {
                 required property int index
-                property var rowItem: root.rowModel.get(index)
+                property var rowItem: root.rowAt(index) || ({})
 
                 width: parent.width
                 height: 32
@@ -76,7 +84,7 @@ Rectangle {
                             required property string modelData
                             Layout.fillWidth: true
                             property string cellKey: modelData
-                            property string cellValue: rowItem[cellKey]
+                            property string cellValue: rowItem[cellKey] !== undefined ? String(rowItem[cellKey]) : ""
                             text: cellValue
                             color: cellKey === root.resultKey
                                    ? (cellValue === "OK" ? root.theme.okColor : cellValue === "NG" ? root.theme.ngColor : root.theme.textMuted)

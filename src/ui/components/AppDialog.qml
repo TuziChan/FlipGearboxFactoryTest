@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     id: root
@@ -9,17 +10,20 @@ Item {
     property bool showCloseButton: true
     property string title: ""
     property string description: ""
+    property int maxWidth: 448
     default property alias content: contentColumn.data
     signal closed
 
     function openDialog() {
         root.open = true
+        overlayAnimation.start()
+        contentAnimation.start()
         return true
     }
 
     function closeDialog() {
-        root.open = false
-        root.closed()
+        closeOverlayAnimation.start()
+        closeContentAnimation.start()
         return true
     }
 
@@ -28,12 +32,45 @@ Item {
         objectName: root.objectName.length > 0 ? root.objectName + "Overlay" : ""
         anchors.fill: parent
         visible: root.open
-        color: Qt.rgba(0, 0, 0, 0.5)
-        z: 100
+        color: Qt.rgba(0, 0, 0, 0.1)
+        z: 50
+        opacity: 0
+
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blur: 0.4
+            blurMax: 32
+            blurMultiplier: 1.0
+        }
 
         MouseArea {
             anchors.fill: parent
             onClicked: root.closeDialog()
+        }
+
+        NumberAnimation {
+            id: overlayAnimation
+            target: overlay
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: 100
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            id: closeOverlayAnimation
+            target: overlay
+            property: "opacity"
+            from: 1
+            to: 0
+            duration: 100
+            easing.type: Easing.InCubic
+            onFinished: {
+                root.open = false
+                root.closed()
+            }
         }
     }
 
@@ -41,47 +78,104 @@ Item {
         id: content
         objectName: root.objectName.length > 0 ? root.objectName + "Content" : ""
         visible: root.open
-        z: 101
-        width: Math.min(parent ? parent.width - 32 : 520, 520)
+        z: 50
+        width: Math.min(parent ? parent.width - 32 : root.maxWidth, root.maxWidth)
         implicitHeight: dialogColumn.implicitHeight + 32
         x: parent ? (parent.width - width) / 2 : 0
         y: parent ? (parent.height - height) / 2 : 0
         radius: root.theme.radiusLarge
-        color: root.theme.bgColor
+        color: root.theme.bgPopover
         border.width: 1
-        border.color: root.theme.dividerColor
+        border.color: Qt.rgba(0, 0, 0, 0.1)
+        opacity: 0
+        scale: 0.95
+
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: Qt.rgba(0, 0, 0, 0.1)
+            shadowBlur: 0.5
+            shadowHorizontalOffset: 0
+            shadowVerticalOffset: 4
+        }
+
+        ParallelAnimation {
+            id: contentAnimation
+            NumberAnimation {
+                target: content
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 100
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                target: content
+                property: "scale"
+                from: 0.95
+                to: 1.0
+                duration: 100
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        ParallelAnimation {
+            id: closeContentAnimation
+            NumberAnimation {
+                target: content
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: 100
+                easing.type: Easing.InCubic
+            }
+            NumberAnimation {
+                target: content
+                property: "scale"
+                from: 1.0
+                to: 0.95
+                duration: 100
+                easing.type: Easing.InCubic
+            }
+        }
 
         Column {
             id: dialogColumn
             anchors.fill: parent
             anchors.margins: 16
-            spacing: 12
+            spacing: 16
 
             Column {
-                spacing: 4
+                id: headerColumn
+                width: parent.width
+                spacing: 8
                 visible: root.title.length > 0 || root.description.length > 0
 
                 Text {
                     visible: root.title.length > 0
                     text: root.title
+                    width: parent.width - (root.showCloseButton ? 40 : 0)
                     color: root.theme.textPrimary
-                    font.pixelSize: 18
-                    font.bold: true
+                    font.pixelSize: 16
+                    font.weight: Font.Medium
+                    wrapMode: Text.WordWrap
                 }
 
                 Text {
                     visible: root.description.length > 0
                     text: root.description
+                    width: parent.width
                     color: root.theme.textSecondary
-                    font.pixelSize: 12
+                    font.pixelSize: 14
                     wrapMode: Text.WordWrap
+                    lineHeight: 1.4
                 }
             }
 
             Column {
                 id: contentColumn
                 width: parent.width
-                spacing: 10
+                spacing: 16
             }
         }
 
@@ -89,11 +183,11 @@ Item {
             visible: root.showCloseButton
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 12
-            anchors.rightMargin: 12
+            anchors.topMargin: 8
+            anchors.rightMargin: 8
             theme: root.theme
             iconName: "close"
-            size: "icon"
+            size: "icon-sm"
             variant: "ghost"
             text: ""
             onClicked: root.closeDialog()

@@ -43,8 +43,8 @@ Item {
                 visible: root.title.length > 0
                 text: root.title
                 color: root.theme.textPrimary
-                font.pixelSize: 14
-                font.bold: true
+                font.pixelSize: 16
+                font.weight: Font.Medium
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
@@ -53,8 +53,9 @@ Item {
                 visible: root.description.length > 0
                 text: root.description
                 color: root.theme.textSecondary
-                font.pixelSize: 11
+                font.pixelSize: 14
                 wrapMode: Text.WordWrap
+                lineHeight: 1.4
                 Layout.fillWidth: true
             }
 

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 
 Item {
     id: root
@@ -13,8 +14,13 @@ Item {
     property date selectedDate: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
     property date rangeStart: new Date(0)
     property date rangeEnd: new Date(0)
-    property int daySize: 32
-    readonly property string monthLabel: Qt.formatDate(root.visibleMonth, "yyyy MMMM")
+    property var disabledDates: []
+    property bool showWeekNumbers: false
+    property string captionLayout: "label"
+    property string buttonVariant: "ghost"
+    property int cellSize: 32
+    property int cellRadius: root.theme.radiusSmall
+    readonly property string monthLabel: Qt.formatDate(root.visibleMonth, "MMMM yyyy")
     readonly property var weekdayLabels: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
     function isValidDate(dateValue) {
@@ -121,33 +127,36 @@ Item {
         return true
     }
 
+    function isDateDisabled(dateValue) {
+        for (let i = 0; i < root.disabledDates.length; i++) {
+            if (root.isSameDate(root.disabledDates[i], dateValue))
+                return true
+        }
+        return false
+    }
+
     implicitWidth: dayGrid.width + calendarColumn.anchors.margins * 2
     implicitHeight: calendarColumn.implicitHeight + 2
-
-    Rectangle {
-        anchors.fill: parent
-        radius: root.theme.radiusLarge
-        color: root.theme.cardColor
-        border.width: 1
-        border.color: root.theme.dividerColor
-    }
 
     Column {
         id: calendarColumn
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 8
+        anchors.margins: 16
+        spacing: 16
 
         RowLayout {
             width: dayGrid.implicitWidth
             anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 0
 
             AppButton {
                 theme: root.theme
                 size: "icon"
-                variant: "ghost"
+                variant: root.buttonVariant
                 iconName: "chevron-left"
                 text: ""
+                Layout.preferredWidth: root.cellSize
+                Layout.preferredHeight: root.cellSize
                 onClicked: root.previousMonth()
             }
 
@@ -156,8 +165,10 @@ Item {
             Text {
                 text: root.monthLabel
                 color: root.theme.textPrimary
-                font.pixelSize: 12
-                font.bold: true
+                font.pixelSize: 14
+                font.weight: Font.Medium
+                horizontalAlignment: Text.AlignHCenter
+                Layout.alignment: Qt.AlignHCenter
             }
 
             Item { Layout.fillWidth: true }
@@ -165,9 +176,11 @@ Item {
             AppButton {
                 theme: root.theme
                 size: "icon"
-                variant: "ghost"
+                variant: root.buttonVariant
                 iconName: "chevron-right"
                 text: ""
+                Layout.preferredWidth: root.cellSize
+                Layout.preferredHeight: root.cellSize
                 onClicked: root.nextMonth()
             }
         }
@@ -176,27 +189,30 @@ Item {
             id: dayGrid
             anchors.horizontalCenter: parent.horizontalCenter
             columns: 7
-            rowSpacing: 4
-            columnSpacing: 4
-            width: (root.daySize * 7) + (columnSpacing * 6)
+            rowSpacing: 8
+            columnSpacing: 0
+            width: root.cellSize * 7
 
             Repeater {
                 model: root.weekdayLabels
 
                 delegate: Text {
                     required property var modelData
-                    width: root.daySize
+                    width: root.cellSize
+                    height: root.cellSize * 0.8
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: String(modelData)
                     color: root.theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: 13
+                    font.weight: Font.Normal
                 }
             }
 
             Repeater {
                 model: root.dayEntries()
 
-                delegate: Rectangle {
+                delegate: Item {
                     id: dayDelegate
                     required property var modelData
                     readonly property bool isToday: root.isSameDate(new Date(), dayDelegate.modelData.dateValue)
@@ -206,33 +222,69 @@ Item {
                     readonly property bool isRangeMiddle: root.selectionMode === "range"
                                                          && root.isInRange(dayDelegate.modelData.dateValue)
                                                          && !isRangeStart && !isRangeEnd
-                    readonly property bool filledState: isSelected || isRangeStart || isRangeEnd || isRangeMiddle
-                    width: root.daySize
-                    height: root.daySize
-                    radius: root.theme.radiusSmall
-                    color: isSelected || isRangeStart || isRangeEnd
-                           ? root.theme.accent
-                           : isRangeMiddle
-                             ? root.theme.accentWeak
-                             : "transparent"
-                    border.width: isToday && !isSelected && !isRangeStart && !isRangeEnd ? 1 : 0
-                    border.color: isToday ? Qt.rgba(root.theme.textMuted.r, root.theme.textMuted.g, root.theme.textMuted.b, 0.65) : "transparent"
-                    opacity: dayDelegate.modelData.outside && !root.showOutsideDays ? 0 : 1
+                    readonly property bool isDisabled: root.isDateDisabled(dayDelegate.modelData.dateValue)
+                    width: root.cellSize
+                    height: root.cellSize
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: dayDelegate.modelData.day
-                        color: !dayDelegate.filledState
-                               ? (dayDelegate.modelData.outside ? Qt.rgba(root.theme.textMuted.r, root.theme.textMuted.g, root.theme.textMuted.b, 0.65) : root.theme.textPrimary)
-                               : (dayDelegate.isRangeMiddle ? root.theme.textPrimary : root.theme.primaryForeground)
-                        font.pixelSize: 11
-                        font.bold: dayDelegate.isSelected || dayDelegate.isRangeStart || dayDelegate.isRangeEnd
+                    Rectangle {
+                        id: rangeBackground
+                        anchors.fill: parent
+                        visible: dayDelegate.isRangeMiddle || dayDelegate.isRangeStart || dayDelegate.isRangeEnd
+                        color: root.theme.mutedColor
+                        radius: 0
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: !dayDelegate.modelData.outside || root.showOutsideDays
-                        onClicked: root.selectDate(dayDelegate.modelData.dateValue)
+                    Rectangle {
+                        id: dayButton
+                        anchors.centerIn: parent
+                        width: root.cellSize
+                        height: root.cellSize
+                        radius: root.cellRadius
+                        color: {
+                            if (dayDelegate.isDisabled)
+                                return "transparent"
+                            if (dayDelegate.isSelected || dayDelegate.isRangeStart || dayDelegate.isRangeEnd)
+                                return root.theme.accent
+                            if (dayDelegate.isToday)
+                                return root.theme.mutedColor
+                            if (dayButtonMouseArea.containsMouse)
+                                return root.theme.accentWeak
+                            return "transparent"
+                        }
+                        border.width: dayDelegate.isToday && !dayDelegate.isSelected && !dayDelegate.isRangeStart && !dayDelegate.isRangeEnd ? 1 : 0
+                        border.color: root.theme.borderColor
+                        opacity: {
+                            if (dayDelegate.isDisabled)
+                                return 0.5
+                            if (dayDelegate.modelData.outside && !root.showOutsideDays)
+                                return 0
+                            return 1
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: dayDelegate.modelData.day
+                            color: {
+                                if (dayDelegate.isDisabled)
+                                    return root.theme.textMuted
+                                if (dayDelegate.isSelected || dayDelegate.isRangeStart || dayDelegate.isRangeEnd)
+                                    return root.theme.primaryForeground
+                                if (dayDelegate.modelData.outside)
+                                    return root.theme.textMuted
+                                return root.theme.textPrimary
+                            }
+                            font.pixelSize: 14
+                            font.weight: Font.Normal
+                        }
+
+                        MouseArea {
+                            id: dayButtonMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: !dayDelegate.isDisabled && (!dayDelegate.modelData.outside || root.showOutsideDays)
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: root.selectDate(dayDelegate.modelData.dateValue)
+                        }
                     }
                 }
             }
