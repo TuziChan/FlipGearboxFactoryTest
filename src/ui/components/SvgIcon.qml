@@ -26,25 +26,18 @@ Item {
             origin.y: 0
         }
 
+        // Check icon (✓)
         ShapePath {
+            visible: root.name === "check"
             strokeColor: root.color
             fillColor: "transparent"
             strokeWidth: 1.55
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
-
-            // Check icon (✓)
-            startX: root.name === "check" ? 5.5 : 0
-            startY: root.name === "check" ? 10.5 : 0
-
-            PathLine {
-                x: root.name === "check" ? 8.5 : 0
-                y: root.name === "check" ? 13.5 : 0
-            }
-            PathLine {
-                x: root.name === "check" ? 14.5 : 0
-                y: root.name === "check" ? 6.5 : 0
-            }
+            startX: 5.5
+            startY: 10.5
+            PathLine { x: 8.5; y: 13.5 }
+            PathLine { x: 14.5; y: 6.5 }
         }
 
         // Chevron Down
