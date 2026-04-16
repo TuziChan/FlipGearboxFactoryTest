@@ -255,7 +255,7 @@ Item {
         Column {
             id: contentColumn
             width: flickable.width
-            spacing: 16
+            spacing: 24
 
             Components.SectionCard {
                 objectName: "galleryIntroCard"
@@ -290,7 +290,7 @@ Item {
                 Text {
                     width: parent.width
                     color: root.theme.textMuted
-                    font.pixelSize: 12
+                    font.pixelSize: 14
                     wrapMode: Text.WordWrap
                     text: "当前页先覆盖 Dialog、DropdownMenu、Tooltip、Tabs、Sheet、Popover、Combobox、Command。后续新增组件时，优先继续放到这个 Gallery，而不是回流到业务页隐藏实例。"
                 }
@@ -308,12 +308,12 @@ Item {
 
                     Column {
                         Layout.preferredWidth: Math.max(260, (parent.width - 16) / 2)
-                        spacing: 10
+                        spacing: 12
 
                         Text {
                             text: "Dropdown Menu"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -328,7 +328,7 @@ Item {
                         Text {
                             width: parent.width
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             text: root.sampleDropdownSelectedText.length > 0
                                   ? "当前选择: " + root.sampleDropdownSelectedText
@@ -338,12 +338,12 @@ Item {
 
                     Column {
                         Layout.preferredWidth: Math.max(260, (parent.width - 16) / 2)
-                        spacing: 10
+                        spacing: 12
 
                         Text {
                             text: "Combobox"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -358,7 +358,7 @@ Item {
                         Text {
                             width: parent.width
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             text: root.sampleComboboxCurrentText.length > 0
                                   ? "当前步骤: " + root.sampleComboboxCurrentText + "，过滤结果 " + root.sampleComboboxFilteredCount + " 项"
@@ -380,12 +380,12 @@ Item {
 
                     Column {
                         Layout.preferredWidth: Math.max(260, (parent.width - 16) / 2)
-                        spacing: 10
+                        spacing: 12
 
                         Text {
                             text: "Tabs / Default"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -405,14 +405,14 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: "当前 Tab 索引: " + root.sampleTabsCurrentIndex
                         }
 
                         Text {
                             width: parent.width
                             color: root.theme.textSecondary
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             text: root.sampleTabsCurrentText
                         }
@@ -420,12 +420,12 @@ Item {
 
                     Column {
                         Layout.preferredWidth: Math.max(260, (parent.width - 16) / 2)
-                        spacing: 10
+                        spacing: 12
 
                         Text {
                             text: "Tabs / Line"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -445,7 +445,7 @@ Item {
                         Text {
                             width: parent.width
                             color: root.theme.textSecondary
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             text: sampleTabsLine.currentText
                         }
@@ -453,7 +453,7 @@ Item {
                         Text {
                             text: "Tooltip"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -474,7 +474,7 @@ Item {
                                     anchors.centerIn: parent
                                     text: "Tooltip Anchor"
                                     color: root.theme.textPrimary
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                 }
                             }
 
@@ -509,7 +509,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleTooltipOpen ? "Tooltip 已显示" : "Tooltip 已隐藏"
                         }
                     }
@@ -533,7 +533,7 @@ Item {
                         Text {
                             text: "Checkbox / Radio Group"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -541,7 +541,7 @@ Item {
                             spacing: 8
 
                             Row {
-                                spacing: 10
+                                spacing: 12
 
                                 Components.AppCheckbox {
                                     id: sampleCheckbox
@@ -553,12 +553,12 @@ Item {
                                     anchors.verticalCenter: sampleCheckbox.verticalCenter
                                     text: root.sampleCheckboxChecked ? "启用检查器" : "未启用检查器"
                                     color: root.theme.textPrimary
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                 }
                             }
 
                             Row {
-                                spacing: 10
+                                spacing: 12
 
                                 Components.AppCheckbox {
                                     id: sampleCheckboxDisabled
@@ -572,12 +572,12 @@ Item {
                                     anchors.verticalCenter: sampleCheckboxDisabled.verticalCenter
                                     text: "禁用状态"
                                     color: root.theme.textMuted
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                 }
                             }
 
                             Row {
-                                spacing: 10
+                                spacing: 12
 
                                 Components.AppCheckbox {
                                     id: sampleCheckboxInvalid
@@ -590,7 +590,7 @@ Item {
                                     anchors.verticalCenter: sampleCheckboxInvalid.verticalCenter
                                     text: "错误状态"
                                     color: root.theme.danger
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                 }
                             }
                         }
@@ -609,7 +609,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: "当前模式: " + root.sampleRadioValue
                         }
                     }
@@ -621,7 +621,7 @@ Item {
                         Text {
                             text: "Toggle / Toggle Group"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -635,7 +635,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleToggleChecked ? "Toggle 已开启" : "Toggle 已关闭"
                         }
 
@@ -656,7 +656,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: "当前视图: " + root.sampleToggleGroupValue
                         }
                     }
@@ -680,7 +680,7 @@ Item {
                         Text {
                             text: "Menubar"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -712,7 +712,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleMenubarSelectedText.length > 0
                                   ? "最近菜单动作: " + root.sampleMenubarSelectedText
                                   : "尚未触发菜单项"
@@ -726,7 +726,7 @@ Item {
                         Text {
                             text: "Context Menu"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -742,7 +742,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "右键菜单锚点"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                             }
                         }
 
@@ -760,7 +760,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleContextMenuSelectedText.length > 0
                                   ? "最近右键动作: " + root.sampleContextMenuSelectedText
                                   : "尚未触发右键菜单"
@@ -786,7 +786,7 @@ Item {
                         Text {
                             text: "Accordion"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -821,7 +821,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: "展开项数量: " + root.sampleAccordionExpandedCount + " (multiple 模式)"
                         }
                     }
@@ -833,7 +833,7 @@ Item {
                         Text {
                             text: "Collapsible"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -849,14 +849,14 @@ Item {
                                 width: parent.width
                                 text: "这里后续会放更完整的高级参数编辑面板。"
                                 color: root.theme.textSecondary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 wrapMode: Text.WordWrap
                             }
                         }
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleCollapsibleOpen ? "Collapsible 已展开" : "Collapsible 已折叠"
                         }
                     }
@@ -880,7 +880,7 @@ Item {
                         Text {
                             text: "Alert"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -927,7 +927,7 @@ Item {
                         Text {
                             text: "Alert Dialog"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -940,7 +940,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleAlertDialogOpen ? "AlertDialog 已打开" : "AlertDialog 已关闭"
                         }
                     }
@@ -1076,12 +1076,12 @@ Item {
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Slider / Pagination"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1097,7 +1097,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前阈值: " + root.sampleSliderValue
                             }
 
@@ -1111,19 +1111,19 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前页: " + root.samplePaginationPage
                             }
                         }
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Native Select / Input OTP"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1142,7 +1142,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前工位值: " + root.sampleNativeSelectValue
                             }
 
@@ -1155,7 +1155,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: root.sampleInputOtpValue.length > 0 ? "OTP: " + root.sampleInputOtpValue : "尚未输入 OTP"
                             }
                         }
@@ -1167,12 +1167,12 @@ Item {
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Input Group"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1194,12 +1194,12 @@ Item {
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Scroll Area"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1218,14 +1218,14 @@ Item {
                                         width: sampleScrollArea.width - 28
                                         text: "滚动条目 #" + (index + 1)
                                         color: root.theme.textSecondary
-                                        font.pixelSize: 12
+                                        font.pixelSize: 14
                                     }
                                 }
                             }
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: root.sampleScrollAtEnd ? "滚动已到底部" : "滚动未到底部"
                             }
                         }
@@ -1249,12 +1249,12 @@ Item {
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Calendar / Carousel"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1267,7 +1267,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前月份: " + root.sampleCalendarMonthLabel
                             }
 
@@ -1285,19 +1285,19 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前轮播索引: " + root.sampleCarouselIndex
                             }
                         }
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Aspect Ratio / Resizable"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1341,7 +1341,7 @@ Item {
                                         anchors.centerIn: parent
                                         text: "左侧面板"
                                         color: root.theme.textPrimary
-                                        font.pixelSize: 12
+                                        font.pixelSize: 14
                                     }
                                 }
 
@@ -1355,7 +1355,7 @@ Item {
                                             anchors.centerIn: parent
                                             text: "右侧面板"
                                             color: root.theme.textSecondary
-                                            font.pixelSize: 12
+                                            font.pixelSize: 14
                                         }
                                     }
                                 ]
@@ -1363,7 +1363,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "当前分割比例: " + root.sampleResizableRatio + "%"
                             }
                         }
@@ -1375,12 +1375,12 @@ Item {
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Range Slider"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1396,19 +1396,19 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: "范围: " + root.sampleRangeSliderValuesText
                             }
                         }
 
                         Column {
                             Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
-                            spacing: 10
+                            spacing: 12
 
                             Text {
                                 text: "Enhanced Table"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 font.bold: true
                             }
 
@@ -1433,7 +1433,7 @@ Item {
 
                             Text {
                                 color: root.theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: 14
                                 text: root.sampleTableFooterText
                             }
                         }
@@ -1458,7 +1458,7 @@ Item {
                         Text {
                             text: "Navigation Menu"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -1487,7 +1487,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: root.sampleNavigationMenuSelectedText.length > 0
                                   ? "最近导航项: " + root.sampleNavigationMenuSelectedText
                                   : "尚未选择导航项"
@@ -1501,7 +1501,7 @@ Item {
                         Text {
                             text: "Hover Card / Drawer"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -1517,7 +1517,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "HoverCard Anchor"
                                 color: root.theme.textPrimary
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                             }
 
                             MouseArea {
@@ -1542,7 +1542,7 @@ Item {
                                     width: parent.width
                                     text: "良率 98.4%，最近一次告警已恢复。"
                                     color: root.theme.textSecondary
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                     wrapMode: Text.WordWrap
                                 }
                             }
@@ -1570,7 +1570,7 @@ Item {
 
                         Text {
                             color: root.theme.textMuted
-                            font.pixelSize: 11
+                            font.pixelSize: 14
                             text: "HoverCard: " + (root.sampleHoverCardOpen ? "open" : "closed")
                                   + " | Drawer: " + (root.sampleDrawerOpen ? "open" : "closed")
                         }
@@ -1619,7 +1619,7 @@ Item {
                 Text {
                     width: parent.width
                     color: root.theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: 14
                     wrapMode: Text.WordWrap
                     text: "Sheet: " + (root.sampleSheetOpen ? "open" : "closed")
                           + " | Popover: " + (root.samplePopoverOpen ? "open" : "closed")
@@ -1643,7 +1643,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Popover Anchor"
                             color: root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                         }
                     }
 
@@ -1660,7 +1660,7 @@ Item {
                             width: parent.width
                             text: "这里后续会用于 Tooltip、Dropdown、Combobox 的局部能力复用。"
                             color: root.theme.textSecondary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                         }
                     }
@@ -1682,7 +1682,7 @@ Item {
             width: parent.width
             text: "后续 Sheet、Popover、DropdownMenu 会沿这条基础层继续扩展。"
             color: root.theme.textSecondary
-            font.pixelSize: 12
+            font.pixelSize: 14
             wrapMode: Text.WordWrap
         }
     }
@@ -1726,7 +1726,7 @@ Item {
             width: parent.width
             text: "抽屉可用于承载不打断主页面的扩展详情。"
             color: root.theme.textSecondary
-            font.pixelSize: 12
+            font.pixelSize: 14
             wrapMode: Text.WordWrap
         }
     }
@@ -1743,7 +1743,7 @@ Item {
             width: parent.width
             text: "这里后续会承载更复杂的侧滑内容。"
             color: root.theme.textSecondary
-            font.pixelSize: 12
+            font.pixelSize: 14
             wrapMode: Text.WordWrap
         }
     }
