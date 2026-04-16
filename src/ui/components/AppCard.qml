@@ -8,7 +8,9 @@ Rectangle {
 
     required property AppTheme theme
     property string size: "default"
-    property alias content: contentContainer.data
+    property alias header: headerContainer.data
+    property alias footer: footerContainer.data
+    default property alias content: contentContainer.data
 
     implicitWidth: 350
     implicitHeight: contentColumn.implicitHeight
@@ -23,9 +25,23 @@ Rectangle {
         spacing: 0
 
         Item {
+            id: headerContainer
+            width: parent.width
+            height: childrenRect.height
+            visible: children.length > 0
+        }
+
+        Item {
             id: contentContainer
             width: parent.width
             height: childrenRect.height
+        }
+
+        Item {
+            id: footerContainer
+            width: parent.width
+            height: childrenRect.height
+            visible: children.length > 0
         }
     }
 }
