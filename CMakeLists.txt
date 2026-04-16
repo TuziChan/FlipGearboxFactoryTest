@@ -87,6 +87,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/BottomStatusBar.qml
         src/ui/components/ThemeSwitcherPanel.qml
         src/ui/components/NavIcon.qml
+        src/ui/components/SvgIcon.qml
         src/ui/components/CommandBar.qml
         src/ui/components/MetricCard.qml
         src/ui/components/ChartPanel.qml
