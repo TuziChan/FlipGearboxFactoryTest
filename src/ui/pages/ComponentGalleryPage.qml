@@ -866,6 +866,258 @@ Item {
             Components.SectionCard {
                 width: parent.width
                 theme: root.theme
+                title: "基础组件"
+                subtitle: "Card、Progress、Skeleton、Separator、Kbd、Label、Switch、Textarea、Select 等基础组件展示。"
+
+                Column {
+                    width: parent.width
+                    spacing: 16
+
+                    RowLayout {
+                        width: parent.width
+                        spacing: 16
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Card"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Components.AppCard {
+                                id: sampleCard
+                                objectName: "sampleCard"
+                                width: parent.width
+                                theme: root.theme
+
+                                header: [
+                                    Components.AppCardHeader {
+                                        theme: root.theme
+
+                                        Components.AppCardTitle {
+                                            theme: root.theme
+                                            text: "卡片标题"
+                                        }
+
+                                        Components.AppCardDescription {
+                                            theme: root.theme
+                                            text: "这是卡片的描述文本"
+                                        }
+
+                                        Components.AppCardAction {
+                                            theme: root.theme
+
+                                            Components.AppButton {
+                                                theme: root.theme
+                                                iconName: "more-vertical"
+                                                size: "icon-sm"
+                                                variant: "ghost"
+                                            }
+                                        }
+                                    }
+                                ]
+
+                                Components.AppCardContent {
+                                    theme: root.theme
+
+                                    Text {
+                                        width: parent.width
+                                        text: "卡片内容区域，可以放置任意内容。"
+                                        color: root.theme.textSecondary
+                                        font.pixelSize: 14
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+
+                                footer: [
+                                    Components.AppCardFooter {
+                                        theme: root.theme
+
+                                        Components.AppButton {
+                                            theme: root.theme
+                                            text: "确认"
+                                            size: "sm"
+                                        }
+
+                                        Components.AppButton {
+                                            theme: root.theme
+                                            text: "取消"
+                                            variant: "outline"
+                                            size: "sm"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Progress & Skeleton"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Components.AppProgress {
+                                id: sampleProgress
+                                objectName: "sampleProgress"
+                                width: parent.width
+                                theme: root.theme
+                                value: 65
+                            }
+
+                            Text {
+                                color: root.theme.textMuted
+                                font.pixelSize: 14
+                                text: "进度: 65%"
+                            }
+
+                            Components.AppSkeleton {
+                                id: sampleSkeleton
+                                objectName: "sampleSkeleton"
+                                width: parent.width
+                                height: 20
+                                theme: root.theme
+                            }
+
+                            Components.AppSkeleton {
+                                width: parent.width * 0.7
+                                height: 20
+                                theme: root.theme
+                            }
+                        }
+                    }
+
+                    Components.AppSeparator {
+                        id: sampleSeparator
+                        objectName: "sampleSeparator"
+                        width: parent.width
+                        theme: root.theme
+                    }
+
+                    RowLayout {
+                        width: parent.width
+                        spacing: 16
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Kbd & Label"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            RowLayout {
+                                spacing: 8
+
+                                Components.AppLabel {
+                                    id: sampleLabel
+                                    objectName: "sampleLabel"
+                                    theme: root.theme
+                                    text: "快捷键："
+                                }
+
+                                Components.AppKbd {
+                                    id: sampleKbd
+                                    objectName: "sampleKbd"
+                                    theme: root.theme
+                                    text: "Ctrl"
+                                }
+
+                                Components.AppKbd {
+                                    theme: root.theme
+                                    text: "S"
+                                }
+                            }
+                        }
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Switch"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Components.AppSwitch {
+                                id: sampleSwitch
+                                objectName: "sampleSwitch"
+                                theme: root.theme
+                                checked: true
+                            }
+
+                            Text {
+                                color: root.theme.textMuted
+                                font.pixelSize: 14
+                                text: sampleSwitch.checked ? "开关已开启" : "开关已关闭"
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        width: parent.width
+                        spacing: 16
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Textarea"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Components.AppTextarea {
+                                id: sampleTextarea
+                                objectName: "sampleTextarea"
+                                width: parent.width
+                                theme: root.theme
+                                placeholder: "请输入多行文本..."
+                            }
+                        }
+
+                        Column {
+                            Layout.preferredWidth: Math.max(280, (parent.width - 16) / 2)
+                            spacing: 12
+
+                            Text {
+                                text: "Select"
+                                color: root.theme.textPrimary
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Components.AppSelect {
+                                id: sampleSelect
+                                objectName: "sampleSelect"
+                                width: parent.width
+                                theme: root.theme
+                                label: "选择选项"
+                                model: ["选项 1", "选项 2", "选项 3"]
+                            }
+                        }
+                    }
+                }
+            }
+
+            Components.SectionCard {
+                width: parent.width
+                theme: root.theme
                 title: "消息与确认"
                 subtitle: "alert 与 alert-dialog 的首批 QML 复刻样例。"
 
