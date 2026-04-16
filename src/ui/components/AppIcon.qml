@@ -1,41 +1,21 @@
 import QtQuick
 
+// Icon component using SVG/Shape for optimal scaling and performance
 Item {
     id: root
 
     required property string name
     required property color color
     property int iconSize: 20
-    property bool useSvg: true  // Use SVG by default for better scaling
 
     implicitWidth: iconSize
     implicitHeight: iconSize
 
-    // SVG-based rendering (preferred)
-    Loader {
+    SvgIcon {
         anchors.centerIn: parent
-        active: root.useSvg
-        sourceComponent: Component {
-            SvgIcon {
-                width: root.iconSize
-                height: root.iconSize
-                name: root.name
-                color: root.color
-            }
-        }
-    }
-
-    // Canvas-based rendering (fallback)
-    Loader {
-        anchors.centerIn: parent
-        active: !root.useSvg
-        sourceComponent: Component {
-            NavIcon {
-                width: root.iconSize
-                height: root.iconSize
-                iconName: root.name
-                iconColor: root.color
-            }
-        }
+        width: root.iconSize
+        height: root.iconSize
+        name: root.name
+        color: root.color
     }
 }
