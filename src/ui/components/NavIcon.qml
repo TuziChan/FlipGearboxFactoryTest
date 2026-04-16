@@ -21,34 +21,38 @@ Canvas {
         ctx.lineCap = "round"
         ctx.lineJoin = "round"
 
+        const w = root.width
+        const h = root.height
+        const scale = Math.min(w, h) / 20.0
+
         if (root.iconName === "test") {
-            ctx.strokeRect(4, 4, 4, 4)
-            ctx.strokeRect(12, 4, 4, 4)
-            ctx.strokeRect(4, 12, 4, 4)
-            ctx.strokeRect(12, 12, 4, 4)
+            ctx.strokeRect(4 * scale, 4 * scale, 4 * scale, 4 * scale)
+            ctx.strokeRect(12 * scale, 4 * scale, 4 * scale, 4 * scale)
+            ctx.strokeRect(4 * scale, 12 * scale, 4 * scale, 4 * scale)
+            ctx.strokeRect(12 * scale, 12 * scale, 4 * scale, 4 * scale)
         } else if (root.iconName === "recipe") {
             for (let i = 0; i < 3; ++i) {
-                const y = 5 + i * 5
+                const y = (5 + i * 5) * scale
                 ctx.beginPath()
-                ctx.arc(5, y, 1.0, 0, Math.PI * 2)
+                ctx.arc(5 * scale, y, 1.0 * scale, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.beginPath()
-                ctx.moveTo(8.5, y)
-                ctx.lineTo(16, y)
+                ctx.moveTo(8.5 * scale, y)
+                ctx.lineTo(16 * scale, y)
                 ctx.stroke()
             }
         } else if (root.iconName === "history") {
             ctx.beginPath()
-            ctx.moveTo(4.5, 14)
-            ctx.lineTo(8, 10.5)
-            ctx.lineTo(11, 12)
-            ctx.lineTo(15.5, 7)
+            ctx.moveTo(4.5 * scale, 14 * scale)
+            ctx.lineTo(8 * scale, 10.5 * scale)
+            ctx.lineTo(11 * scale, 12 * scale)
+            ctx.lineTo(15.5 * scale, 7 * scale)
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(4.5, 14, 1.0, 0, Math.PI * 2)
-            ctx.arc(8, 10.5, 1.0, 0, Math.PI * 2)
-            ctx.arc(11, 12, 1.0, 0, Math.PI * 2)
-            ctx.arc(15.5, 7, 1.0, 0, Math.PI * 2)
+            ctx.arc(4.5 * scale, 14 * scale, 1.0 * scale, 0, Math.PI * 2)
+            ctx.arc(8 * scale, 10.5 * scale, 1.0 * scale, 0, Math.PI * 2)
+            ctx.arc(11 * scale, 12 * scale, 1.0 * scale, 0, Math.PI * 2)
+            ctx.arc(15.5 * scale, 7 * scale, 1.0 * scale, 0, Math.PI * 2)
             ctx.fill()
         } else if (root.iconName === "device") {
             ctx.strokeRect(5.5, 3.5, 9, 12)
@@ -105,9 +109,9 @@ Canvas {
             ctx.stroke()
         } else if (root.iconName === "check") {
             ctx.beginPath()
-            ctx.moveTo(5.5, 10.5)
-            ctx.lineTo(8.5, 13.5)
-            ctx.lineTo(14.5, 6.5)
+            ctx.moveTo(5.5 * scale, 10.5 * scale)
+            ctx.lineTo(8.5 * scale, 13.5 * scale)
+            ctx.lineTo(14.5 * scale, 6.5 * scale)
             ctx.stroke()
         } else if (root.iconName === "close") {
             ctx.beginPath()
