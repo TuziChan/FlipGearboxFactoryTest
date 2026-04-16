@@ -537,20 +537,61 @@ Item {
                             font.bold: true
                         }
 
-                        Row {
-                            spacing: 10
+                        Column {
+                            spacing: 8
 
-                            Components.AppCheckbox {
-                                id: sampleCheckbox
-                                objectName: "sampleCheckbox"
-                                theme: root.theme
+                            Row {
+                                spacing: 10
+
+                                Components.AppCheckbox {
+                                    id: sampleCheckbox
+                                    objectName: "sampleCheckbox"
+                                    theme: root.theme
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: sampleCheckbox.verticalCenter
+                                    text: root.sampleCheckboxChecked ? "启用检查器" : "未启用检查器"
+                                    color: root.theme.textPrimary
+                                    font.pixelSize: 12
+                                }
                             }
 
-                            Text {
-                                anchors.verticalCenter: sampleCheckbox.verticalCenter
-                                text: root.sampleCheckboxChecked ? "启用检查器" : "未启用检查器"
-                                color: root.theme.textPrimary
-                                font.pixelSize: 12
+                            Row {
+                                spacing: 10
+
+                                Components.AppCheckbox {
+                                    id: sampleCheckboxDisabled
+                                    objectName: "sampleCheckboxDisabled"
+                                    theme: root.theme
+                                    checked: true
+                                    disabled: true
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: sampleCheckboxDisabled.verticalCenter
+                                    text: "禁用状态"
+                                    color: root.theme.textMuted
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            Row {
+                                spacing: 10
+
+                                Components.AppCheckbox {
+                                    id: sampleCheckboxInvalid
+                                    objectName: "sampleCheckboxInvalid"
+                                    theme: root.theme
+                                    invalid: true
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: sampleCheckboxInvalid.verticalCenter
+                                    text: "错误状态"
+                                    color: root.theme.danger
+                                    font.pixelSize: 12
+                                }
                             }
                         }
 

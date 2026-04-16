@@ -518,6 +518,22 @@ void QmlSmokeTests::togglesCheckboxAndRadioGroupSelection()
              "Component gallery should expose toggleSampleCheckbox().");
     QCOMPARE(gallery->property("sampleCheckboxChecked").toBool(), true);
 
+    auto *checkboxDisabled = window->findChild<QObject *>(QStringLiteral("sampleCheckboxDisabled"));
+    QVERIFY2(checkboxDisabled != nullptr, "Component gallery should expose the disabled checkbox sample.");
+    QCOMPARE(checkboxDisabled->property("checked").toBool(), true);
+    QCOMPARE(checkboxDisabled->property("disabled").toBool(), true);
+    const bool disabledToggleResult = QMetaObject::invokeMethod(checkboxDisabled, "toggle");
+    QVERIFY2(disabledToggleResult, "Disabled checkbox should expose toggle() method.");
+    QCOMPARE(checkboxDisabled->property("checked").toBool(), true);
+
+    auto *checkboxInvalid = window->findChild<QObject *>(QStringLiteral("sampleCheckboxInvalid"));
+    QVERIFY2(checkboxInvalid != nullptr, "Component gallery should expose the invalid checkbox sample.");
+    QCOMPARE(checkboxInvalid->property("invalid").toBool(), true);
+    QCOMPARE(checkboxInvalid->property("checked").toBool(), false);
+    const bool invalidToggleResult = QMetaObject::invokeMethod(checkboxInvalid, "toggle");
+    QVERIFY2(invalidToggleResult, "Invalid checkbox should expose toggle() method.");
+    QCOMPARE(checkboxInvalid->property("checked").toBool(), true);
+
     QVERIFY2(QMetaObject::invokeMethod(
                  gallery,
                  "selectSampleRadioValue",
