@@ -46,9 +46,9 @@
   - [x] 5.6 `saveRecipe()` 检查 `recipeService.save()` 返回值，失败时提示用户
   - [x] 5.7 保存成功后同步更新 `recipeListModel` 中对应条目
 
-- [ ] Task 6: DiagnosticsPage.qml 安全防护
-  - [ ] 6.1 电机正/反转按钮添加确认对话框（使用 `MessageDialog` 或自定义弹窗）
-  - [ ] 6.2 制动电流输入添加前端范围校验（0~5.0A），显示错误提示
+- [x] Task 6: DiagnosticsPage.qml 安全防护
+  - [x] 6.1 电机正/反转按钮添加确认对话框（使用 `AppAlertDialog` 组件）
+  - [x] 6.2 制动电流输入添加前端范围校验（0~5.0A），显示错误提示
 
 - [ ] Task 7: DeviceConfigPage.qml 范围校验
   - [ ] 7.1 `slaveId` 输入添加 `onTextChanged` 校验，限制 1-247 范围
