@@ -85,7 +85,7 @@ Column {
 
     Rectangle {
         implicitWidth: 200
-        implicitHeight: 28
+        implicitHeight: 36
         radius: root.theme.radiusSmall
         color: Qt.tint(root.theme.cardColor, Qt.rgba(root.theme.stroke.r, root.theme.stroke.g, root.theme.stroke.b, 0.18))
         border.width: 1
@@ -101,7 +101,7 @@ Column {
                 Layout.fillWidth: true
                 text: root.currentText.length > 0 ? root.currentText : "请选择..."
                 color: root.currentText.length > 0 ? root.theme.textPrimary : root.theme.textMuted
-                font.pixelSize: 12
+                font.pixelSize: 14
                 elide: Text.ElideRight
             }
 
@@ -194,7 +194,7 @@ Column {
                     required property var modelData
                     required property int index
                     width: listView.width
-                    height: 28
+                    height: 32
                     radius: root.theme.radiusSmall
                     color: root.highlightedIndex === index ? root.theme.accentWeak : "transparent"
 
@@ -208,7 +208,7 @@ Column {
                             Layout.fillWidth: true
                             text: modelData.text
                             color: root.highlightedIndex === index ? root.theme.accentForeground : root.theme.textPrimary
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             elide: Text.ElideRight
                         }
 
@@ -216,7 +216,7 @@ Column {
                             visible: root.currentIndex === modelData.index
                             name: "check"
                             color: root.highlightedIndex === index ? root.theme.accentForeground : root.theme.accent
-                            iconSize: 12
+                            iconSize: 16
                         }
                     }
 

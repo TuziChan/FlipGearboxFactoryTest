@@ -8,8 +8,9 @@ Item {
 
     required property AppTheme theme
     property alias content: rowLayout.data
-
-    implicitWidth: parent.width
+    width: parent ? parent.width : implicitWidth
+    height: implicitHeight
+    implicitWidth: parent ? parent.width : rowLayout.implicitWidth + 24
     implicitHeight: rowLayout.implicitHeight + 24
 
     RowLayout {

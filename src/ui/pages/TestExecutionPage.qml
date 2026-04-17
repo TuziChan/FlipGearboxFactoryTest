@@ -10,21 +10,25 @@ Item {
 
     required property Components.AppTheme theme
 
-    property bool running: false
+    // ViewModel connection - exposed from main.cpp as "testViewModel"
+    property var viewModel: typeof testViewModel !== "undefined" ? testViewModel : null
+
+    // Local UI state derived from ViewModel
+    property bool running: viewModel ? viewModel.running : false
     property int currentPhaseIndex: -1
-    property real elapsedSeconds: 0
+    property real elapsedSeconds: viewModel ? viewModel.elapsedMs / 1000.0 : 0
     property real phaseElapsedSeconds: 0
-    property real speedValue: 0
-    property real torqueValue: 0
-    property real powerValue: 0
-    property real motorCurrentValue: 0
-    property real brakeCurrentValue: 0
-    property real angleValue: 0
-    property real ai1Value: 0
+    property real speedValue: viewModel ? viewModel.speed : 0
+    property real torqueValue: viewModel ? viewModel.torque : 0
+    property real powerValue: viewModel ? viewModel.power : 0
+    property real motorCurrentValue: viewModel ? viewModel.motorCurrent : 0
+    property real brakeCurrentValue: viewModel ? viewModel.brakeCurrent : 0
+    property real angleValue: viewModel ? viewModel.angle : 0
+    property real ai1Value: viewModel ? (viewModel.ai1Level ? 1.0 : 0.0) : 0
     property real ai2Value: 0
-    property string verdictState: "pending"
-    property string verdictText: "待测试"
-    property string infoText: ""
+    property string verdictState: viewModel ? (viewModel.testPassed ? "ok" : "pending") : "pending"
+    property string verdictText: viewModel ? viewModel.overallVerdict : "待测试"
+    property string infoText: viewModel ? viewModel.statusMessage : ""
     property string infoType: ""
     property bool speedChannelOn: true
     property bool torqueChannelOn: true
@@ -35,11 +39,59 @@ Item {
     property var chartTorque: []
     property var chartCurrent: []
     property var chartAngle: []
-    property string phaseTitle: currentPhaseIndex >= 0 ? stepModel.get(currentPhaseIndex).name : "等待开始"
+    property string phaseTitle: viewModel ? viewModel.currentPhase : "等待开始"
 
     ListModel { id: stepModel }
     ListModel { id: angleModel }
     ListModel { id: loadModel }
+
+    // Connect to ViewModel signals
+    Connections {
+        target: root.viewModel
+        enabled: root.viewModel !== null
+
+        function onTelemetryChanged() {
+            // Update chart data with new telemetry
+            appendPoint(root.chartSpeed, root.speedValue)
+            appendPoint(root.chartTorque, root.torqueValue)
+            appendPoint(root.chartCurrent, root.motorCurrentValue)
+            appendPoint(root.chartAngle, root.angleValue)
+        }
+
+        function onCurrentPhaseChanged() {
+            updateCurrentPhaseIndex()
+            root.infoText = "阶段切换到 " + root.phaseTitle
+            root.infoType = "warning"
+            applyStepStates()
+        }
+
+        function onRunningChanged() {
+            if (root.running) {
+                root.infoText = "测试开始，进入 " + root.phaseTitle
+                root.infoType = "success"
+            } else {
+                root.infoText = "测试已停止"
+                root.infoType = "warning"
+            }
+            applyStepStates()
+        }
+
+        function onResultsChanged() {
+            applyStepStates()
+            if (root.viewModel.testPassed) {
+                root.infoText = "测试完成，整机判定 OK"
+                root.infoType = "success"
+            } else {
+                root.infoText = "测试完成，整机判定 NG"
+                root.infoType = "error"
+            }
+        }
+
+        function onErrorOccurred(message) {
+            root.infoText = message
+            root.infoType = "error"
+        }
+    }
 
     function formatSeconds(seconds) {
         const mins = Math.floor(seconds / 60)
@@ -120,7 +172,25 @@ Item {
         loadModel.append({ direction: "反转", brakeCurrent: "--", torque: "--", limit: "≥ 1.20 N·m", result: "待测" })
     }
 
+    function updateCurrentPhaseIndex() {
+        const phaseName = root.phaseTitle
+        if (phaseName.includes("准备") || phaseName.includes("找零") || phaseName.includes("Homing"))
+            currentPhaseIndex = 0
+        else if (phaseName.includes("空载") || phaseName.includes("Idle"))
+            currentPhaseIndex = 1
+        else if (phaseName.includes("角度") || phaseName.includes("Angle"))
+            currentPhaseIndex = 2
+        else if (phaseName.includes("负载") || phaseName.includes("Load"))
+            currentPhaseIndex = 3
+        else if (phaseName.includes("回零") || phaseName.includes("Return"))
+            currentPhaseIndex = 4
+        else
+            currentPhaseIndex = -1
+    }
+
     function stepStateForIndex(index) {
+        if (currentPhaseIndex < 0)
+            return "wait"
         if (index < currentPhaseIndex)
             return "done"
         if (index === currentPhaseIndex)
@@ -142,47 +212,18 @@ Item {
             array.shift()
     }
 
-    function updateAngleTable() {
-        const targetValues = [3.0, 49.0, 3.0, 113.5, 0.0]
-        for (let i = 0; i < angleModel.count; ++i) {
-            const actual = targetValues[i] + Math.sin(elapsedSeconds + i) * 0.8
-            angleModel.setProperty(i, "currentAngle", Number(actual).toFixed(1) + "°")
-            angleModel.setProperty(i, "deviation", (actual - targetValues[i]).toFixed(1) + "°")
-            angleModel.setProperty(i, "result", Math.abs(actual - targetValues[i]) <= 3 ? "OK" : "NG")
-        }
-    }
-
-    function updateLoadTable() {
-        const forwardTorque = 1.38 + Math.sin(elapsedSeconds * 0.5) * 0.12
-        const reverseTorque = 1.42 + Math.cos(elapsedSeconds * 0.5) * 0.10
-        loadModel.setProperty(0, "brakeCurrent", (0.82 + Math.sin(elapsedSeconds) * 0.04).toFixed(2) + " A")
-        loadModel.setProperty(0, "torque", forwardTorque.toFixed(2) + " N·m")
-        loadModel.setProperty(0, "result", forwardTorque >= 1.2 ? "OK" : "NG")
-        loadModel.setProperty(1, "brakeCurrent", (0.85 + Math.cos(elapsedSeconds) * 0.03).toFixed(2) + " A")
-        loadModel.setProperty(1, "torque", reverseTorque.toFixed(2) + " N·m")
-        loadModel.setProperty(1, "result", reverseTorque >= 1.2 ? "OK" : "NG")
-    }
-
     function resetRun() {
-        running = false
         currentPhaseIndex = -1
-        elapsedSeconds = 0
         phaseElapsedSeconds = 0
-        speedValue = 0
-        torqueValue = 0
-        powerValue = 0
-        motorCurrentValue = 0
-        brakeCurrentValue = 0
-        angleValue = 0
-        ai1Value = 0
-        ai2Value = 0
-        verdictState = "pending"
-        verdictText = "待测试"
         chartSpeed = []
         chartTorque = []
         chartCurrent = []
         chartAngle = []
         initializeModels()
+        
+        if (viewModel) {
+            viewModel.resetTest()
+        }
     }
 
     function startRun() {
@@ -192,37 +233,34 @@ Item {
             return
         }
 
+        if (!viewModel) {
+            infoText = "ViewModel 未连接，无法启动测试"
+            infoType = "error"
+            return
+        }
+
+        const backlashDeg = Number(commandBar.backlashValue)
+        if (commandBar.backlashValue !== "" && Number.isNaN(backlashDeg)) {
+            infoText = "回差补偿必须是数字"
+            infoType = "error"
+            return
+        }
+
         resetRun()
-        running = true
-        currentPhaseIndex = 0
-        infoText = "测试开始，进入 " + phaseTitle
-        infoType = "success"
-        applyStepStates()
-        simulationTimer.start()
+        viewModel.loadRecipe(commandBar.modelText)
+        viewModel.selectedModel = commandBar.modelText
+        viewModel.setSerialNumber(commandBar.serialNumber)
+        viewModel.backlashCompensationDeg = Number.isNaN(backlashDeg) ? 0 : backlashDeg
+        viewModel.startTest()
     }
 
     function stopRun() {
-        running = false
-        simulationTimer.stop()
+        if (viewModel) {
+            viewModel.stopTest()
+        }
         infoText = "急停触发，测试已中断"
         infoType = "error"
         applyStepStates()
-    }
-
-    function finishRun() {
-        running = false
-        simulationTimer.stop()
-        currentPhaseIndex = stepModel.count - 1
-        phaseElapsedSeconds = phaseDurations[currentPhaseIndex]
-        applyStepStates()
-        verdictState = "ok"
-        verdictText = "OK"
-        infoText = "测试完成，整机判定 OK"
-        infoType = "success"
-        speedValue = 0
-        torqueValue = 0
-        powerValue = 0
-        motorCurrentValue = 0
     }
 
     function toggleChannel(channelName) {
@@ -236,83 +274,21 @@ Item {
             angleChannelOn = !angleChannelOn
     }
 
-    function simulateTick() {
-        elapsedSeconds += 0.1
-        phaseElapsedSeconds += 0.1
-
-        if (currentPhaseIndex === 0) {
-            speedValue = 180 + Math.sin(elapsedSeconds * 1.4) * 22
-            motorCurrentValue = 0.42 + Math.sin(elapsedSeconds * 0.9) * 0.08
-            torqueValue = 0.10 + Math.cos(elapsedSeconds) * 0.02
-            brakeCurrentValue = 0
-            angleValue = Math.max(0, 30 - phaseElapsedSeconds * 8.0)
-        } else if (currentPhaseIndex === 1) {
-            speedValue = 1240 + Math.sin(elapsedSeconds * 1.8) * 42
-            motorCurrentValue = 2.14 + Math.cos(elapsedSeconds) * 0.14
-            torqueValue = 0.31 + Math.sin(elapsedSeconds * 1.3) * 0.06
-            brakeCurrentValue = 0
-            angleValue = (angleValue + 2.6) % 360
-        } else if (currentPhaseIndex === 2) {
-            speedValue = 340 + Math.sin(elapsedSeconds * 2.1) * 60
-            motorCurrentValue = 1.62 + Math.sin(elapsedSeconds * 1.5) * 0.22
-            torqueValue = 0.48 + Math.cos(elapsedSeconds) * 0.08
-            brakeCurrentValue = 0
-            angleValue = 58 + Math.sin(elapsedSeconds * 0.6) * 55
-            updateAngleTable()
-        } else if (currentPhaseIndex === 3) {
-            speedValue = 740 + Math.sin(elapsedSeconds * 1.6) * 85
-            motorCurrentValue = 2.86 + Math.sin(elapsedSeconds * 1.4) * 0.18
-            torqueValue = 1.38 + Math.cos(elapsedSeconds * 0.8) * 0.18
-            brakeCurrentValue = 0.82 + Math.sin(elapsedSeconds) * 0.04
-            angleValue = (angleValue + 1.1) % 360
-            updateLoadTable()
-        } else if (currentPhaseIndex === 4) {
-            speedValue = Math.max(0, 160 - phaseElapsedSeconds * 48)
-            motorCurrentValue = Math.max(0, 0.42 - phaseElapsedSeconds * 0.10)
-            torqueValue = Math.max(0, 0.12 - phaseElapsedSeconds * 0.03)
-            brakeCurrentValue = 0
-            angleValue = Math.max(0, 12 - phaseElapsedSeconds * 4.0)
-        }
-
-        powerValue = Math.max(0, torqueValue * speedValue * Math.PI / 30.0)
-        ai1Value = running && currentPhaseIndex >= 2 ? 1.0 : 0.0
-        ai2Value = running && currentPhaseIndex >= 3 ? 1.0 : 0.0
-
-        appendPoint(chartSpeed, speedValue)
-        appendPoint(chartTorque, torqueValue)
-        appendPoint(chartCurrent, motorCurrentValue)
-        appendPoint(chartAngle, angleValue)
-        applyStepStates()
-
-        if (phaseElapsedSeconds >= phaseDurations[currentPhaseIndex]) {
-            stepModel.setProperty(currentPhaseIndex, "state", "done")
-            stepModel.setProperty(currentPhaseIndex, "elapsed", formatSeconds(phaseDurations[currentPhaseIndex]))
-            currentPhaseIndex += 1
-            phaseElapsedSeconds = 0
-
-            if (currentPhaseIndex >= stepModel.count) {
-                finishRun()
-                return
-            }
-
-            stepModel.setProperty(currentPhaseIndex, "state", "run")
-            infoText = "阶段切换到 " + stepModel.get(currentPhaseIndex).name
-            infoType = "warning"
-        }
-    }
-
-    Timer {
-        id: simulationTimer
-        interval: 100
-        repeat: true
-        running: false
-        onTriggered: root.simulateTick()
-    }
-
     Component.onCompleted: {
-        commandBar.serialNumber = "GBX42A-20260415-001"
+        commandBar.serialNumber = "GBX42A-20260417-001"
         commandBar.backlashValue = "1.2"
-        resetRun()
+        initializeModels()
+        
+        if (!viewModel) {
+            console.warn("TestExecutionPage: testViewModel not found in context")
+            infoText = "警告：ViewModel 未连接，UI 将无法控制测试"
+            infoType = "warning"
+        } else {
+            console.log("TestExecutionPage: Connected to testViewModel")
+            commandBar.modelIndex = 0
+            viewModel.loadRecipe(commandBar.modelText)
+            updateCurrentPhaseIndex()
+        }
     }
 
     Rectangle {

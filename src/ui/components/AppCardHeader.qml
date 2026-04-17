@@ -8,8 +8,9 @@ Item {
 
     required property AppTheme theme
     property alias content: gridLayout.data
-
-    implicitWidth: parent.width
+    width: parent ? parent.width : implicitWidth
+    height: implicitHeight
+    implicitWidth: parent ? parent.width : gridLayout.implicitWidth + 24
     implicitHeight: gridLayout.implicitHeight + 24
 
     GridLayout {

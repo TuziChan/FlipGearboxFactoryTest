@@ -72,9 +72,8 @@ Rectangle {
                     visible: root.title.length > 0
                     text: root.title
                     color: root.accentColor
-                    font.pixelSize: 13
-                    font.bold: true
-                    font.letterSpacing: -0.2
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
                     elide: Text.ElideRight
                     maximumLineCount: 1
                     wrapMode: Text.NoWrap
@@ -86,7 +85,7 @@ Rectangle {
                     visible: root.description.length > 0
                     text: root.description
                     color: root.destructiveVariant ? Qt.rgba(root.theme.danger.r, root.theme.danger.g, root.theme.danger.b, 0.9) : root.theme.textSecondary
-                    font.pixelSize: 12
+                    font.pixelSize: 14
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                 }

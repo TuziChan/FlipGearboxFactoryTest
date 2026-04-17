@@ -1,4 +1,4 @@
-import QtQuick
+﻿import QtQuick
 
 QtObject {
     id: root
@@ -146,6 +146,8 @@ QtObject {
     readonly property color accentForeground: _palette.accentForeground || _palette.primaryForeground
     readonly property color accentHover: _palette.primary
     readonly property color bgColor: _palette.background
+    readonly property color background: _palette.background
+    readonly property color bgSecondary: _palette.secondary
     readonly property color cardColor: _palette.card
     readonly property color navColor: _palette.sidebar
     readonly property color panelColor: darkMode ? Qt.darker(_palette.sidebar, 1.08) : Qt.lighter(_palette.sidebar, 1.02)
@@ -158,6 +160,11 @@ QtObject {
     readonly property color textPrimary: _palette.foreground
     readonly property color textSecondary: _palette.mutedForeground
     readonly property color textMuted: darkMode ? Qt.lighter(_palette.mutedForeground, 1.05) : _palette.mutedForeground
+
+    readonly property color bgPopover: _palette.card
+    readonly property color bgMuted: _palette.muted
+    readonly property color mutedColor: _palette.muted
+    readonly property color ringColor: _palette.primary
 
     readonly property color ok: darkMode ? "#3CCF7A" : "#1F9A55"
     readonly property color okColor: ok

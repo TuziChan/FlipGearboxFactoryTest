@@ -8,7 +8,7 @@ FocusScope {
     property bool open: false
     property bool closeOnEscape: true
     property bool closeOnOverlayPress: false
-    property string variant: "destructive"
+    property string variant: "default"
     property string size: "default"
     property string title: ""
     property string description: ""
@@ -18,7 +18,7 @@ FocusScope {
     property bool cancelEnabled: true
     property string confirmButtonVariant: root.variant === "destructive" || root.variant === "danger" ? "destructive" : "default"
     property string cancelButtonVariant: "outline"
-    property real maximumWidth: root.size === "sm" ? 320 : 420
+    property real maximumWidth: root.size === "sm" ? 320 : 512
     default property alias content: bodyColumn.data
     property alias media: mediaSlot.data
     signal confirmed
@@ -165,7 +165,7 @@ FocusScope {
                         text: root.title
                         color: root.theme.textPrimary
                         font.pixelSize: 18
-                        font.bold: true
+                        font.weight: Font.DemiBold
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                     }
@@ -174,8 +174,8 @@ FocusScope {
                         objectName: root.objectName.length > 0 ? root.objectName + "Description" : ""
                         visible: root.description.length > 0
                         text: root.description
-                        color: root.theme.textSecondary
-                        font.pixelSize: 12
+                        color: root.theme.textMuted
+                        font.pixelSize: 14
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                     }

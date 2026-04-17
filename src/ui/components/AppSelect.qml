@@ -13,11 +13,33 @@ Column {
     property int currentIndex: 0
     property int highlightedIndex: currentIndex
     readonly property string currentText: itemTextAt(currentIndex)
+    property var currentValue: undefined
     property string size: "default"
     property string popupObjectName: ""
     signal activated(int index)
 
     spacing: 6
+
+    onCurrentIndexChanged: {
+        const item = itemAt(currentIndex)
+        if (item && typeof item === "object" && item.value !== undefined) {
+            root.currentValue = item.value
+        }
+    }
+
+    onCurrentValueChanged: {
+        if (root.currentValue === undefined)
+            return
+        for (let i = 0; i < itemCount(); i++) {
+            const item = itemAt(i)
+            if (item && typeof item === "object" && item.value === root.currentValue) {
+                if (root.currentIndex !== i) {
+                    root.currentIndex = i
+                }
+                return
+            }
+        }
+    }
 
     function itemCount() {
         if (Array.isArray(root.model))
@@ -95,6 +117,7 @@ Column {
 
     Rectangle {
         id: trigger
+        width: root.width > 0 ? root.width : implicitWidth
         implicitWidth: 160
         implicitHeight: root.size === "sm" ? 24 : 28
         radius: root.theme.radiusSmall

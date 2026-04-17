@@ -108,7 +108,7 @@ Rectangle {
                           ? root.theme.accent
                           : root.theme.textPrimary)
             font.pixelSize: root.size === "xs" ? 12 : 14
-            font.bold: true
+            font.weight: Font.Medium
             font.underline: root.linkVariant
         }
 
@@ -134,7 +134,7 @@ Rectangle {
                     ? root.theme.danger
                     : root.theme.textPrimary)
         font.pixelSize: 14
-        font.bold: true
+        font.weight: Font.Medium
     }
 
     AppIcon {

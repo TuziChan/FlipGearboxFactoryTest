@@ -13,17 +13,18 @@ Rectangle {
     radius: root.theme.radiusLarge
     color: root.theme.cardColor
     border.color: root.theme.dividerColor
-    implicitHeight: 88
+    border.width: 1
+    implicitHeight: 104
 
     Column {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 2
+        anchors.margins: 16
+        spacing: 6
 
         Text {
             text: root.label
             color: root.theme.textSecondary
-            font.pixelSize: 10
+            font.pixelSize: 11
             font.bold: true
         }
 
@@ -33,22 +34,23 @@ Rectangle {
             Text {
                 text: root.value
                 color: root.accentColor
-                font.pixelSize: 24
-                font.weight: Font.Light
+                font.pixelSize: 28
+                font.weight: Font.DemiBold
+                font.family: "Consolas"
             }
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.unit
                 color: root.theme.textSecondary
-                font.pixelSize: 12
+                font.pixelSize: 13
             }
         }
 
         Text {
             text: root.subtext
             color: root.theme.textMuted
-            font.pixelSize: 10
+            font.pixelSize: 11
         }
     }
 }

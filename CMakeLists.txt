@@ -10,12 +10,58 @@ set(CMAKE_AUTOUIC ON)
 
 include(CTest)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Test)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 SerialPort Test)
 
 qt_standard_project_setup(REQUIRES 6.10)
 
 qt_add_executable(appFlipGearboxFactoryTest
     main.cpp
+    assets/app.rc
+    # Infrastructure - Bus
+    src/infrastructure/bus/ModbusFrame.h
+    src/infrastructure/bus/ModbusFrame.cpp
+    src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/ModbusRtuBusController.h
+    src/infrastructure/bus/ModbusRtuBusController.cpp
+    # Infrastructure - Devices
+    src/infrastructure/devices/IMotorDriveDevice.h
+    src/infrastructure/devices/ITorqueSensorDevice.h
+    src/infrastructure/devices/IEncoderDevice.h
+    src/infrastructure/devices/IBrakePowerDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.cpp
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.h
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
+    src/infrastructure/devices/SingleTurnEncoderDevice.h
+    src/infrastructure/devices/SingleTurnEncoderDevice.cpp
+    src/infrastructure/devices/BrakePowerSupplyDevice.h
+    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
+    # Infrastructure - Config
+    src/infrastructure/config/AppConfig.h
+    src/infrastructure/config/StationConfig.h
+    src/infrastructure/config/RecipeConfig.h
+    src/infrastructure/config/RecipeConfig.cpp
+    src/infrastructure/config/ConfigLoader.h
+    src/infrastructure/config/ConfigLoader.cpp
+    src/infrastructure/config/DeviceConfigService.h
+    src/infrastructure/config/DeviceConfigService.cpp
+    src/infrastructure/config/StationRuntime.h
+    src/infrastructure/config/StationRuntime.cpp
+    src/infrastructure/config/StationRuntimeFactory.h
+    src/infrastructure/config/StationRuntimeFactory.cpp
+    # ViewModels
+    src/viewmodels/TestExecutionViewModel.h
+    src/viewmodels/TestExecutionViewModel.cpp
+    src/viewmodels/DiagnosticsViewModel.h
+    src/viewmodels/DiagnosticsViewModel.cpp
+    # Domain
+    src/domain/TelemetrySnapshot.h
+    src/domain/FailureReason.h
+    src/domain/TestRecipe.h
+    src/domain/TestResults.h
+    src/domain/TestRunState.h
+    src/domain/GearboxTestEngine.h
+    src/domain/GearboxTestEngine.cpp
 )
 
 qt_add_qml_module(appFlipGearboxFactoryTest
@@ -48,6 +94,13 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/AppCarousel.qml
         src/ui/components/AppBreadcrumb.qml
         src/ui/components/AppButtonGroup.qml
+        src/ui/components/AppCard.qml
+        src/ui/components/AppCardHeader.qml
+        src/ui/components/AppCardTitle.qml
+        src/ui/components/AppCardDescription.qml
+        src/ui/components/AppCardAction.qml
+        src/ui/components/AppCardContent.qml
+        src/ui/components/AppCardFooter.qml
         src/ui/components/AppCollapsible.qml
         src/ui/components/AppContextMenu.qml
         src/ui/components/AppField.qml
@@ -103,6 +156,30 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/pages/TestExecutionPage.qml
 )
 
+# Copy fonts to build directory (only when changed)
+set(FONT_FILES
+    ${CMAKE_SOURCE_DIR}/assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+    ${CMAKE_SOURCE_DIR}/assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+    ${CMAKE_SOURCE_DIR}/assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+    ${CMAKE_SOURCE_DIR}/assets/fonts/HarmonyOS_Sans_SC_Light.ttf
+)
+
+foreach(FONT_FILE ${FONT_FILES})
+    get_filename_component(FONT_NAME ${FONT_FILE} NAME)
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/fonts/${FONT_NAME}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${FONT_FILE}
+                ${CMAKE_BINARY_DIR}/fonts/${FONT_NAME}
+        DEPENDS ${FONT_FILE}
+        COMMENT "Copying font ${FONT_NAME}"
+    )
+    list(APPEND FONT_OUTPUTS ${CMAKE_BINARY_DIR}/fonts/${FONT_NAME})
+endforeach()
+
+add_custom_target(copy_fonts ALL DEPENDS ${FONT_OUTPUTS})
+add_dependencies(appFlipGearboxFactoryTest copy_fonts)
+
 set_target_properties(appFlipGearboxFactoryTest PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -114,6 +191,7 @@ target_link_libraries(appFlipGearboxFactoryTest
     PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
+        Qt6::SerialPort
 )
 
 qt_add_executable(QmlSmokeTests

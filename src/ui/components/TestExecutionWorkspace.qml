@@ -36,17 +36,22 @@ Item {
     required property var onCopyReport
     required property var onResetRequested
 
+    function statusColor(active) {
+        return active ? root.theme.okColor : root.theme.textMuted
+    }
+
     RowLayout {
         anchors.fill: parent
-        spacing: 0
+        anchors.margins: 12
+        spacing: 16
 
         SectionCard {
             objectName: "phasePanel"
-            Layout.preferredWidth: root.hostWidth < 1500 ? 214 : 236
+            Layout.preferredWidth: root.hostWidth < 1500 ? 244 : 268
             Layout.fillHeight: true
             theme: root.theme
             title: "测试流程"
-            subtitle: root.running ? root.phaseTitle : "待机"
+            subtitle: root.running ? root.phaseTitle : "待机中"
 
             FlowList {
                 width: parent.width
@@ -95,55 +100,107 @@ Item {
                     width: parent.width - 24
                     x: 12
                     y: 12
-                    spacing: 12
+                    spacing: 16
 
-                    GridLayout {
-                        id: metricsGrid
-                        objectName: "metricsGrid"
+                    SectionCard {
                         Layout.fillWidth: true
-                        columns: root.hostWidth < 1550 ? 2 : 3
-                        columnSpacing: 10
-                        rowSpacing: 10
+                        theme: root.theme
+                        title: "测试概览"
+                        subtitle: "核心实时指标与当前运行状态"
 
-                        Repeater {
-                            model: ["转速", "扭矩", "功率", "电机电流", "制动电流", "角度"]
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: 16
 
-                            delegate: MetricCard {
-                                required property string modelData
+                            GridLayout {
+                                width: parent.width
+                                columns: 3
+                                columnSpacing: 12
+                                rowSpacing: 12
 
-                                Layout.fillWidth: true
-                                theme: root.theme
-                                label: modelData
-                                value: root.metricValueProvider(modelData)
-                                unit: root.metricUnitProvider(modelData)
-                                subtext: modelData === "角度" ? root.phaseTitle : "采样周期 100 ms"
-                                accentColor: root.metricColorProvider(modelData)
+                                Repeater {
+                                    model: ["转速", "扭矩", "角度"]
+
+                                    delegate: MetricCard {
+                                        required property string modelData
+                                        Layout.fillWidth: true
+                                        theme: root.theme
+                                        label: modelData
+                                        value: root.metricValueProvider(modelData)
+                                        unit: root.metricUnitProvider(modelData)
+                                        subtext: modelData === "角度" ? root.phaseTitle : "核心指标"
+                                        accentColor: root.metricColorProvider(modelData)
+                                    }
+                                }
+                            }
+
+                            GridLayout {
+                                width: parent.width
+                                columns: 3
+                                columnSpacing: 12
+                                rowSpacing: 12
+
+                                Repeater {
+                                    model: ["功率", "电机电流", "制动电流"]
+
+                                    delegate: MetricCard {
+                                        required property string modelData
+                                        Layout.fillWidth: true
+                                        theme: root.theme
+                                        label: modelData
+                                        value: root.metricValueProvider(modelData)
+                                        unit: root.metricUnitProvider(modelData)
+                                        subtext: "采样周期 100 ms"
+                                        accentColor: root.metricColorProvider(modelData)
+                                    }
+                                }
                             }
                         }
                     }
 
-                    DataTableCard {
-                        visible: root.currentPhaseIndex === 2
-                                 || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
+                    SectionCard {
                         Layout.fillWidth: true
                         theme: root.theme
-                        headers: ["目标位", "目标角度", "当前角度", "偏差", "公差", "判定"]
-                        rowModel: root.angleModel
-                        columnKeys: ["target", "targetAngle", "currentAngle", "deviation", "tolerance", "result"]
-                        resultKey: "result"
-                        pendingText: "待测"
-                    }
+                        title: "运行状态"
+                        subtitle: "当前阶段、传感器与时间摘要"
 
-                    DataTableCard {
-                        visible: root.currentPhaseIndex === 3
-                                 || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
-                        Layout.fillWidth: true
-                        theme: root.theme
-                        headers: ["方向", "制动电流", "锁止扭矩", "下限", "判定"]
-                        rowModel: root.loadModel
-                        columnKeys: ["direction", "brakeCurrent", "torque", "limit", "result"]
-                        resultKey: "result"
-                        pendingText: "待测"
+                        GridLayout {
+                            width: parent.width
+                            columns: 4
+                            columnSpacing: 16
+                            rowSpacing: 10
+
+                            Repeater {
+                                model: [
+                                    { label: "当前阶段", value: root.phaseTitle },
+                                    { label: "总耗时", value: root.totalTimeText },
+                                    { label: "AI1", value: root.ai1Value > 0.5 ? "ON" : "--", active: root.ai1Value > 0.5 },
+                                    { label: "AI2", value: root.ai2Value > 0.5 ? "ON" : "--", active: root.ai2Value > 0.5 }
+                                ]
+
+                                delegate: Column {
+                                    required property var modelData
+                                    spacing: 4
+
+                                    Text {
+                                        text: parent.modelData.label
+                                        color: root.theme.textSecondary
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: parent.modelData.value
+                                        color: parent.modelData.active !== undefined
+                                               ? root.statusColor(parent.modelData.active)
+                                               : root.theme.textPrimary
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        font.family: parent.modelData.label === "总耗时" ? "Consolas" : ""
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     ChartPanel {
@@ -159,6 +216,46 @@ Item {
                         currentChannelOn: root.currentChannelOn
                         angleChannelOn: root.angleChannelOn
                         onToggleChannel: root.onToggleChannel
+                    }
+
+                    SectionCard {
+                        visible: root.currentPhaseIndex === 2
+                                 || root.currentPhaseIndex === 3
+                                 || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
+                                 || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
+                        Layout.fillWidth: true
+                        theme: root.theme
+                        title: "阶段明细"
+                        subtitle: root.currentPhaseIndex === 3 ? "负载测试结果" : "角度定位结果"
+
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: 12
+
+                            DataTableCard {
+                                visible: root.currentPhaseIndex === 2
+                                         || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
+                                width: parent.width
+                                theme: root.theme
+                                headers: ["目标位", "目标角度", "当前角度", "偏差", "公差", "判定"]
+                                rowModel: root.angleModel
+                                columnKeys: ["target", "targetAngle", "currentAngle", "deviation", "tolerance", "result"]
+                                resultKey: "result"
+                                pendingText: "待测"
+                            }
+
+                            DataTableCard {
+                                visible: root.currentPhaseIndex === 3
+                                         || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
+                                width: parent.width
+                                theme: root.theme
+                                headers: ["方向", "制动电流", "锁止扭矩", "下限", "判定"]
+                                rowModel: root.loadModel
+                                columnKeys: ["direction", "brakeCurrent", "torque", "limit", "result"]
+                                resultKey: "result"
+                                pendingText: "待测"
+                            }
+                        }
                     }
                 }
             }

@@ -7,8 +7,9 @@ Item {
 
     required property AppTheme theme
     property alias content: container.data
-
-    implicitWidth: parent.width
+    width: parent ? parent.width : implicitWidth
+    height: implicitHeight
+    implicitWidth: parent ? parent.width : container.childrenRect.width + 24
     implicitHeight: container.childrenRect.height + 24
 
     Item {

@@ -8,6 +8,8 @@ Rectangle {
     property string variant: "default"
     property string iconName: ""
     property bool focusable: false
+    readonly property bool successVariant: variant === "success"
+    readonly property bool warningVariant: variant === "warning"
 
     implicitHeight: 24
     implicitWidth: Math.max(52, label.implicitWidth + (icon.visible ? 32 : 24))
@@ -16,13 +18,25 @@ Rectangle {
            ? theme.surface
            : variant === "outline"
              ? theme.cardColor
+             : successVariant
+               ? theme.okWeak
+               : warningVariant
+                 ? theme.warnWeak
              : variant === "destructive"
                ? theme.dangerWeak
                : variant === "ghost"
                  ? "transparent"
                  : theme.accent
-    border.width: variant === "outline" ? 1 : 0
-    border.color: variant === "outline" ? theme.stroke : "transparent"
+    border.width: variant === "outline" || successVariant || warningVariant || variant === "destructive" ? 1 : 0
+    border.color: variant === "outline"
+                  ? theme.stroke
+                  : successVariant
+                    ? theme.okColor
+                    : warningVariant
+                      ? theme.warnColor
+                      : variant === "destructive"
+                        ? theme.danger
+                        : "transparent"
     focus: focusable
 
     Rectangle {
@@ -51,6 +65,10 @@ Rectangle {
             text: root.text
             color: root.variant === "default"
                    ? root.theme.primaryForeground
+                   : root.successVariant
+                     ? root.theme.okColor
+                     : root.warningVariant
+                       ? root.theme.warnColor
                    : root.variant === "destructive"
                      ? root.theme.danger
                      : root.variant === "secondary"

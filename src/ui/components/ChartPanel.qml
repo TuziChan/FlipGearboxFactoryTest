@@ -22,7 +22,8 @@ Rectangle {
     radius: root.theme.radiusLarge
     color: root.theme.cardColor
     border.color: root.theme.dividerColor
-    implicitHeight: 286
+    border.width: 1
+    implicitHeight: 320
 
     function drawSeries(ctx, values, maxValue, color) {
         if (!values || values.length < 2)
@@ -44,8 +45,8 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 10
+        anchors.margins: 16
+        spacing: 12
 
         RowLayout {
             Layout.fillWidth: true
@@ -71,14 +72,18 @@ Rectangle {
                     radius: 11
                     color: modelData.enabled ? root.theme.accentLight : root.theme.sectionColor
                     border.color: modelData.enabled ? root.theme.accent : root.theme.dividerColor
-                    implicitHeight: 24
-                    implicitWidth: 68
+                    border.width: 1
+                    implicitHeight: 26
+                    implicitWidth: 72
 
-                    Row {
-                        anchors.centerIn: parent
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
                         spacing: 5
 
                         Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
                             width: 8
                             height: 8
                             radius: 4
@@ -86,6 +91,7 @@ Rectangle {
                         }
 
                         Text {
+                            Layout.alignment: Qt.AlignVCenter
                             text: modelData.label
                             color: modelData.enabled ? root.theme.accent : root.theme.textSecondary
                             font.pixelSize: 10
@@ -103,42 +109,72 @@ Rectangle {
             Item { Layout.fillWidth: true }
 
             Text {
-                text: root.running ? "采样中" : "待机"
+                text: root.running ? "采样中" : "尚未开始"
                 color: root.running ? root.theme.accent : root.theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: 11
                 font.bold: root.running
             }
         }
-
-        Canvas {
-            id: chartCanvas
+        Rectangle {
+            id: chartFrame
             Layout.fillWidth: true
             Layout.fillHeight: true
+            radius: root.theme.radiusMedium
+            color: root.theme.bgSecondary
+            border.color: root.theme.dividerColor
 
-            onPaint: {
-                const ctx = getContext("2d")
-                ctx.reset()
-                ctx.fillStyle = "#FFFFFF"
-                ctx.fillRect(0, 0, width, height)
+            Canvas {
+                id: chartCanvas
+                anchors.fill: parent
+                anchors.margins: 12
 
-                ctx.strokeStyle = "#E8E8E8"
-                ctx.lineWidth = 1
-                for (let i = 0; i < 5; ++i) {
-                    const y = i / 4 * (height - 20)
-                    ctx.beginPath()
-                    ctx.moveTo(0, y)
-                    ctx.lineTo(width, y)
-                    ctx.stroke()
+                onPaint: {
+                    const ctx = getContext("2d")
+                    ctx.reset()
+                    ctx.fillStyle = root.theme.bgSecondary
+                    ctx.fillRect(0, 0, width, height)
+
+                    ctx.strokeStyle = "#E8E8E8"
+                    ctx.lineWidth = 1
+                    for (let i = 0; i < 5; ++i) {
+                        const y = i / 4 * (height - 20)
+                        ctx.beginPath()
+                        ctx.moveTo(0, y)
+                        ctx.lineTo(width, y)
+                        ctx.stroke()
+                    }
+
+                    if (root.speedChannelOn)
+                        root.drawSeries(ctx, root.speedData, 1600, "#0078D4")
+                    if (root.torqueChannelOn)
+                        root.drawSeries(ctx, root.torqueData, 2.0, "#E74856")
+                    if (root.currentChannelOn)
+                        root.drawSeries(ctx, root.currentData, 4.0, "#FF8C00")
+                    if (root.angleChannelOn)
+                        root.drawSeries(ctx, root.angleData, 180.0, "#16C60C")
+                }
+            }
+
+            Column {
+                anchors.centerIn: parent
+                visible: !root.running && root.speedData.length === 0 && root.torqueData.length === 0
+                         && root.currentData.length === 0 && root.angleData.length === 0
+                spacing: 6
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "尚未开始测试"
+                    color: root.theme.textPrimary
+                    font.pixelSize: 14
+                    font.bold: true
                 }
 
-                if (root.speedChannelOn)
-                    root.drawSeries(ctx, root.speedData, 1600, "#0078D4")
-                if (root.torqueChannelOn)
-                    root.drawSeries(ctx, root.torqueData, 2.0, "#E74856")
-                if (root.currentChannelOn)
-                    root.drawSeries(ctx, root.currentData, 4.0, "#FF8C00")
-                if (root.angleChannelOn)
-                    root.drawSeries(ctx, root.angleData, 180.0, "#16C60C")
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "点击“开始测试”后显示实时波形和采样曲线"
+                    color: root.theme.textMuted
+                    font.pixelSize: 11
+                }
             }
         }
     }
