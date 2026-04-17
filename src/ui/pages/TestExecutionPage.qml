@@ -34,7 +34,7 @@ Item {
     property bool torqueChannelOn: true
     property bool currentChannelOn: false
     property bool angleChannelOn: true
-    property var phaseDurations: [4.0, 12.0, 12.5, 10.0, 3.0]
+    property var phaseDurations: []
     property var chartSpeed: []
     property var chartTorque: []
     property var chartCurrent: []
@@ -149,12 +149,12 @@ Item {
             stepModel.append(steps[i])
 
         angleModel.clear()
-        const angleRows = [
+        var angleRows = [
             ["①", "3.0°", "--", "--", "±3.0°", "待测"],
             ["②", "49.0°", "--", "--", "±3.0°", "待测"],
             ["①", "3.0°", "--", "--", "±3.0°", "待测"],
             ["③", "113.5°", "--", "--", "±3.0°", "待测"],
-            ["零", "0.0°", "--", "--", "±3.0°", "待测"]
+            ["零", "0.0°", "--", "--", "±1.0°", "待测"]
         ]
         for (let j = 0; j < angleRows.length; ++j) {
             angleModel.append({
@@ -168,8 +168,8 @@ Item {
         }
 
         loadModel.clear()
-        loadModel.append({ direction: "正转", brakeCurrent: "--", torque: "--", limit: "≥ 1.20 N·m", result: "待测" })
-        loadModel.append({ direction: "反转", brakeCurrent: "--", torque: "--", limit: "≥ 1.20 N·m", result: "待测" })
+        loadModel.append({ direction: "正转", brakeCurrent: "--", torque: "--", limit: "-- N·m", result: "待测" })
+        loadModel.append({ direction: "反转", brakeCurrent: "--", torque: "--", limit: "-- N·m", result: "待测" })
     }
 
     function updateCurrentPhaseIndex() {
@@ -275,8 +275,8 @@ Item {
     }
 
     Component.onCompleted: {
-        commandBar.serialNumber = "GBX42A-20260417-001"
-        commandBar.backlashValue = "1.2"
+        commandBar.serialNumber = ""
+        commandBar.backlashValue = ""
         initializeModels()
         
         if (!viewModel) {

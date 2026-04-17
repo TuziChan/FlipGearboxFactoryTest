@@ -11,6 +11,7 @@ GearboxTestEngine::GearboxTestEngine(QObject* parent)
     , m_torque(nullptr)
     , m_encoder(nullptr)
     , m_brake(nullptr)
+    , m_acquisitionScheduler(nullptr)
     , m_recipe()
     , m_brakeChannel(1)
     , m_state()
@@ -39,6 +40,10 @@ void GearboxTestEngine::setDevices(Infrastructure::Devices::IMotorDriveDevice* m
     m_torque = torque;
     m_encoder = encoder;
     m_brake = brake;
+}
+
+void GearboxTestEngine::setAcquisitionScheduler(Infrastructure::Acquisition::AcquisitionScheduler* scheduler) {
+    m_acquisitionScheduler = scheduler;
 }
 
 void GearboxTestEngine::setRecipe(const TestRecipe& recipe) {
@@ -154,33 +159,33 @@ void GearboxTestEngine::onCycleTick() {
 // Helper methods implementation
 
 bool GearboxTestEngine::acquireTelemetry(TelemetrySnapshot& snapshot) {
+    if (m_acquisitionScheduler && m_acquisitionScheduler->isRunning()) {
+        snapshot = m_acquisitionScheduler->snapshot();
+        return true;
+    }
+
     snapshot.timestamp = QDateTime::currentDateTime();
 
-    // Read motor current
     if (!m_motor->readCurrent(snapshot.motorCurrentA)) {
         qWarning() << "Failed to read motor current:" << m_motor->lastError();
         return false;
     }
 
-    // Read AI1 level
     if (!m_motor->readAI1Level(snapshot.aqmdAi1Level)) {
         qWarning() << "Failed to read AI1 level:" << m_motor->lastError();
         return false;
     }
 
-    // Read torque sensor data
     if (!m_torque->readAll(snapshot.dynTorqueNm, snapshot.dynSpeedRpm, snapshot.dynPowerW)) {
         qWarning() << "Failed to read torque sensor:" << m_torque->lastError();
         return false;
     }
 
-    // Read encoder angle
     if (!m_encoder->readAngle(snapshot.encoderAngleDeg)) {
         qWarning() << "Failed to read encoder:" << m_encoder->lastError();
         return false;
     }
 
-    // Read brake current
     if (!m_brake->readCurrent(m_brakeChannel, snapshot.brakeCurrentA)) {
         qWarning() << "Failed to read brake current:" << m_brake->lastError();
         return false;

@@ -14,7 +14,7 @@ TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRu
     , m_currentRecipe(Infrastructure::Config::RecipeConfig::createDefault())
     , m_running(false)
     , m_serialNumber()
-    , m_selectedModel("GBX-42A")
+    , m_selectedModel("")
     , m_backlashCompensationDeg(0.0)
     , m_currentPhase("Idle")
     , m_statusMessage("Ready")
@@ -30,7 +30,9 @@ TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRu
     , m_overallVerdict("Pending")
     , m_testPassed(false)
 {
-    loadRecipe(m_selectedModel);
+    if (!m_selectedModel.isEmpty()) {
+        loadRecipe(m_selectedModel);
+    }
 
     if (m_runtime && m_runtime->testEngine()) {
         connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::stateChanged,

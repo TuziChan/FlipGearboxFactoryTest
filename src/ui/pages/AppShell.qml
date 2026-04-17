@@ -16,6 +16,28 @@ Item {
                                       ? navModel.get(activeNavIndex).title
                                       : ""
 
+    readonly property var devStatuses: {
+        if (typeof diagnosticsViewModel !== 'undefined' && diagnosticsViewModel && diagnosticsViewModel.deviceStatuses.length > 0) {
+            return diagnosticsViewModel.deviceStatuses
+        }
+        return [
+            { name: "AQMD 电机驱动器", status: "offline" },
+            { name: "DYN200 扭矩传感器", status: "offline" },
+            { name: "单圈绝对值编码器", status: "offline" },
+            { name: "制动电源", status: "offline" }
+        ]
+    }
+    readonly property bool allDevicesOnline: {
+        if (devStatuses.length === 0) return false
+        for (var i = 0; i < devStatuses.length; i++) {
+            if (devStatuses[i].status !== "online") return false
+        }
+        return true
+    }
+    readonly property string connText: devStatuses.length > 0
+                                       ? (allDevicesOnline ? "所有设备在线" : "设备离线")
+                                       : ""
+
     function selectNav(index) {
         if (index < 0 || index >= navModel.count)
             return false
@@ -69,6 +91,8 @@ Item {
                 Layout.fillWidth: true
                 theme: theme
                 pageTitle: root.currentPageTitle
+                connectionText: root.connText
+                isConnected: root.allDevicesOnline
             }
 
             RowLayout {
@@ -111,13 +135,14 @@ Item {
             Components.BottomStatusBar {
                 Layout.fillWidth: true
                 theme: theme
-                items: [
-                    { name: "CAN 心跳" },
-                    { name: "DYN200" },
-                    { name: "AQMD" },
-                    { name: "编码器" },
-                    { name: "磁粉制动" }
-                ]
+                items: {
+                    var result = [];
+                    for (var i = 0; i < root.devStatuses.length; i++) {
+                        var d = root.devStatuses[i];
+                        result.push({ name: d.name, online: d.status === "online" });
+                    }
+                    return result;
+                }
                 clockText: Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss")
             }
         }

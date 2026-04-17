@@ -64,6 +64,21 @@ std::unique_ptr<StationRuntime> StationRuntimeFactory::create(const StationConfi
         runtime->m_brake.get()
     );
 
+    runtime->m_acquisitionScheduler = std::make_unique<Acquisition::AcquisitionScheduler>(runtime.get());
+    if (runtime->m_motor) {
+        runtime->m_acquisitionScheduler->setMotorDevice(runtime->m_motor.get(), config.aqmdConfig.pollIntervalUs);
+    }
+    if (runtime->m_torque) {
+        runtime->m_acquisitionScheduler->setTorqueDevice(runtime->m_torque.get(), config.dyn200Config.pollIntervalUs);
+    }
+    if (runtime->m_encoder) {
+        runtime->m_acquisitionScheduler->setEncoderDevice(runtime->m_encoder.get(), config.encoderConfig.pollIntervalUs);
+    }
+    if (runtime->m_brake) {
+        runtime->m_acquisitionScheduler->setBrakeDevice(runtime->m_brake.get(), config.brakeChannel, config.brakeConfig.pollIntervalUs);
+    }
+    runtime->m_testEngine->setAcquisitionScheduler(runtime->m_acquisitionScheduler.get());
+
     qDebug() << "Station runtime created successfully";
     return runtime;
 }

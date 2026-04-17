@@ -11,120 +11,72 @@ Item {
 
     required property Components.AppTheme theme
 
-    property string selectedRecordId: ""
+    property int selectedRecordIndex: -1
     property string searchText: ""
     property string filterVerdict: "all"
     property string filterDateRange: "all"
+
+    function currentRecord() {
+        if (selectedRecordIndex >= 0 && selectedRecordIndex < historyModel.count)
+            return historyModel.get(selectedRecordIndex)
+        return null
+    }
 
     ListModel {
         id: historyModel
 
         Component.onCompleted: {
-            append({
-                id: "REC-20260417-001",
-                serialNumber: "GBX42A-20260417-001",
-                recipeName: "GBX-42A 标准配方",
-                verdict: "PASS",
-                startTime: "2026-04-17 14:25:30",
-                endTime: "2026-04-17 14:27:15",
-                duration: "1:45",
-                operator: "张三",
-                idleForwardCurrent: "0.65",
-                idleReverseCurrent: "0.68",
-                loadForwardTorque: "1.35",
-                loadReverseTorque: "1.42"
-            })
-
-            append({
-                id: "REC-20260417-002",
-                serialNumber: "GBX42A-20260417-002",
-                recipeName: "GBX-42A 标准配方",
-                verdict: "FAIL",
-                startTime: "2026-04-17 14:30:10",
-                endTime: "2026-04-17 14:31:45",
-                duration: "1:35",
-                operator: "张三",
-                idleForwardCurrent: "0.92",
-                idleReverseCurrent: "0.88",
-                loadForwardTorque: "1.05",
-                loadReverseTorque: "1.12",
-                failureReason: "负载扭矩不足"
-            })
-
-            append({
-                id: "REC-20260417-003",
-                serialNumber: "GBX42A-20260417-003",
-                recipeName: "GBX-42A 标准配方",
-                verdict: "PASS",
-                startTime: "2026-04-17 14:35:20",
-                endTime: "2026-04-17 14:37:05",
-                duration: "1:45",
-                operator: "张三",
-                idleForwardCurrent: "0.58",
-                idleReverseCurrent: "0.62",
-                loadForwardTorque: "1.28",
-                loadReverseTorque: "1.38"
-            })
-
-            append({
-                id: "REC-20260417-004",
-                serialNumber: "GBX42B-20260417-001",
-                recipeName: "GBX-42B 高精度配方",
-                verdict: "PASS",
-                startTime: "2026-04-17 15:10:15",
-                endTime: "2026-04-17 15:12:20",
-                duration: "2:05",
-                operator: "李四",
-                idleForwardCurrent: "0.52",
-                idleReverseCurrent: "0.55",
-                loadForwardTorque: "1.62",
-                loadReverseTorque: "1.68"
-            })
-
-            append({
-                id: "REC-20260416-015",
-                serialNumber: "GBX42A-20260416-015",
-                recipeName: "GBX-42A 标准配方",
-                verdict: "FAIL",
-                startTime: "2026-04-16 16:45:30",
-                endTime: "2026-04-16 16:46:50",
-                duration: "1:20",
-                operator: "王五",
-                idleForwardCurrent: "0.75",
-                idleReverseCurrent: "0.78",
-                loadForwardTorque: "1.15",
-                loadReverseTorque: "0.98",
-                failureReason: "角度定位超差"
-            })
-        }
-    }
-
-    function selectRecord(recordId) {
-        selectedRecordId = recordId
-    }
-
-    function exportRecord() {
-        console.log("Export record:", selectedRecordId)
-    }
-
-    function exportAll() {
-        console.log("Export all records")
-    }
-
-    function deleteRecord() {
-        if (!selectedRecordId) return
-
-        for (let i = 0; i < historyModel.count; i++) {
-            if (historyModel.get(i).id === selectedRecordId) {
-                historyModel.remove(i)
-                selectedRecordId = ""
-                break
+            if (typeof historyService !== 'undefined' && historyService) {
+                var records = historyService.loadAll()
+                for (var i = 0; i < records.length; i++) {
+                    var r = records[i]
+                    append({
+                        id: r.id || "",
+                        serialNumber: r.serialNumber || "",
+                        recipeName: r.recipeName || "",
+                        verdict: r.verdict || "",
+                        startTime: r.startTime || "",
+                        endTime: r.endTime || "",
+                        duration: r.duration || "",
+                        operator: r.operator_ || r.operator || "",
+                        idleForwardCurrent: r.idleForwardCurrentAvg || "",
+                        idleReverseCurrent: r.idleReverseCurrentAvg || "",
+                        loadForwardTorque: r.loadForwardTorque || "",
+                        loadReverseTorque: r.loadReverseTorque || "",
+                        failureReason: r.failureReason || ""
+                    })
+                }
             }
         }
     }
 
+    function selectRecord(index) {
+        selectedRecordIndex = index
+    }
+
+    function exportRecord() {
+        var r = currentRecord()
+        if (r && typeof historyService !== 'undefined' && historyService) {
+            historyService.exportRecord(r.id, "exports/" + r.id + ".json")
+        }
+    }
+
+    function exportAll() {
+        if (typeof historyService !== 'undefined' && historyService) {
+            historyService.exportAll("exports/history_export.json")
+        }
+    }
+
+    function deleteRecord() {
+        if (selectedRecordIndex < 0) return
+        historyModel.remove(selectedRecordIndex)
+        selectedRecordIndex = -1
+    }
+
     function getFilteredModel() {
-        // TODO: 实现实际的过滤逻辑
+        if (typeof historyService !== 'undefined' && historyService) {
+            return historyService.filteredModel(filterVerdict, "", "")
+        }
         return historyModel
     }
 
@@ -244,6 +196,7 @@ Item {
                                 spacing: 8
 
                                 delegate: Rectangle {
+                                    required property int index
                                     required property string id
                                     required property string serialNumber
                                     required property string recipeName
@@ -255,13 +208,13 @@ Item {
                                     width: ListView.view.width
                                     height: 90
                                     radius: 6
-                                    color: root.selectedRecordId === id ? root.theme.accent + "20" : root.theme.bgSecondary
-                                    border.width: root.selectedRecordId === id ? 1 : 0
+                                    color: root.selectedRecordIndex === index ? root.theme.accent + "20" : root.theme.bgSecondary
+                                    border.width: root.selectedRecordIndex === index ? 1 : 0
                                     border.color: root.theme.accent
 
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: root.selectRecord(id)
+                                        onClicked: root.selectRecord(index)
                                     }
 
                                     RowLayout {

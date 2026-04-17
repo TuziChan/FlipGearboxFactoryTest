@@ -36,6 +36,11 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
     src/infrastructure/devices/BrakePowerSupplyDevice.h
     src/infrastructure/devices/BrakePowerSupplyDevice.cpp
+    # Infrastructure - Acquisition
+    src/infrastructure/acquisition/TelemetryBuffer.h
+    src/infrastructure/acquisition/DevicePoller.h
+    src/infrastructure/acquisition/AcquisitionScheduler.h
+    src/infrastructure/acquisition/AcquisitionScheduler.cpp
     # Infrastructure - Config
     src/infrastructure/config/AppConfig.h
     src/infrastructure/config/StationConfig.h
@@ -49,6 +54,9 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/config/StationRuntime.cpp
     src/infrastructure/config/StationRuntimeFactory.h
     src/infrastructure/config/StationRuntimeFactory.cpp
+    # Infrastructure - Services
+    src/infrastructure/services/HistoryService.h
+    src/infrastructure/services/HistoryService.cpp
     # ViewModels
     src/viewmodels/TestExecutionViewModel.h
     src/viewmodels/TestExecutionViewModel.cpp
@@ -211,6 +219,50 @@ target_link_libraries(QmlSmokeTests
 target_compile_definitions(QmlSmokeTests
     PRIVATE
         TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+
+qt_add_executable(TestExecutionVerification
+    tests/TestExecutionVerification.cpp
+    tests/mocks/MockDevices.h
+    src/domain/GearboxTestEngine.h
+    src/domain/GearboxTestEngine.cpp
+    src/domain/TelemetrySnapshot.h
+    src/domain/TestRunState.h
+    src/domain/TestRecipe.h
+    src/domain/TestResults.h
+    src/domain/FailureReason.h
+    src/infrastructure/config/StationConfig.h
+    src/infrastructure/config/ConfigLoader.h
+    src/infrastructure/config/ConfigLoader.cpp
+    src/infrastructure/config/RecipeConfig.h
+    src/infrastructure/config/RecipeConfig.cpp
+    src/infrastructure/devices/IMotorDriveDevice.h
+    src/infrastructure/devices/ITorqueSensorDevice.h
+    src/infrastructure/devices/IEncoderDevice.h
+    src/infrastructure/devices/IBrakePowerDevice.h
+    src/infrastructure/acquisition/TelemetryBuffer.h
+    src/infrastructure/acquisition/DevicePoller.h
+    src/infrastructure/acquisition/AcquisitionScheduler.h
+    src/infrastructure/acquisition/AcquisitionScheduler.cpp
+)
+
+set_target_properties(TestExecutionVerification PROPERTIES
+    WIN32_EXECUTABLE FALSE
+)
+
+target_include_directories(TestExecutionVerification PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(TestExecutionVerification
+    PRIVATE
+        Qt6::Test
+)
+
+add_test(
+    NAME TestExecutionVerification
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+        "QT_QPA_PLATFORM=offscreen"
+        $<TARGET_FILE:TestExecutionVerification> -o - -txt
 )
 
 set(QML_SMOKE_TEST_PATH "F:/Qt/6.11.0/mingw_64/bin;F:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}")

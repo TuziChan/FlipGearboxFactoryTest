@@ -27,6 +27,13 @@ bool BrakePowerSupplyDevice::initialize() {
         return false;
     }
 
+    QVector<uint16_t> modeValues;
+    if (readInputRegisters(0x0009, 1, modeValues)) {
+        if (modeValues[0] != 1) {
+            qWarning() << "Brake power supply NOT in CC mode (SW5 should be ON). Current settings will be auto-cleared by device.";
+        }
+    }
+
     qDebug() << "Brake power supply initialized, slave ID:" << m_slaveId;
     return true;
 }

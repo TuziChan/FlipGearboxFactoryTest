@@ -44,7 +44,7 @@ private:
     
     // Input registers for readback (would use 0x04 function code)
     static constexpr uint16_t REG_CH1_READ_CURRENT = 0x0001;  // ×0.01A
-    static constexpr uint16_t REG_CH2_READ_CURRENT = 0x0004;  // ×0.01A
+    static constexpr uint16_t REG_CH2_READ_CURRENT = 0x0005;  // ×0.01A
     
     // Coils for output enable (would use 0x01/0x05 function codes)
     static constexpr uint16_t COIL_CH1_OUTPUT_ENABLE = 0x0000;

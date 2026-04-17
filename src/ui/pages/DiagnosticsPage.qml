@@ -21,7 +21,7 @@ Item {
                                                             56 + deviceRows * deviceCardHeight + Math.max(0, deviceRows - 1) * deviceCardSpacing + 36)
 
     property bool autoRefresh: true
-    property int refreshInterval: 1000
+    property int refreshInterval: 2000
 
     Timer {
         id: refreshTimer

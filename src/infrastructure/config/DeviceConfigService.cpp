@@ -9,19 +9,41 @@
 namespace Infrastructure {
 namespace Config {
 
-DeviceConfigService::DeviceConfigService(const QString& stationConfigPath, QObject* parent)
+DeviceConfigService::DeviceConfigService(const QString& stationConfigPath,
+                                         const StationConfig& defaults,
+                                         QObject* parent)
     : QObject(parent)
     , m_stationConfigPath(stationConfigPath)
+    , m_defaultConfig(defaults)
     , m_lastError()
 {
 }
 
 QVariantMap DeviceConfigService::defaultDeviceConfig() const {
+    auto dc = [](const Infrastructure::Config::DeviceConfig& c) -> QVariantMap {
+        return {
+            {"portName", c.portName.isEmpty() ? QString() : c.portName},
+            {"baudRate", c.baudRate},
+            {"slaveId", static_cast<int>(c.slaveId)},
+            {"timeout", c.timeout},
+            {"parity", c.parity},
+            {"stopBits", c.stopBits},
+            {"enabled", c.enabled},
+            {"pollIntervalUs", c.pollIntervalUs}
+        };
+    };
+
+    auto encoderMap = dc(m_defaultConfig.encoderConfig);
+    encoderMap["resolution"] = static_cast<int>(m_defaultConfig.encoderConfig.encoderResolution);
+
+    auto brakeMap = dc(m_defaultConfig.brakeConfig);
+    brakeMap["channel"] = m_defaultConfig.brakeConfig.enabled ? 1 : 0;
+
     return {
-        {"aqmd", QVariantMap{{"portName", "COM3"}, {"baudRate", 9600}, {"slaveId", 1}, {"timeout", 1000}, {"parity", "None"}, {"stopBits", 1}, {"enabled", true}}},
-        {"dyn200", QVariantMap{{"portName", "COM4"}, {"baudRate", 9600}, {"slaveId", 2}, {"timeout", 1000}, {"parity", "None"}, {"stopBits", 1}, {"enabled", true}}},
-        {"encoder", QVariantMap{{"portName", "COM5"}, {"baudRate", 9600}, {"slaveId", 3}, {"timeout", 1000}, {"parity", "None"}, {"stopBits", 1}, {"resolution", 4096}, {"enabled", true}}},
-        {"brake", QVariantMap{{"portName", "COM6"}, {"baudRate", 9600}, {"slaveId", 4}, {"timeout", 1000}, {"parity", "None"}, {"stopBits", 1}, {"channel", 1}, {"enabled", true}}}
+        {"aqmd", dc(m_defaultConfig.aqmdConfig)},
+        {"dyn200", dc(m_defaultConfig.dyn200Config)},
+        {"encoder", encoderMap},
+        {"brake", brakeMap}
     };
 }
 
@@ -54,6 +76,7 @@ QVariantMap DeviceConfigService::loadDeviceConfig() const {
         if (deviceJson.contains("parity")) deviceMap["parity"] = deviceJson.value("parity").toString(deviceMap.value("parity").toString());
         if (deviceJson.contains("stopBits")) deviceMap["stopBits"] = deviceJson.value("stopBits").toInt(deviceMap.value("stopBits").toInt());
         if (deviceJson.contains("enabled")) deviceMap["enabled"] = deviceJson.value("enabled").toBool(deviceMap.value("enabled").toBool());
+        if (deviceJson.contains("pollIntervalUs")) deviceMap["pollIntervalUs"] = deviceJson.value("pollIntervalUs").toInt(deviceMap.value("pollIntervalUs").toInt());
         if (key == "encoder" && deviceJson.contains("resolution")) deviceMap["resolution"] = deviceJson.value("resolution").toInt(deviceMap.value("resolution").toInt());
         if (key == "brake" && deviceJson.contains("channel")) deviceMap["channel"] = deviceJson.value("channel").toInt(deviceMap.value("channel").toInt());
         result[key] = deviceMap;
@@ -89,6 +112,7 @@ bool DeviceConfigService::saveDeviceConfig(const QVariantMap& deviceConfig) {
         obj["parity"] = map.value("parity").toString();
         obj["stopBits"] = map.value("stopBits").toInt();
         obj["enabled"] = map.value("enabled", true).toBool();
+        if (map.contains("pollIntervalUs")) obj["pollIntervalUs"] = map.value("pollIntervalUs").toInt();
         if (key == "encoder") obj["resolution"] = map.value("resolution").toInt();
         if (key == "brake") {
             obj["channel"] = map.value("channel", 1).toInt();

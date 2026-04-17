@@ -11,120 +11,126 @@ Item {
 
     required property Components.AppTheme theme
 
-    property string selectedRecipeId: ""
+    property int selectedRecipeIndex: -1
     property bool isEditing: false
+
+    function currentRecipe() {
+        if (selectedRecipeIndex >= 0 && selectedRecipeIndex < recipeListModel.count)
+            return recipeListModel.get(selectedRecipeIndex)
+        return null
+    }
 
     ListModel {
         id: recipeListModel
 
         Component.onCompleted: {
-            // 默认配方数据
-            append({
-                id: "GBX-42A",
-                name: "GBX-42A 标准配方",
-                description: "42系列齿轮箱标准测试配方",
-                homeDutyCycle: 30.0,
-                idleDutyCycle: 40.0,
-                idleSpeedMin: 80.0,
-                idleSpeedMax: 120.0,
-                idleCurrentMax: 0.8,
-                loadDutyCycle: 50.0,
-                loadTorqueMin: 1.20,
-                brakeRampStep: 0.05,
-                brakeRampInterval: 100,
-                lockSpeedThreshold: 5.0,
-                lockDuration: 500,
-                anglePositions: "3.0, 49.0, 3.0, 113.5, 0.0",
-                angleTolerance: 3.0,
-                createdAt: "2026-04-15 10:30:00",
-                modifiedAt: "2026-04-17 14:20:00"
-            })
-
-            append({
-                id: "GBX-42B",
-                name: "GBX-42B 高精度配方",
-                description: "42系列高精度齿轮箱测试配方",
-                homeDutyCycle: 25.0,
-                idleDutyCycle: 35.0,
-                idleSpeedMin: 85.0,
-                idleSpeedMax: 115.0,
-                idleCurrentMax: 0.7,
-                loadDutyCycle: 45.0,
-                loadTorqueMin: 1.50,
-                brakeRampStep: 0.03,
-                brakeRampInterval: 80,
-                lockSpeedThreshold: 3.0,
-                lockDuration: 600,
-                anglePositions: "3.0, 49.0, 3.0, 113.5, 0.0",
-                angleTolerance: 2.0,
-                createdAt: "2026-04-10 09:15:00",
-                modifiedAt: "2026-04-16 16:45:00"
-            })
-
-            append({
-                id: "GBX-56A",
-                name: "GBX-56A 标准配方",
-                description: "56系列齿轮箱标准测试配方",
-                homeDutyCycle: 35.0,
-                idleDutyCycle: 45.0,
-                idleSpeedMin: 70.0,
-                idleSpeedMax: 110.0,
-                idleCurrentMax: 1.0,
-                loadDutyCycle: 55.0,
-                loadTorqueMin: 1.80,
-                brakeRampStep: 0.06,
-                brakeRampInterval: 120,
-                lockSpeedThreshold: 5.0,
-                lockDuration: 500,
-                anglePositions: "5.0, 60.0, 5.0, 120.0, 0.0",
-                angleTolerance: 3.5,
-                createdAt: "2026-04-12 11:00:00",
-                modifiedAt: "2026-04-17 10:30:00"
-            })
+            if (typeof recipeService !== 'undefined' && recipeService) {
+                var recipes = recipeService.loadAll()
+                for (var i = 0; i < recipes.length; i++) {
+                    var r = recipes[i]
+                    append({
+                        fileName: r.fileName || "",
+                        name: r.name || "",
+                        homeDutyCycle: r.homeDutyCycle || 0,
+                        idleDutyCycle: r.idleDutyCycle || 0,
+                        idleSpeedMin: r.idleForwardSpeedAvgMin || 0,
+                        idleSpeedMax: r.idleForwardSpeedAvgMax || 0,
+                        idleCurrentMax: r.idleForwardCurrentAvgMax || 0,
+                        loadDutyCycle: r.loadDutyCycle || 0,
+                        loadTorqueMin: r.loadForwardTorqueMin || 0,
+                        brakeRampStep: r.brakeRampEndCurrentA || 0,
+                        brakeRampInterval: r.loadRampMs || 0,
+                        lockSpeedThreshold: r.lockSpeedThresholdRpm || 0,
+                        lockDuration: r.lockHoldMs || 0,
+                        anglePositions: (r.position1TargetDeg || 0) + ", " + (r.position2TargetDeg || 0) + ", " + (r.position1TargetDeg || 0) + ", " + (r.position3TargetDeg || 0) + ", 0.0",
+                        angleTolerance: r.position1ToleranceDeg || 0
+                    })
+                }
+            }
         }
     }
 
-    function selectRecipe(recipeId) {
-        selectedRecipeId = recipeId
+    function selectRecipe(index) {
+        selectedRecipeIndex = index
         isEditing = false
     }
 
     function createNewRecipe() {
-        selectedRecipeId = ""
+        selectedRecipeIndex = -1
         isEditing = true
     }
 
     function editRecipe() {
-        if (selectedRecipeId) {
+        if (selectedRecipeIndex >= 0) {
             isEditing = true
         }
     }
 
     function saveRecipe() {
-        // TODO: 实际保存逻辑
+        var r = currentRecipe()
+        if (!r) return
+        if (typeof recipeService !== 'undefined' && recipeService) {
+            var data = {
+                fileName: r.fileName,
+                name: r.name,
+                homeDutyCycle: r.homeDutyCycle,
+                idleDutyCycle: r.idleDutyCycle,
+                idleForwardSpeedAvgMin: r.idleSpeedMin,
+                idleForwardSpeedAvgMax: r.idleSpeedMax,
+                idleForwardCurrentAvgMax: r.idleCurrentMax,
+                loadDutyCycle: r.loadDutyCycle,
+                loadForwardTorqueMin: r.loadTorqueMin,
+                brakeRampEndCurrentA: r.brakeRampStep,
+                loadRampMs: r.brakeRampInterval,
+                lockSpeedThresholdRpm: r.lockSpeedThreshold,
+                lockHoldMs: r.lockDuration,
+                position1ToleranceDeg: r.angleTolerance
+            }
+            recipeService.save(data)
+        }
         isEditing = false
     }
 
     function deleteRecipe() {
-        if (!selectedRecipeId) return
-
-        for (let i = 0; i < recipeListModel.count; i++) {
-            if (recipeListModel.get(i).id === selectedRecipeId) {
-                recipeListModel.remove(i)
-                selectedRecipeId = ""
-                break
-            }
+        if (selectedRecipeIndex < 0) return
+        var r = currentRecipe()
+        if (r && typeof recipeService !== 'undefined' && recipeService) {
+            recipeService.remove(r.fileName)
         }
+        recipeListModel.remove(selectedRecipeIndex)
+        selectedRecipeIndex = -1
     }
 
     function exportRecipe() {
-        // TODO: 导出配方到文件
-        console.log("Export recipe:", selectedRecipeId)
+        var r = currentRecipe()
+        if (r && typeof recipeService !== 'undefined' && recipeService) {
+            recipeService.exportTo(r.fileName, "exports/" + r.fileName)
+        }
     }
 
     function importRecipe() {
-        // TODO: 从文件导入配方
-        console.log("Import recipe")
+        if (typeof recipeService !== 'undefined' && recipeService) {
+            var result = recipeService.importFrom("imports/recipe.json")
+            if (result && result.fileName) {
+                recipeListModel.append({
+                    fileName: result.fileName || "",
+                    name: result.name || "",
+                    homeDutyCycle: result.homeDutyCycle || 0,
+                    idleDutyCycle: result.idleDutyCycle || 0,
+                    idleSpeedMin: result.idleForwardSpeedAvgMin || 0,
+                    idleSpeedMax: result.idleForwardSpeedAvgMax || 0,
+                    idleCurrentMax: result.idleForwardCurrentAvgMax || 0,
+                    loadDutyCycle: result.loadDutyCycle || 0,
+                    loadTorqueMin: result.loadForwardTorqueMin || 0,
+                    brakeRampStep: result.brakeRampEndCurrentA || 0,
+                    brakeRampInterval: result.loadRampMs || 0,
+                    lockSpeedThreshold: result.lockSpeedThresholdRpm || 0,
+                    lockDuration: result.lockHoldMs || 0,
+                    anglePositions: (result.position1TargetDeg || 0) + ", " + (result.position2TargetDeg || 0) + ", " + (result.position1TargetDeg || 0) + ", " + (result.position3TargetDeg || 0) + ", 0.0",
+                    angleTolerance: result.position1ToleranceDeg || 0
+                })
+            }
+        }
     }
 
     Rectangle {
@@ -194,21 +200,20 @@ Item {
                             spacing: 8
 
                             delegate: Rectangle {
-                                required property string id
+                                required property int index
                                 required property string name
-                                required property string description
-                                required property string modifiedAt
+                                required property string fileName
 
                                 width: ListView.view.width
                                 height: 80
                                 radius: 6
-                                color: root.selectedRecipeId === id ? root.theme.accent + "20" : "transparent"
-                                border.width: root.selectedRecipeId === id ? 1 : 0
+                                color: root.selectedRecipeIndex === index ? root.theme.accent + "20" : "transparent"
+                                border.width: root.selectedRecipeIndex === index ? 1 : 0
                                 border.color: root.theme.accent
 
                                 MouseArea {
                                     anchors.fill: parent
-                                    onClicked: root.selectRecipe(id)
+                                    onClicked: root.selectRecipe(index)
                                 }
 
                                 ColumnLayout {
@@ -224,20 +229,13 @@ Item {
                                     }
 
                                     Components.AppLabel {
-                                        text: description
+                                        text: fileName
                                         fontSize: 12
                                         color: root.theme.textSecondary
                                         theme: root.theme
                                     }
 
                                     Item { Layout.fillHeight: true }
-
-                                    Components.AppLabel {
-                                        text: "修改时间: " + modifiedAt
-                                        fontSize: 11
-                                        color: root.theme.textMuted
-                                        theme: root.theme
-                                    }
                                 }
                             }
                         }
@@ -261,7 +259,7 @@ Item {
                         spacing: 8
 
                         Components.AppLabel {
-                            text: root.isEditing ? (root.selectedRecipeId ? "编辑配方" : "新建配方") : "配方详情"
+                            text: root.isEditing ? (root.selectedRecipeIndex >= 0 ? "编辑配方" : "新建配方") : "配方详情"
                             fontSize: 16
                             fontWeight: 600
                             theme: root.theme
@@ -270,7 +268,7 @@ Item {
                         Item { Layout.fillWidth: true }
 
                         Components.AppButton {
-                            visible: !root.isEditing && root.selectedRecipeId
+                            visible: !root.isEditing && root.selectedRecipeIndex >= 0
                             text: "编辑"
                             variant: "default"
                             size: "sm"
@@ -279,7 +277,7 @@ Item {
                         }
 
                         Components.AppButton {
-                            visible: !root.isEditing && root.selectedRecipeId
+                            visible: !root.isEditing && root.selectedRecipeIndex >= 0
                             text: "导出"
                             variant: "outline"
                             size: "sm"
@@ -288,7 +286,7 @@ Item {
                         }
 
                         Components.AppButton {
-                            visible: !root.isEditing && root.selectedRecipeId
+                            visible: !root.isEditing && root.selectedRecipeIndex >= 0
                             text: "删除"
                             variant: "destructive"
                             size: "sm"
@@ -333,7 +331,7 @@ Item {
 
                             // 空状态提示
                             Item {
-                                visible: !root.selectedRecipeId && !root.isEditing
+                                visible: root.selectedRecipeIndex < 0 && !root.isEditing
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 200
 
@@ -361,7 +359,7 @@ Item {
 
                             // 配方参数表单
                             ColumnLayout {
-                                visible: root.selectedRecipeId || root.isEditing
+                                visible: root.selectedRecipeIndex >= 0 || root.isEditing
                                 Layout.fillWidth: true
                                 spacing: 16
 
@@ -386,6 +384,7 @@ Item {
                                     Components.AppInput {
                                         Layout.fillWidth: true
                                         placeholderText: "GBX-XXX"
+                                        text: root.currentRecipe() ? root.currentRecipe().fileName : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -397,6 +396,7 @@ Item {
                                     Components.AppInput {
                                         Layout.fillWidth: true
                                         placeholderText: "输入配方名称"
+                                        text: root.currentRecipe() ? root.currentRecipe().name : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -409,6 +409,7 @@ Item {
                                     Components.AppTextarea {
                                         Layout.fillWidth: true
                                         placeholderText: "输入配方描述"
+                                        text: root.currentRecipe() ? root.currentRecipe().fileName : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -439,7 +440,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "30.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().homeDutyCycle.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -450,7 +451,6 @@ Item {
                                     theme: root.theme
                                 }
 
-                                // 空载参数
                                 Components.AppLabel {
                                     text: "空载测试参数"
                                     fontSize: 14
@@ -470,7 +470,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "40.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().idleDutyCycle.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -481,7 +481,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "80.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().idleSpeedMin.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -492,7 +492,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "120.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().idleSpeedMax.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -503,7 +503,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "0.8"
+                                        text: root.currentRecipe() ? root.currentRecipe().idleCurrentMax.toFixed(2) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -514,7 +514,6 @@ Item {
                                     theme: root.theme
                                 }
 
-                                // 角度定位参数
                                 Components.AppLabel {
                                     text: "角度定位参数"
                                     fontSize: 14
@@ -534,7 +533,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "3.0, 49.0, 3.0, 113.5, 0.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().anglePositions : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -545,7 +544,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "3.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().angleTolerance.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -556,7 +555,6 @@ Item {
                                     theme: root.theme
                                 }
 
-                                // 负载测试参数
                                 Components.AppLabel {
                                     text: "负载测试参数"
                                     fontSize: 14
@@ -576,7 +574,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "50.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().loadDutyCycle.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -587,7 +585,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "1.20"
+                                        text: root.currentRecipe() ? root.currentRecipe().loadTorqueMin.toFixed(2) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -598,7 +596,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "0.05"
+                                        text: root.currentRecipe() ? root.currentRecipe().brakeRampStep.toFixed(2) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -609,7 +607,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "100"
+                                        text: root.currentRecipe() ? root.currentRecipe().brakeRampInterval.toString() : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -620,7 +618,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "5.0"
+                                        text: root.currentRecipe() ? root.currentRecipe().lockSpeedThreshold.toFixed(1) : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }
@@ -631,7 +629,7 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: "500"
+                                        text: root.currentRecipe() ? root.currentRecipe().lockDuration.toString() : ""
                                         readOnly: !root.isEditing
                                         theme: root.theme
                                     }

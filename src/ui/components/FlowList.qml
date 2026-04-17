@@ -6,7 +6,7 @@ Column {
 
     required property AppTheme theme
     required property var model
-    spacing: 4
+    spacing: 0
 
     function rowAt(index) {
         if (Array.isArray(root.model))
@@ -19,16 +19,40 @@ Column {
     Repeater {
         model: root.model
 
-        delegate: FlowStepItem {
+        delegate: Column {
             required property int index
-            property var row: root.rowAt(index) || ({})
             width: root.width
-            theme: root.theme
-            order: index + 1
-            title: row.name || ""
-            detail: row.detail || ""
-            elapsedText: row.elapsed || ""
-            state: row.state || "pending"
+
+            FlowStepItem {
+                width: parent.width
+                theme: root.theme
+                order: index + 1
+                title: {
+                    var r = root.rowAt(index) || ({})
+                    return r.name || ""
+                }
+                detail: {
+                    var r = root.rowAt(index) || ({})
+                    return r.detail || ""
+                }
+                elapsedText: {
+                    var r = root.rowAt(index) || ({})
+                    return r.elapsed || ""
+                }
+                state: {
+                    var r = root.rowAt(index) || ({})
+                    return r.state || "pending"
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: root.theme.dividerColor
+                visible: index < root.model.length - 1
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+            }
         }
     }
 }

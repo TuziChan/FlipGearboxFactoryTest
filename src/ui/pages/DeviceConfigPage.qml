@@ -78,14 +78,11 @@ Item {
     }
 
     function testConnection() {
-        connectionStatus = "connecting"
-        Qt.callLater(function() {
-            connectionStatus = "connected"
-        })
+        connectionStatus = "untested"
     }
 
     function testDevice(deviceName) {
-        console.log("Testing device:", deviceName)
+        connectionStatus = "untested"
     }
 
     Component.onCompleted: {

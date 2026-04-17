@@ -12,6 +12,7 @@
 #include "../infrastructure/devices/ITorqueSensorDevice.h"
 #include "../infrastructure/devices/IEncoderDevice.h"
 #include "../infrastructure/devices/IBrakePowerDevice.h"
+#include "../infrastructure/acquisition/AcquisitionScheduler.h"
 
 namespace Domain {
 
@@ -39,6 +40,8 @@ public:
                     Infrastructure::Devices::ITorqueSensorDevice* torque,
                     Infrastructure::Devices::IEncoderDevice* encoder,
                     Infrastructure::Devices::IBrakePowerDevice* brake);
+
+    void setAcquisitionScheduler(Infrastructure::Acquisition::AcquisitionScheduler* scheduler);
 
     /**
      * @brief Set test recipe
@@ -80,6 +83,8 @@ private:
     Infrastructure::Devices::ITorqueSensorDevice* m_torque;
     Infrastructure::Devices::IEncoderDevice* m_encoder;
     Infrastructure::Devices::IBrakePowerDevice* m_brake;
+
+    Infrastructure::Acquisition::AcquisitionScheduler* m_acquisitionScheduler;
 
     // Configuration
     TestRecipe m_recipe;

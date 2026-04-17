@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVariantMap>
 #include <QString>
+#include "StationConfig.h"
 
 namespace Infrastructure {
 namespace Config {
@@ -11,7 +12,9 @@ namespace Config {
 class DeviceConfigService : public QObject {
     Q_OBJECT
 public:
-    explicit DeviceConfigService(const QString& stationConfigPath, QObject* parent = nullptr);
+    explicit DeviceConfigService(const QString& stationConfigPath,
+                                 const StationConfig& defaults = StationConfig(),
+                                 QObject* parent = nullptr);
 
     Q_INVOKABLE QVariantMap loadDeviceConfig() const;
     Q_INVOKABLE bool saveDeviceConfig(const QVariantMap& deviceConfig);
@@ -20,6 +23,7 @@ public:
 
 private:
     QString m_stationConfigPath;
+    StationConfig m_defaultConfig;
     mutable QString m_lastError;
 
     QVariantMap defaultDeviceConfig() const;

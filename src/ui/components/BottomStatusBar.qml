@@ -26,10 +26,16 @@ Rectangle {
                 spacing: 6
 
                 Rectangle {
-                    Layout.preferredWidth: 7
-                    Layout.preferredHeight: 7
-                    radius: 3.5
-                    color: root.theme.ok
+                    Layout.preferredWidth: 10
+                    Layout.preferredHeight: 10
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: 5
+                    color: {
+                        if (modelData.online === true) return root.theme.ok
+                        if (modelData.online === false) return root.theme.ngColor
+                        if (modelData.status === "online") return root.theme.ok
+                        return root.theme.ngColor
+                    }
                 }
 
                 Text {

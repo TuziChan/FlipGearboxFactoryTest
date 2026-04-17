@@ -32,28 +32,12 @@ int main(int argc, char *argv[])
     app.setFont(defaultFont);
 
     Infrastructure::Config::StationConfig stationConfig;
-    stationConfig.stationId = "STATION-01";
-    stationConfig.stationName = "Gearbox Test Station 1";
-    stationConfig.aqmdConfig.portName = "COM3";
-    stationConfig.aqmdConfig.slaveId = 1;
-    stationConfig.aqmdConfig.baudRate = 9600;
-    stationConfig.dyn200Config.portName = "COM4";
-    stationConfig.dyn200Config.slaveId = 2;
-    stationConfig.dyn200Config.baudRate = 9600;
-    stationConfig.encoderConfig.portName = "COM5";
-    stationConfig.encoderConfig.slaveId = 3;
-    stationConfig.encoderConfig.baudRate = 9600;
-    stationConfig.encoderConfig.encoderResolution = 4096;
-    stationConfig.brakeConfig.portName = "COM6";
-    stationConfig.brakeConfig.slaveId = 4;
-    stationConfig.brakeConfig.baudRate = 9600;
-    stationConfig.brakeChannel = 1;
-    stationConfig.defaultRecipe = "GBX-42A";
 
     const QString stationConfigPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../../config/station.json");
     Infrastructure::Config::ConfigLoader configLoader;
     if (!configLoader.loadStationConfig(stationConfigPath, stationConfig)) {
         qWarning() << "Failed to load station config from" << stationConfigPath << ":" << configLoader.lastError();
+        qWarning() << "Using built-in defaults. Please verify config/station.json exists and is valid.";
     }
 
     // Create station runtime
@@ -68,7 +52,7 @@ int main(int argc, char *argv[])
     // Create ViewModel
     auto viewModel = new ViewModels::TestExecutionViewModel(runtime.get(), &app);
     auto diagnosticsViewModel = new ViewModels::DiagnosticsViewModel(runtime.get(), &app);
-    auto deviceConfigService = new Infrastructure::Config::DeviceConfigService(stationConfigPath, &app);
+    auto deviceConfigService = new Infrastructure::Config::DeviceConfigService(stationConfigPath, stationConfig, &app);
 
     // Create QML engine
     QQmlApplicationEngine engine;

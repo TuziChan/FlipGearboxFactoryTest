@@ -15,7 +15,9 @@ Rectangle {
     readonly property bool done: state === "done"
 
     radius: theme.radiusMedium
-    color: current ? theme.accentWeak : done ? theme.okWeak : "transparent"
+    color: current ? theme.accentWeak : done ? theme.okWeak : theme.cardColor
+    border.width: !current && !done ? 1 : 0
+    border.color: theme.dividerColor
     implicitHeight: 58
 
     Column {

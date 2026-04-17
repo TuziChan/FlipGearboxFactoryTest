@@ -50,6 +50,7 @@ bool ConfigLoader::loadStationConfig(const QString& filePath, StationConfig& con
     config.aqmdConfig.parity = aqmd["parity"].toString("None");
     config.aqmdConfig.stopBits = aqmd["stopBits"].toInt(1);
     config.aqmdConfig.enabled = aqmd["enabled"].toBool(true);
+    config.aqmdConfig.pollIntervalUs = aqmd["pollIntervalUs"].toInt(5000);
 
     QJsonObject dyn200 = json["dyn200"].toObject();
     config.dyn200Config.portName = dyn200["portName"].toString();
@@ -59,6 +60,7 @@ bool ConfigLoader::loadStationConfig(const QString& filePath, StationConfig& con
     config.dyn200Config.parity = dyn200["parity"].toString("None");
     config.dyn200Config.stopBits = dyn200["stopBits"].toInt(1);
     config.dyn200Config.enabled = dyn200["enabled"].toBool(true);
+    config.dyn200Config.pollIntervalUs = dyn200["pollIntervalUs"].toInt(5000);
 
     QJsonObject encoder = json["encoder"].toObject();
     config.encoderConfig.portName = encoder["portName"].toString();
@@ -69,6 +71,7 @@ bool ConfigLoader::loadStationConfig(const QString& filePath, StationConfig& con
     config.encoderConfig.stopBits = encoder["stopBits"].toInt(1);
     config.encoderConfig.encoderResolution = static_cast<uint16_t>(encoder["resolution"].toInt(4096));
     config.encoderConfig.enabled = encoder["enabled"].toBool(true);
+    config.encoderConfig.pollIntervalUs = encoder["pollIntervalUs"].toInt(5000);
 
     QJsonObject brake = json["brake"].toObject();
     config.brakeConfig.portName = brake["portName"].toString();
@@ -78,6 +81,7 @@ bool ConfigLoader::loadStationConfig(const QString& filePath, StationConfig& con
     config.brakeConfig.parity = brake["parity"].toString("None");
     config.brakeConfig.stopBits = brake["stopBits"].toInt(1);
     config.brakeConfig.enabled = brake["enabled"].toBool(true);
+    config.brakeConfig.pollIntervalUs = brake["pollIntervalUs"].toInt(5000);
     config.brakeChannel = brake["channel"].toInt(config.brakeChannel);
 
     return true;

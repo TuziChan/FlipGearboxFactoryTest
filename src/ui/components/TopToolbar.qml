@@ -8,7 +8,8 @@ Rectangle {
     property string appTitle: "齿轮箱测试系统"
     property string pageTitle: ""
     property string stationText: "工位 #03"
-    property string connectionText: "CAN 在线"
+    property string connectionText: ""
+    property bool isConnected: false
 
     color: root.theme.cardColor
     border.color: "transparent"
@@ -67,17 +68,18 @@ Rectangle {
 
         RowLayout {
             spacing: 6
+            visible: root.connectionText.length > 0
 
             Rectangle {
                 Layout.preferredWidth: 8
                 Layout.preferredHeight: 8
                 radius: 4
-                color: root.theme.ok
+                color: root.isConnected ? root.theme.ok : root.theme.ngColor
             }
 
             Text {
                 text: root.connectionText
-                color: root.theme.ok
+                color: root.isConnected ? root.theme.ok : root.theme.ngColor
                 font.pixelSize: 12
             }
         }

@@ -6,6 +6,7 @@
 #include "../devices/Dyn200TorqueSensorDevice.h"
 #include "../devices/SingleTurnEncoderDevice.h"
 #include "../devices/BrakePowerSupplyDevice.h"
+#include "../acquisition/AcquisitionScheduler.h"
 #include "../../domain/GearboxTestEngine.h"
 #include <QObject>
 #include <memory>
@@ -28,6 +29,7 @@ public:
     Devices::SingleTurnEncoderDevice* encoder() const { return m_encoder.get(); }
     Devices::BrakePowerSupplyDevice* brake() const { return m_brake.get(); }
     Domain::GearboxTestEngine* testEngine() const { return m_testEngine.get(); }
+    Acquisition::AcquisitionScheduler* acquisitionScheduler() const { return m_acquisitionScheduler.get(); }
     int brakeChannel() const { return m_brakeChannel; }
     bool isInitialized() const { return m_initialized; }
 
@@ -62,6 +64,7 @@ private:
     std::unique_ptr<Devices::SingleTurnEncoderDevice> m_encoder;
     std::unique_ptr<Devices::BrakePowerSupplyDevice> m_brake;
     std::unique_ptr<Domain::GearboxTestEngine> m_testEngine;
+    std::unique_ptr<Acquisition::AcquisitionScheduler> m_acquisitionScheduler;
 
     QString m_lastError;
     int m_brakeChannel = 1;

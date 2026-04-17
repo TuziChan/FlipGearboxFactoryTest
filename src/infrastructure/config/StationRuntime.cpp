@@ -51,6 +51,10 @@ bool StationRuntime::initialize() {
         return false;
     }
 
+    if (m_acquisitionScheduler && !m_acquisitionScheduler->start()) {
+        qWarning() << "Failed to start acquisition scheduler (non-fatal, will use synchronous fallback)";
+    }
+
     m_initialized = true;
     qDebug() << "Station runtime initialized successfully";
     return true;
@@ -74,6 +78,10 @@ bool StationRuntime::initializeBus(const QString& displayName,
 void StationRuntime::shutdown() {
     qDebug() << "Shutting down station runtime...";
     m_initialized = false;
+
+    if (m_acquisitionScheduler) {
+        m_acquisitionScheduler->stop();
+    }
 
     if (m_testEngine) {
         m_testEngine->reset();

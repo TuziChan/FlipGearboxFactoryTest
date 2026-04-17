@@ -1,0 +1,203 @@
+#include "HistoryService.h"
+
+#include <QCoreApplication>
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+namespace Infrastructure {
+namespace Services {
+
+HistoryService::HistoryService(QObject* parent)
+    : QObject(parent)
+    , m_lastError()
+{
+}
+
+QString HistoryService::dataFilePath() const
+{
+    QDir appDir(QCoreApplication::applicationDirPath());
+    appDir.cdUp();
+    appDir.cdUp();
+    return appDir.filePath(QStringLiteral("data/history.jsonl"));
+}
+
+bool HistoryService::ensureDataDir() const
+{
+    QDir appDir(QCoreApplication::applicationDirPath());
+    appDir.cdUp();
+    appDir.cdUp();
+    if (!appDir.exists(QStringLiteral("data"))) {
+        if (!appDir.mkpath(QStringLiteral("data"))) {
+            m_lastError = tr("Failed to create data directory: %1")
+                              .arg(appDir.filePath(QStringLiteral("data")));
+            return false;
+        }
+    }
+    return true;
+}
+
+QVariantList HistoryService::loadAll()
+{
+    QVariantList records;
+    const QString filePath = dataFilePath();
+    QFile file(filePath);
+
+    if (!file.exists()) {
+        return records;
+    }
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        m_lastError = tr("Failed to open history file: %1").arg(file.errorString());
+        return records;
+    }
+
+    while (!file.atEnd()) {
+        const QByteArray line = file.readLine().trimmed();
+        if (line.isEmpty()) {
+            continue;
+        }
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(line, &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
+            continue;
+        }
+        if (doc.isObject()) {
+            records.append(doc.object().toVariantMap());
+        }
+    }
+    file.close();
+
+    std::sort(records.begin(), records.end(),
+              [](const QVariant& a, const QVariant& b) {
+                  const QString timeA = a.toMap().value(QStringLiteral("startTime")).toString();
+                  const QString timeB = b.toMap().value(QStringLiteral("startTime")).toString();
+                  return timeA > timeB;
+              });
+
+    return records;
+}
+
+bool HistoryService::addRecord(const QVariantMap& record)
+{
+    if (!ensureDataDir()) {
+        return false;
+    }
+
+    const QString filePath = dataFilePath();
+    QFile file(filePath);
+
+    if (!file.open(QIODevice::Append | QIODevice::Text)) {
+        m_lastError = tr("Failed to open history file for writing: %1").arg(file.errorString());
+        return false;
+    }
+
+    const QJsonObject jsonObj = QJsonObject::fromVariantMap(record);
+    const QJsonDocument doc(jsonObj);
+    file.write(doc.toJson(QJsonDocument::Compact));
+    file.write("\n");
+    file.close();
+
+    return true;
+}
+
+bool HistoryService::exportRecord(const QString& recordId, const QString& targetPath)
+{
+    const QVariantList all = loadAll();
+    for (const QVariant& item : all) {
+        const QVariantMap record = item.toMap();
+        if (record.value(QStringLiteral("id")).toString() == recordId) {
+            QFile file(targetPath);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                m_lastError = tr("Failed to open export file: %1").arg(file.errorString());
+                return false;
+            }
+            const QJsonObject jsonObj = QJsonObject::fromVariantMap(record);
+            const QJsonDocument doc(jsonObj);
+            file.write(doc.toJson(QJsonDocument::Indented));
+            file.close();
+            return true;
+        }
+    }
+
+    m_lastError = tr("Record not found: %1").arg(recordId);
+    return false;
+}
+
+bool HistoryService::exportAll(const QString& targetPath)
+{
+    const QVariantList records = loadAll();
+    QJsonArray array;
+    for (const QVariant& item : records) {
+        const QJsonObject obj = QJsonObject::fromVariantMap(item.toMap());
+        array.append(obj);
+    }
+
+    QFile file(targetPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        m_lastError = tr("Failed to open export file: %1").arg(file.errorString());
+        return false;
+    }
+
+    const QJsonDocument doc(array);
+    file.write(doc.toJson(QJsonDocument::Indented));
+    file.close();
+    return true;
+}
+
+QVariantList HistoryService::filteredModel(const QString& verdictFilter,
+                                           const QString& dateFrom,
+                                           const QString& dateTo) const
+{
+    QVariantList all;
+    {
+        HistoryService* nonConst = const_cast<HistoryService*>(this);
+        all = nonConst->loadAll();
+    }
+
+    QVariantList filtered;
+    const QDate fromDate = QDate::fromString(dateFrom, QStringLiteral("yyyy-MM-dd"));
+    const QDate toDate = QDate::fromString(dateTo, QStringLiteral("yyyy-MM-dd"));
+
+    for (const QVariant& item : all) {
+        const QVariantMap record = item.toMap();
+        const QString verdict = record.value(QStringLiteral("verdict")).toString();
+
+        if (verdictFilter != QStringLiteral("ALL")) {
+            if (verdict != verdictFilter) {
+                continue;
+            }
+        }
+
+        const QString startTimeStr = record.value(QStringLiteral("startTime")).toString();
+        const QDateTime startDt = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        const QDate startDate = startDt.date();
+
+        if (fromDate.isValid()) {
+            if (startDate < fromDate) {
+                continue;
+            }
+        }
+
+        if (toDate.isValid()) {
+            if (startDate > toDate) {
+                continue;
+            }
+        }
+
+        filtered.append(record);
+    }
+
+    return filtered;
+}
+
+QString HistoryService::lastError() const
+{
+    return m_lastError;
+}
+
+} // namespace Services
+} // namespace Infrastructure
