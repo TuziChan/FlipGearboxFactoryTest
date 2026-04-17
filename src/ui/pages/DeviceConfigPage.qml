@@ -299,7 +299,10 @@ Item {
                                         text: String(root.deviceConfig[modelData.key].slaveId)
                                         theme: root.theme
                                         onTextChanged: {
-                                            root.deviceConfig[modelData.key].slaveId = parseInt(text) || 1
+                                            var val = parseInt(text)
+                                            if (isNaN(val) || val < 1) val = 1
+                                            if (val > 247) val = 247
+                                            root.deviceConfig[modelData.key].slaveId = val
                                             root.isModified = true
                                         }
                                     }

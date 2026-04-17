@@ -50,9 +50,9 @@
   - [x] 6.1 电机正/反转按钮添加确认对话框（使用 `AppAlertDialog` 组件）
   - [x] 6.2 制动电流输入添加前端范围校验（0~5.0A），显示错误提示
 
-- [ ] Task 7: DeviceConfigPage.qml 范围校验
-  - [ ] 7.1 `slaveId` 输入添加 `onTextChanged` 校验，限制 1-247 范围
-  - [ ] 7.2 使用 `SpinBox` 替代自由输入的 `AppInput`（可选方案）
+- [x] Task 7: DeviceConfigPage.qml 范围校验
+  - [x] 7.1 `slaveId` 输入添加 `onTextChanged` 校验，限制 1-247 范围
+  - [ ] 7.2 使用 `SpinBox` 替代自由输入的 `AppInput`（可选方案，暂不实施）
 
 ## 阶段三：工程配置可移植性
 
