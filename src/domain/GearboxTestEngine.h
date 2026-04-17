@@ -111,6 +111,7 @@ private:
 
     // Brake ramp state
     double m_currentBrakeCurrent;
+    quint64 m_settlingTargetMs = 0;
 
     // Phase management
     void transitionToPhase(TestPhase newPhase, TestSubState newSubState);
@@ -149,6 +150,14 @@ private:
     void handleRampBrakeReverse();
     void handleConfirmLockReverse();
     void handleReturnFinalZero();
+    void handleSettlingForwardDelay();
+    void handleSettlingReverseDelay();
+    void handleSettlingPosition2Delay();
+    void handleSettlingPosition1ReturnDelay();
+    void handleSettlingPosition3Delay();
+    void handleSettlingZeroDelay();
+    void handleSettlingLoadForwardDelay();
+    void handleSettlingLoadReverseDelay();
 
     // Judgment helpers
     void evaluateIdleResults(const QString& direction, 

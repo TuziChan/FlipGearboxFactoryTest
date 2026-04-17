@@ -22,6 +22,8 @@ Item {
 
     property bool autoRefresh: true
     property int refreshInterval: 2000
+    property string pendingMotorAction: ""
+    property bool motorConfirmVisible: false
 
     Timer {
         id: refreshTimer
@@ -263,7 +265,11 @@ Item {
                                         variant: "outline"
                                         size: "sm"
                                         theme: root.theme
-                                        onClicked: if (root.viewModel) root.viewModel.setMotorForward()
+                                        onClicked: {
+                                            if (!root.viewModel) return
+                                            root.pendingMotorAction = "forward"
+                                            root.motorConfirmVisible = true
+                                        }
                                     }
 
                                     Components.AppButton {
@@ -271,7 +277,11 @@ Item {
                                         variant: "outline"
                                         size: "sm"
                                         theme: root.theme
-                                        onClicked: if (root.viewModel) root.viewModel.setMotorReverse()
+                                        onClicked: {
+                                            if (!root.viewModel) return
+                                            root.pendingMotorAction = "reverse"
+                                            root.motorConfirmVisible = true
+                                        }
                                     }
 
                                     Components.AppButton {
@@ -339,7 +349,15 @@ Item {
                                         variant: "default"
                                         size: "sm"
                                         theme: root.theme
-                                        onClicked: if (root.viewModel) root.viewModel.setBrakeCurrent(Number(brakeCurrentInput.text))
+                                        onClicked: {
+                                            if (!root.viewModel) return
+                                            var val = Number(brakeCurrentInput.text)
+                                            if (Number.isNaN(val) || val < 0 || val > 5.0) {
+                                                console.warn("Brake current out of range: " + brakeCurrentInput.text + " (must be 0-5.0A)")
+                                                return
+                                            }
+                                            root.viewModel.setBrakeCurrent(val)
+                                        }
                                     }
 
                                     Components.AppButton {
@@ -469,6 +487,27 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    Components.AppAlertDialog {
+        id: motorConfirmDialog
+        theme: root.theme
+        open: root.motorConfirmVisible
+        title: "确认操作"
+        description: root.pendingMotorAction === "forward" ? "确定要启动电机正转吗？" : "确定要启动电机反转吗？"
+        confirmText: "确认"
+        cancelText: "取消"
+        onConfirmed: {
+            root.motorConfirmVisible = false
+            if (!root.viewModel) return
+            if (root.pendingMotorAction === "forward") root.viewModel.setMotorForward()
+            else if (root.pendingMotorAction === "reverse") root.viewModel.setMotorReverse()
+            root.pendingMotorAction = ""
+        }
+        onCancelled: {
+            root.motorConfirmVisible = false
+            root.pendingMotorAction = ""
         }
     }
 

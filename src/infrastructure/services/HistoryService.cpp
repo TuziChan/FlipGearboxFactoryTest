@@ -148,6 +148,42 @@ bool HistoryService::exportAll(const QString& targetPath)
     return true;
 }
 
+bool HistoryService::deleteRecord(const QString& recordId)
+{
+    QVariantList all = loadAll();
+    QVariantList filtered;
+    bool found = false;
+    for (const QVariant& item : all) {
+        const QVariantMap record = item.toMap();
+        if (record.value(QStringLiteral("id")).toString() == recordId) {
+            found = true;
+            continue;
+        }
+        filtered.append(item);
+    }
+
+    if (!found) {
+        m_lastError = tr("Record not found: %1").arg(recordId);
+        return false;
+    }
+
+    ensureDataDir();
+    QFile file(dataFilePath());
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        m_lastError = tr("Failed to open data file for writing: %1").arg(file.errorString());
+        return false;
+    }
+
+    for (const QVariant& item : filtered) {
+        const QJsonObject obj = QJsonObject::fromVariantMap(item.toMap());
+        const QJsonDocument doc(obj);
+        file.write(doc.toJson(QJsonDocument::Compact));
+        file.write("\n");
+    }
+    file.close();
+    return true;
+}
+
 QVariantList HistoryService::filteredModel(const QString& verdictFilter,
                                            const QString& dateFrom,
                                            const QString& dateTo) const

@@ -44,9 +44,17 @@ bool BrakePowerSupplyDevice::setCurrent(int channel, double currentA) {
         return false;
     }
 
+    constexpr double MAX_CURRENT_A = 5.0;
+    if (currentA < 0.0 || currentA > MAX_CURRENT_A) {
+        m_lastError = QString("Current %1A exceeds safety limit [0, %2A]")
+                          .arg(currentA, 0, 'f', 2)
+                          .arg(MAX_CURRENT_A, 0, 'f', 1);
+        qWarning() << m_lastError;
+        return false;
+    }
+
     uint16_t registerAddr = getSetCurrentRegister(channel);
     
-    // Scale: ×0.01A, so 1.5A = 150
     uint16_t value = static_cast<uint16_t>(currentA * 100.0);
 
     if (!writeRegister(registerAddr, value)) {

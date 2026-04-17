@@ -62,6 +62,16 @@ enum class TestSubState {
     ReturnFinalZero,
     FinalZeroSettled,
     
+    // Settling delays (non-blocking)
+    SettlingForwardDelay,
+    SettlingReverseDelay,
+    SettlingPosition2Delay,
+    SettlingPosition1ReturnDelay,
+    SettlingPosition3Delay,
+    SettlingZeroDelay,
+    SettlingLoadForwardDelay,
+    SettlingLoadReverseDelay,
+
     // Terminal
     TestCompleted,
     TestFailed

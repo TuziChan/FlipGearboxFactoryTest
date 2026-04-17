@@ -417,6 +417,12 @@ void GearboxTestEngine::handleIdleRunPhase() {
         case TestSubState::SampleReverse:
             handleSampleReverse();
             break;
+        case TestSubState::SettlingForwardDelay:
+            handleSettlingForwardDelay();
+            break;
+        case TestSubState::SettlingReverseDelay:
+            handleSettlingReverseDelay();
+            break;
         default:
             break;
     }
@@ -454,8 +460,8 @@ void GearboxTestEngine::handleSampleForward() {
         
         // Move to reverse
         stopMotor();
-        QThread::msleep(500);  // Brief pause between directions
-        transitionToSubState(TestSubState::SpinupReverse);
+        m_settlingTargetMs = 500;
+        transitionToSubState(TestSubState::SettlingForwardDelay);
     }
 }
 
@@ -491,8 +497,8 @@ void GearboxTestEngine::handleSampleReverse() {
         
         // Move to angle positioning
         stopMotor();
-        QThread::msleep(500);
-        transitionToPhase(TestPhase::AnglePositioning, TestSubState::MoveToPosition1);
+        m_settlingTargetMs = 500;
+        transitionToSubState(TestSubState::SettlingReverseDelay);
     }
 }
 
@@ -512,6 +518,18 @@ void GearboxTestEngine::handleAnglePositioningPhase() {
             break;
         case TestSubState::MoveBackToZero:
             handleMoveBackToZero();
+            break;
+        case TestSubState::SettlingPosition2Delay:
+            handleSettlingPosition2Delay();
+            break;
+        case TestSubState::SettlingPosition1ReturnDelay:
+            handleSettlingPosition1ReturnDelay();
+            break;
+        case TestSubState::SettlingPosition3Delay:
+            handleSettlingPosition3Delay();
+            break;
+        case TestSubState::SettlingZeroDelay:
+            handleSettlingZeroDelay();
             break;
         default:
             break;
@@ -563,8 +581,8 @@ void GearboxTestEngine::handleMoveToPosition2() {
                            m_recipe.position2ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        QThread::msleep(200);
-        transitionToSubState(TestSubState::MoveBackToPosition1);
+        m_settlingTargetMs = 200;
+        transitionToSubState(TestSubState::SettlingPosition2Delay);
         return;
     }
 
@@ -592,8 +610,8 @@ void GearboxTestEngine::handleMoveBackToPosition1() {
                            m_recipe.position1ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        QThread::msleep(200);
-        transitionToSubState(TestSubState::MoveToPosition3);
+        m_settlingTargetMs = 200;
+        transitionToSubState(TestSubState::SettlingPosition1ReturnDelay);
         return;
     }
 
@@ -621,8 +639,8 @@ void GearboxTestEngine::handleMoveToPosition3() {
                            m_recipe.position3ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        QThread::msleep(200);
-        transitionToSubState(TestSubState::MoveBackToZero);
+        m_settlingTargetMs = 200;
+        transitionToSubState(TestSubState::SettlingPosition3Delay);
         return;
     }
 
@@ -649,8 +667,8 @@ void GearboxTestEngine::handleMoveBackToZero() {
     double angleDiff = qAbs(currentAngle - targetAngle);
     if (angleDiff < m_recipe.returnZeroToleranceDeg) {
         stopMotor();
-        QThread::msleep(500);
-        transitionToPhase(TestPhase::LoadRampAndLock, TestSubState::SpinupLoadForward);
+        m_settlingTargetMs = 500;
+        transitionToSubState(TestSubState::SettlingZeroDelay);
         return;
     }
 
@@ -679,6 +697,12 @@ void GearboxTestEngine::handleLoadTestPhase() {
             break;
         case TestSubState::ConfirmLockReverse:
             handleConfirmLockReverse();
+            break;
+        case TestSubState::SettlingLoadForwardDelay:
+            handleSettlingLoadForwardDelay();
+            break;
+        case TestSubState::SettlingLoadReverseDelay:
+            handleSettlingLoadReverseDelay();
             break;
         default:
             break;
@@ -735,9 +759,9 @@ void GearboxTestEngine::handleRampBrakeForward() {
         // Disable brake and stop motor
         m_brake->setOutputEnable(m_brakeChannel, false);
         stopMotor();
-        QThread::msleep(500);
+        m_settlingTargetMs = 500;
         
-        transitionToSubState(TestSubState::SpinupLoadReverse);
+        transitionToSubState(TestSubState::SettlingLoadForwardDelay);
         return;
     }
 
@@ -803,9 +827,9 @@ void GearboxTestEngine::handleRampBrakeReverse() {
         // Disable brake and stop motor
         m_brake->setOutputEnable(m_brakeChannel, false);
         stopMotor();
-        QThread::msleep(500);
+        m_settlingTargetMs = 500;
         
-        transitionToPhase(TestPhase::ReturnToZero, TestSubState::ReturnFinalZero);
+        transitionToSubState(TestSubState::SettlingLoadReverseDelay);
         return;
     }
 
@@ -1031,6 +1055,62 @@ bool GearboxTestEngine::checkLockCondition(const TelemetrySnapshot& snapshot) {
     }
 
     return false;
+}
+
+void GearboxTestEngine::handleSettlingForwardDelay() {
+    m_state.statusMessage = "Settling (forward to reverse)...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToSubState(TestSubState::SpinupReverse);
+    }
+}
+
+void GearboxTestEngine::handleSettlingReverseDelay() {
+    m_state.statusMessage = "Settling (reverse to angle)...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToPhase(TestPhase::AnglePositioning, TestSubState::MoveToPosition1);
+    }
+}
+
+void GearboxTestEngine::handleSettlingPosition2Delay() {
+    m_state.statusMessage = "Settling after position 2...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToSubState(TestSubState::MoveBackToPosition1);
+    }
+}
+
+void GearboxTestEngine::handleSettlingPosition1ReturnDelay() {
+    m_state.statusMessage = "Settling after position 1 return...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToSubState(TestSubState::MoveToPosition3);
+    }
+}
+
+void GearboxTestEngine::handleSettlingPosition3Delay() {
+    m_state.statusMessage = "Settling after position 3...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToSubState(TestSubState::MoveBackToZero);
+    }
+}
+
+void GearboxTestEngine::handleSettlingZeroDelay() {
+    m_state.statusMessage = "Settling at zero before load test...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToPhase(TestPhase::LoadRampAndLock, TestSubState::SpinupLoadForward);
+    }
+}
+
+void GearboxTestEngine::handleSettlingLoadForwardDelay() {
+    m_state.statusMessage = "Settling after load forward...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToSubState(TestSubState::SpinupLoadReverse);
+    }
+}
+
+void GearboxTestEngine::handleSettlingLoadReverseDelay() {
+    m_state.statusMessage = "Settling after load reverse...";
+    if (m_state.phaseElapsedMs >= m_settlingTargetMs) {
+        transitionToPhase(TestPhase::ReturnToZero, TestSubState::ReturnFinalZero);
+    }
 }
 
 } // namespace Domain

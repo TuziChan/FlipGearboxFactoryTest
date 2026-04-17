@@ -18,6 +18,7 @@ public:
     Q_INVOKABLE bool addRecord(const QVariantMap& record);
     Q_INVOKABLE bool exportRecord(const QString& recordId, const QString& targetPath);
     Q_INVOKABLE bool exportAll(const QString& targetPath);
+    Q_INVOKABLE bool deleteRecord(const QString& recordId);
     Q_INVOKABLE QVariantList filteredModel(const QString& verdictFilter,
                                            const QString& dateFrom,
                                            const QString& dateTo) const;

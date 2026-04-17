@@ -11,10 +11,25 @@
 #include "src/infrastructure/config/StationConfig.h"
 #include "src/infrastructure/config/ConfigLoader.h"
 #include "src/infrastructure/config/RecipeConfig.h"
+#include "src/infrastructure/devices/BrakePowerSupplyDevice.h"
 
 using namespace Tests::Mocks;
 using namespace Domain;
 using namespace Infrastructure::Config;
+using namespace Infrastructure::Devices;
+
+class MockBusController : public Infrastructure::Bus::IBusController {
+    Q_OBJECT
+public:
+    explicit MockBusController(QObject* parent = nullptr)
+        : IBusController(parent) {}
+
+    bool open(const QString&, int, int, const QString& = "None", int = 1) override { return true; }
+    void close() override {}
+    bool isOpen() const override { return true; }
+    bool sendRequest(const QByteArray&, QByteArray&) override { return true; }
+    QString lastError() const override { return ""; }
+};
 
 class TestExecutionVerification : public QObject {
     Q_OBJECT
@@ -402,6 +417,41 @@ private slots:
         state.phase = TestPhase::Failed;
         QCOMPARE(state.phaseString(), QString("Failed"));
         qDebug() << "阶段字符串转换验证通过";
+    }
+
+    void testBrakeCurrentSafetyLimitNormalRange() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double normalValues[] = {0.0, 0.5, 1.0, 2.5, 4.99, 5.0};
+        for (double v : normalValues) {
+            QVERIFY2(device.setCurrent(1, v), QString("Expected %1A to be accepted").arg(v).toUtf8().constData());
+        }
+        qDebug() << "制动电流正常范围验证通过";
+    }
+
+    void testBrakeCurrentSafetyLimitExceedsMax() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double overValues[] = {5.01, 6.0, 10.0, 100.0};
+        for (double v : overValues) {
+            QVERIFY2(!device.setCurrent(1, v), QString("Expected %1A to be rejected").arg(v).toUtf8().constData());
+            QVERIFY(!device.lastError().isEmpty());
+        }
+        qDebug() << "制动电流超限拒绝验证通过";
+    }
+
+    void testBrakeCurrentSafetyLimitNegative() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double negativeValues[] = {-0.01, -1.0, -100.0};
+        for (double v : negativeValues) {
+            QVERIFY2(!device.setCurrent(1, v), QString("Expected %1A to be rejected").arg(v).toUtf8().constData());
+            QVERIFY(!device.lastError().isEmpty());
+        }
+        qDebug() << "制动电流负值拒绝验证通过";
     }
 };
 

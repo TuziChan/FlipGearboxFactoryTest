@@ -12,6 +12,7 @@ Item {
     required property Components.AppTheme theme
 
     property int selectedRecordIndex: -1
+    property string selectedRecordId: ""
     property string searchText: ""
     property string filterVerdict: "all"
     property string filterDateRange: "all"
@@ -50,8 +51,9 @@ Item {
         }
     }
 
-    function selectRecord(index) {
-        selectedRecordIndex = index
+    function selectRecord(recordId, recordIndex) {
+        root.selectedRecordId = recordId
+        root.selectedRecordIndex = recordIndex
     }
 
     function exportRecord() {
@@ -69,15 +71,42 @@ Item {
 
     function deleteRecord() {
         if (selectedRecordIndex < 0) return
+        if (root.selectedRecordId && typeof historyService !== 'undefined' && historyService) {
+            historyService.deleteRecord(root.selectedRecordId)
+        }
         historyModel.remove(selectedRecordIndex)
         selectedRecordIndex = -1
+        selectedRecordId = ""
     }
 
     function getFilteredModel() {
-        if (typeof historyService !== 'undefined' && historyService) {
-            return historyService.filteredModel(filterVerdict, "", "")
+        if (root.filterVerdict === "all" && root.searchText === "") return historyModel
+        var filtered = Qt.createQmlObject('import QtQml 2.15; ListModel {}', root)
+        for (var i = 0; i < historyModel.count; i++) {
+            var item = historyModel.get(i)
+            var matchVerdict = root.filterVerdict === "all" || item.verdict === root.filterVerdict
+            var matchSearch = root.searchText === "" ||
+                item.serialNumber.indexOf(root.searchText) >= 0 ||
+                item.recipeName.indexOf(root.searchText) >= 0
+            if (matchVerdict && matchSearch) {
+                filtered.append({
+                    id: item.id,
+                    serialNumber: item.serialNumber,
+                    recipeName: item.recipeName,
+                    verdict: item.verdict,
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                    duration: item.duration,
+                    operator: item.operator,
+                    idleForwardCurrent: item.idleForwardCurrent,
+                    idleReverseCurrent: item.idleReverseCurrent,
+                    loadForwardTorque: item.loadForwardTorque,
+                    loadReverseTorque: item.loadReverseTorque,
+                    failureReason: item.failureReason
+                })
+            }
         }
-        return historyModel
+        return filtered
     }
 
     Rectangle {
@@ -192,7 +221,7 @@ Item {
 
                             ListView {
                                 id: historyListView
-                                model: historyModel
+                                model: root.getFilteredModel()
                                 spacing: 8
 
                                 delegate: Rectangle {
@@ -214,7 +243,7 @@ Item {
 
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: root.selectRecord(index)
+                                        onClicked: root.selectRecord(id, index)
                                     }
 
                                     RowLayout {
@@ -285,7 +314,7 @@ Item {
                                             variant: "ghost"
                                             size: "sm"
                                             theme: root.theme
-                                            onClicked: root.selectRecord(id)
+                                            onClicked: root.selectRecord(id, index)
                                         }
                                     }
                                 }
@@ -398,7 +427,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "GBX42A-20260417-001"
+                                        text: root.currentRecord() ? root.currentRecord().serialNumber : ""
                                         theme: root.theme
                                     }
 
@@ -408,7 +437,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "GBX-42A 标准配方"
+                                        text: root.currentRecord() ? root.currentRecord().recipeName : ""
                                         theme: root.theme
                                     }
 
@@ -418,8 +447,8 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppBadge {
-                                        text: "PASS"
-                                        variant: "success"
+                                        text: root.currentRecord() ? root.currentRecord().verdict : ""
+                                        variant: root.currentRecord() && root.currentRecord().verdict === "PASS" ? "success" : "destructive"
                                         theme: root.theme
                                     }
 
@@ -429,7 +458,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "张三"
+                                        text: root.currentRecord() ? root.currentRecord().operator : ""
                                         theme: root.theme
                                     }
                                 }
@@ -458,7 +487,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "2026-04-17 14:25:30"
+                                        text: root.currentRecord() ? root.currentRecord().startTime : ""
                                         theme: root.theme
                                     }
 
@@ -468,7 +497,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "2026-04-17 14:27:15"
+                                        text: root.currentRecord() ? root.currentRecord().endTime : ""
                                         theme: root.theme
                                     }
 
@@ -478,7 +507,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "1:45"
+                                        text: root.currentRecord() ? root.currentRecord().duration : ""
                                         theme: root.theme
                                     }
                                 }
@@ -507,7 +536,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "0.65 A"
+                                        text: root.currentRecord() ? root.currentRecord().idleForwardCurrent : ""
                                         theme: root.theme
                                     }
 
@@ -517,7 +546,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "0.68 A"
+                                        text: root.currentRecord() ? root.currentRecord().idleReverseCurrent : ""
                                         theme: root.theme
                                     }
                                 }
@@ -546,7 +575,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "1.35 N·m"
+                                        text: root.currentRecord() ? root.currentRecord().loadForwardTorque : ""
                                         theme: root.theme
                                     }
 
@@ -556,7 +585,7 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
-                                        text: "1.42 N·m"
+                                        text: root.currentRecord() ? root.currentRecord().loadReverseTorque : ""
                                         theme: root.theme
                                     }
                                 }

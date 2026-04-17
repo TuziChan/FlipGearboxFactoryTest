@@ -36,14 +36,15 @@ protected:
             if (!m_device->readAI1Level(ai1)) ok = false;
 
             uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->currentA.store(currentA);
-            m_buffer->ai1Level.store(ai1);
             m_buffer->timestampNs.store(ts);
-            m_buffer->valid.store(true);
 
             if (ok) {
+                m_buffer->currentA.store(currentA);
+                m_buffer->ai1Level.store(ai1);
+                m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {
+                m_buffer->valid.store(false);
                 m_buffer->errorCount.fetch_add(1);
             }
 
@@ -81,15 +82,16 @@ protected:
             bool ok = m_device->readAll(torqueNm, speedRpm, powerW);
 
             uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->torqueNm.store(torqueNm);
-            m_buffer->speedRpm.store(speedRpm);
-            m_buffer->powerW.store(powerW);
             m_buffer->timestampNs.store(ts);
-            m_buffer->valid.store(ok);
 
             if (ok) {
+                m_buffer->torqueNm.store(torqueNm);
+                m_buffer->speedRpm.store(speedRpm);
+                m_buffer->powerW.store(powerW);
+                m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {
+                m_buffer->valid.store(false);
                 m_buffer->errorCount.fetch_add(1);
             }
 
@@ -127,13 +129,14 @@ protected:
             bool ok = m_device->readAngle(angleDeg);
 
             uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->angleDeg.store(angleDeg);
             m_buffer->timestampNs.store(ts);
-            m_buffer->valid.store(ok);
 
             if (ok) {
+                m_buffer->angleDeg.store(angleDeg);
+                m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {
+                m_buffer->valid.store(false);
                 m_buffer->errorCount.fetch_add(1);
             }
 
@@ -171,13 +174,14 @@ protected:
             bool ok = m_device->readCurrent(m_channel, currentA);
 
             uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->currentA.store(currentA);
             m_buffer->timestampNs.store(ts);
-            m_buffer->valid.store(ok);
 
             if (ok) {
+                m_buffer->currentA.store(currentA);
+                m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {
+                m_buffer->valid.store(false);
                 m_buffer->errorCount.fetch_add(1);
             }
 

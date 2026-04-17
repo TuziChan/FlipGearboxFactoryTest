@@ -13,6 +13,7 @@ Item {
 
     property int selectedRecipeIndex: -1
     property bool isEditing: false
+    property var editingRecipe: null
 
     function currentRecipe() {
         if (selectedRecipeIndex >= 0 && selectedRecipeIndex < recipeListModel.count)
@@ -42,7 +43,7 @@ Item {
                         brakeRampInterval: r.loadRampMs || 0,
                         lockSpeedThreshold: r.lockSpeedThresholdRpm || 0,
                         lockDuration: r.lockHoldMs || 0,
-                        anglePositions: (r.position1TargetDeg || 0) + ", " + (r.position2TargetDeg || 0) + ", " + (r.position1TargetDeg || 0) + ", " + (r.position3TargetDeg || 0) + ", 0.0",
+                        anglePositions: (r.position1TargetDeg || 0) + ", " + (r.position2TargetDeg || 0) + ", " + (r.position2ToleranceDeg || 0) + ", " + (r.position3TargetDeg || 0) + ", 0.0",
                         angleTolerance: r.position1ToleranceDeg || 0
                     })
                 }
@@ -56,39 +57,95 @@ Item {
     }
 
     function createNewRecipe() {
-        selectedRecipeIndex = -1
-        isEditing = true
+        root.editingRecipe = {
+            fileName: "",
+            name: "",
+            homeDutyCycle: 40,
+            idleDutyCycle: 40,
+            idleSpeedMin: 0,
+            idleSpeedMax: 9999,
+            idleCurrentMax: 5,
+            loadDutyCycle: 40,
+            loadTorqueMin: 0,
+            brakeRampStep: 3.0,
+            brakeRampInterval: 10000,
+            lockSpeedThreshold: 10,
+            lockDuration: 500,
+            anglePositions: "0, 90, 5, 180, 0.0",
+            angleTolerance: 5,
+            description: ""
+        }
+        root.selectedRecipeIndex = -1
+        root.isEditing = true
     }
 
     function editRecipe() {
         if (selectedRecipeIndex >= 0) {
-            isEditing = true
+            var r = currentRecipe()
+            if (r) {
+                root.editingRecipe = {
+                    fileName: r.fileName,
+                    name: r.name,
+                    homeDutyCycle: r.homeDutyCycle,
+                    idleDutyCycle: r.idleDutyCycle,
+                    idleSpeedMin: r.idleSpeedMin,
+                    idleSpeedMax: r.idleSpeedMax,
+                    idleCurrentMax: r.idleCurrentMax,
+                    loadDutyCycle: r.loadDutyCycle,
+                    loadTorqueMin: r.loadTorqueMin,
+                    brakeRampStep: r.brakeRampStep,
+                    brakeRampInterval: r.brakeRampInterval,
+                    lockSpeedThreshold: r.lockSpeedThreshold,
+                    lockDuration: r.lockDuration,
+                    anglePositions: r.anglePositions,
+                    angleTolerance: r.angleTolerance,
+                    description: r.description || ""
+                }
+            }
+            root.isEditing = true
         }
     }
 
     function saveRecipe() {
-        var r = currentRecipe()
-        if (!r) return
+        var data = root.editingRecipe
+        if (!data) return
+
         if (typeof recipeService !== 'undefined' && recipeService) {
-            var data = {
-                fileName: r.fileName,
-                name: r.name,
-                homeDutyCycle: r.homeDutyCycle,
-                idleDutyCycle: r.idleDutyCycle,
-                idleForwardSpeedAvgMin: r.idleSpeedMin,
-                idleForwardSpeedAvgMax: r.idleSpeedMax,
-                idleForwardCurrentAvgMax: r.idleCurrentMax,
-                loadDutyCycle: r.loadDutyCycle,
-                loadForwardTorqueMin: r.loadTorqueMin,
-                brakeRampEndCurrentA: r.brakeRampStep,
-                loadRampMs: r.brakeRampInterval,
-                lockSpeedThresholdRpm: r.lockSpeedThreshold,
-                lockHoldMs: r.lockDuration,
-                position1ToleranceDeg: r.angleTolerance
+            var payload = {
+                fileName: data.fileName,
+                name: data.name,
+                homeDutyCycle: data.homeDutyCycle,
+                idleDutyCycle: data.idleDutyCycle,
+                idleForwardSpeedAvgMin: data.idleSpeedMin,
+                idleForwardSpeedAvgMax: data.idleSpeedMax,
+                idleForwardCurrentAvgMax: data.idleCurrentMax,
+                loadDutyCycle: data.loadDutyCycle,
+                loadForwardTorqueMin: data.loadTorqueMin,
+                brakeRampEndCurrentA: data.brakeRampStep,
+                loadRampMs: data.brakeRampInterval,
+                lockSpeedThresholdRpm: data.lockSpeedThreshold,
+                lockHoldMs: data.lockDuration,
+                position1ToleranceDeg: data.angleTolerance
             }
-            recipeService.save(data)
+            var ok = recipeService.save(payload)
+            if (!ok) {
+                console.warn("Failed to save recipe")
+                return
+            }
         }
-        isEditing = false
+
+        if (root.selectedRecipeIndex >= 0) {
+            var keys = Object.keys(data)
+            for (var i = 0; i < keys.length; i++) {
+                recipeListModel.setProperty(root.selectedRecipeIndex, keys[i], data[keys[i]])
+            }
+        } else {
+            recipeListModel.append(data)
+            root.selectedRecipeIndex = recipeListModel.count - 1
+        }
+
+        root.isEditing = false
+        root.editingRecipe = null
     }
 
     function deleteRecipe() {
@@ -126,7 +183,7 @@ Item {
                     brakeRampInterval: result.loadRampMs || 0,
                     lockSpeedThreshold: result.lockSpeedThresholdRpm || 0,
                     lockDuration: result.lockHoldMs || 0,
-                    anglePositions: (result.position1TargetDeg || 0) + ", " + (result.position2TargetDeg || 0) + ", " + (result.position1TargetDeg || 0) + ", " + (result.position3TargetDeg || 0) + ", 0.0",
+                    anglePositions: (result.position1TargetDeg || 0) + ", " + (result.position2TargetDeg || 0) + ", " + (result.position2ToleranceDeg || 0) + ", " + (result.position3TargetDeg || 0) + ", 0.0",
                     angleTolerance: result.position1ToleranceDeg || 0
                 })
             }
@@ -309,7 +366,7 @@ Item {
                             variant: "outline"
                             size: "sm"
                             theme: root.theme
-                            onClicked: { root.isEditing = false }
+                            onClicked: { root.isEditing = false; root.editingRecipe = null }
                         }
                     }
 
@@ -384,9 +441,10 @@ Item {
                                     Components.AppInput {
                                         Layout.fillWidth: true
                                         placeholderText: "GBX-XXX"
-                                        text: root.currentRecipe() ? root.currentRecipe().fileName : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.fileName : (root.currentRecipe() ? root.currentRecipe().fileName : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.fileName = text
                                     }
 
                                     Components.AppLabel {
@@ -396,9 +454,10 @@ Item {
                                     Components.AppInput {
                                         Layout.fillWidth: true
                                         placeholderText: "输入配方名称"
-                                        text: root.currentRecipe() ? root.currentRecipe().name : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.name : (root.currentRecipe() ? root.currentRecipe().name : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.name = text
                                     }
 
                                     Components.AppLabel {
@@ -409,9 +468,10 @@ Item {
                                     Components.AppTextarea {
                                         Layout.fillWidth: true
                                         placeholderText: "输入配方描述"
-                                        text: root.currentRecipe() ? root.currentRecipe().fileName : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.description : (root.currentRecipe() ? (root.currentRecipe().description || "") : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.description = text
                                     }
                                 }
 
@@ -440,9 +500,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().homeDutyCycle.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.homeDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().homeDutyCycle.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.homeDutyCycle = parseFloat(text) || 0
                                     }
                                 }
 
@@ -470,9 +531,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().idleDutyCycle.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleDutyCycle.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleDutyCycle = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -481,9 +543,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().idleSpeedMin.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleSpeedMin.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleSpeedMin.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleSpeedMin = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -492,9 +555,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().idleSpeedMax.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleSpeedMax.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleSpeedMax.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleSpeedMax = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -503,9 +567,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().idleCurrentMax.toFixed(2) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleCurrentMax.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().idleCurrentMax.toFixed(2) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleCurrentMax = parseFloat(text) || 0
                                     }
                                 }
 
@@ -533,9 +598,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().anglePositions : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.anglePositions : (root.currentRecipe() ? root.currentRecipe().anglePositions : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.anglePositions = text
                                     }
 
                                     Components.AppLabel {
@@ -544,9 +610,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().angleTolerance.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.angleTolerance.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().angleTolerance.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.angleTolerance = parseFloat(text) || 0
                                     }
                                 }
 
@@ -574,9 +641,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().loadDutyCycle.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.loadDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().loadDutyCycle.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.loadDutyCycle = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -585,9 +653,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().loadTorqueMin.toFixed(2) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.loadTorqueMin.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().loadTorqueMin.toFixed(2) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.loadTorqueMin = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -596,9 +665,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().brakeRampStep.toFixed(2) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.brakeRampStep.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().brakeRampStep.toFixed(2) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.brakeRampStep = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -607,9 +677,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().brakeRampInterval.toString() : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.brakeRampInterval.toString() : (root.currentRecipe() ? root.currentRecipe().brakeRampInterval.toString() : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.brakeRampInterval = parseInt(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -618,9 +689,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().lockSpeedThreshold.toFixed(1) : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.lockSpeedThreshold.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().lockSpeedThreshold.toFixed(1) : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.lockSpeedThreshold = parseFloat(text) || 0
                                     }
 
                                     Components.AppLabel {
@@ -629,9 +701,10 @@ Item {
                                     }
                                     Components.AppInput {
                                         Layout.fillWidth: true
-                                        text: root.currentRecipe() ? root.currentRecipe().lockDuration.toString() : ""
+                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.lockDuration.toString() : (root.currentRecipe() ? root.currentRecipe().lockDuration.toString() : "")
                                         readOnly: !root.isEditing
                                         theme: root.theme
+                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.lockDuration = parseInt(text) || 0
                                     }
                                 }
                             }
