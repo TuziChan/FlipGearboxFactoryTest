@@ -1,0 +1,91 @@
+# Build outputs
+/build/
+/cmake-build-*/
+/out/
+/bin/
+/obj/
+/Debug/
+/Release/
+/x64/
+/x86/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+Testing/
+
+# Qt / QML generated artifacts
+.qmake.stash
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qmlc
+*.jsc
+qmldir
+plugins.qmltypes
+.qmlls.ini
+.qmlls.build.ini
+.qt/
+.rcc/
+
+# Qt creator / project user state
+.qtcreator/
+*.creator
+*.creator.user
+*.creator.user.*
+*.files
+*.includes
+*.config
+
+# Visual Studio / VS Code / JetBrains
+.vs/
+.vscode/
+.idea/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Compiler / linker artifacts
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.lib
+*.dll
+*.exe
+*.exp
+*.idb
+*.ilk
+*.pdb
+*.dSYM/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+*.bak
+*.orig
+*.autosave
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local agent / tooling directories
+.codex/
+.aionrs/
+.playwright-mcp/
+
+# Local reference snapshots
+/Docs/references/shadcn-ui/
+/Docs/drafts/**/.vite/
