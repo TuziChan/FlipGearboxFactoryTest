@@ -96,7 +96,11 @@ class MockEncoderDevice : public Infrastructure::Devices::IEncoderDevice {
     Q_OBJECT
 public:
     double mockAngleDeg = 0.0;
+    double mockVirtualMultiTurnDeg = 0.0;
+    double mockAngularVelocityRpm = 0.0;
     bool mockFailReadAngle = false;
+    bool mockFailReadVirtualMultiTurn = false;
+    bool mockFailReadAngularVelocity = false;
     bool initialized = false;
 
     explicit MockEncoderDevice(QObject* parent = nullptr)
@@ -107,6 +111,18 @@ public:
     bool readAngle(double& angleDeg) override {
         if (mockFailReadAngle) { m_lastError = "Mock: readAngle failed"; return false; }
         angleDeg = mockAngleDeg;
+        return true;
+    }
+
+    bool readVirtualMultiTurn(double& totalAngleDeg) override {
+        if (mockFailReadVirtualMultiTurn) { m_lastError = "Mock: readVirtualMultiTurn failed"; return false; }
+        totalAngleDeg = mockVirtualMultiTurnDeg;
+        return true;
+    }
+
+    bool readAngularVelocity(double& velocityRpm) override {
+        if (mockFailReadAngularVelocity) { m_lastError = "Mock: readAngularVelocity failed"; return false; }
+        velocityRpm = mockAngularVelocityRpm;
         return true;
     }
 

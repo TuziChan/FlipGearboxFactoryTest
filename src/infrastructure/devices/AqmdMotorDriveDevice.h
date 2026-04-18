@@ -29,6 +29,25 @@ public:
     bool readAI1Level(bool& level) override;
     QString lastError() const override;
 
+    /**
+     * @brief Read device identification using 0x2B function code
+     * @param vendor Output vendor name
+     * @param product Output product code
+     * @param version Output version string
+     * @return true if successful
+     */
+    bool readDeviceIdentification(QString& vendor, QString& product, QString& version);
+
+    /**
+     * @brief Write multiple registers using 0x10 function code
+     * @param address Starting register address
+     * @param values Vector of register values to write
+     * @return true if successful
+     * 
+     * Note: Writing to GPIO registers (0x0050-0x0053) with 0x10 triggers EEPROM storage
+     */
+    bool writeMultipleRegisters(uint16_t address, const QVector<uint16_t>& values);
+
 private:
     Bus::IBusController* m_busController;
     uint8_t m_slaveId;

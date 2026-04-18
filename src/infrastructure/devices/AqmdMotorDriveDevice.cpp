@@ -104,6 +104,61 @@ bool AqmdMotorDriveDevice::readAI1Level(bool& level) {
     return true;
 }
 
+bool AqmdMotorDriveDevice::readDeviceIdentification(QString& vendor, QString& product, QString& version) {
+    QByteArray request = Bus::ModbusFrame::buildReadDeviceIdentification(m_slaveId);
+    QByteArray response;
+    
+    if (!m_busController->sendRequest(request, response)) {
+        m_lastError = m_busController->lastError();
+        return false;
+    }
+
+    if (!Bus::ModbusFrame::parseReadDeviceIdentificationResponse(response, vendor, product, version)) {
+        // Check if it's an exception response
+        uint8_t functionCode = static_cast<uint8_t>(response[1]);
+        if (functionCode & 0x80) {
+            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+            m_lastError = QString("Modbus exception: %1").arg(exception.second);
+        } else {
+            m_lastError = "Invalid device identification response or CRC error";
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool AqmdMotorDriveDevice::writeMultipleRegisters(uint16_t address, const QVector<uint16_t>& values) {
+    QByteArray request = Bus::ModbusFrame::buildWriteMultipleRegisters(m_slaveId, address, values);
+    QByteArray response;
+    
+    if (!m_busController->sendRequest(request, response)) {
+        m_lastError = m_busController->lastError();
+        return false;
+    }
+
+    if (!Bus::ModbusFrame::parseWriteMultipleRegistersResponse(response, address, static_cast<uint16_t>(values.size()))) {
+        // Check if it's an exception response
+        uint8_t functionCode = static_cast<uint8_t>(response[1]);
+        if (functionCode & 0x80) {
+            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+            m_lastError = QString("Modbus exception: %1").arg(exception.second);
+        } else {
+            m_lastError = "Invalid write multiple registers response or CRC error";
+        }
+        return false;
+    }
+
+    qDebug() << "AQMD: Wrote" << values.size() << "registers starting at address" << QString::number(address, 16);
+    
+    // Note: Writing to GPIO registers (0x0050-0x0053) with 0x10 triggers EEPROM storage
+    if (address >= 0x0050 && address <= 0x0053) {
+        qDebug() << "AQMD: GPIO configuration written, EEPROM storage triggered";
+    }
+
+    return true;
+}
+
 QString AqmdMotorDriveDevice::lastError() const {
     return m_lastError;
 }
@@ -118,7 +173,14 @@ bool AqmdMotorDriveDevice::writeRegister(uint16_t address, uint16_t value) {
     }
 
     if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
-        m_lastError = "Invalid write response or CRC error";
+        // Check if it's an exception response
+        uint8_t functionCode = static_cast<uint8_t>(response[1]);
+        if (functionCode & 0x80) {
+            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+            m_lastError = QString("Modbus exception: %1").arg(exception.second);
+        } else {
+            m_lastError = "Invalid write response or CRC error";
+        }
         return false;
     }
 
@@ -136,7 +198,14 @@ bool AqmdMotorDriveDevice::writeRegisterSigned(uint16_t address, int16_t value) 
 
     uint16_t unsignedValue = static_cast<uint16_t>(value);
     if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, unsignedValue)) {
-        m_lastError = "Invalid write response or CRC error";
+        // Check if it's an exception response
+        uint8_t functionCode = static_cast<uint8_t>(response[1]);
+        if (functionCode & 0x80) {
+            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+            m_lastError = QString("Modbus exception: %1").arg(exception.second);
+        } else {
+            m_lastError = "Invalid write response or CRC error";
+        }
         return false;
     }
 
@@ -153,7 +222,14 @@ bool AqmdMotorDriveDevice::readRegisters(uint16_t address, uint16_t count, QVect
     }
 
     if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
-        m_lastError = "Invalid read response or CRC error";
+        // Check if it's an exception response
+        uint8_t functionCode = static_cast<uint8_t>(response[1]);
+        if (functionCode & 0x80) {
+            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+            m_lastError = QString("Modbus exception: %1").arg(exception.second);
+        } else {
+            m_lastError = "Invalid read response or CRC error";
+        }
         return false;
     }
 

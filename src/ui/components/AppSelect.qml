@@ -41,8 +41,18 @@ Column {
         }
     }
 
+    function isArrayLikeModel(model) {
+        return model !== undefined
+            && model !== null
+            && typeof model !== "string"
+            && model.length !== undefined
+            && typeof model.length === "number"
+    }
+
     function itemCount() {
         if (Array.isArray(root.model))
+            return root.model.length
+        if (isArrayLikeModel(root.model))
             return root.model.length
         if (root.model && root.model.count !== undefined)
             return root.model.count
@@ -51,6 +61,8 @@ Column {
 
     function itemAt(index) {
         if (Array.isArray(root.model))
+            return root.model[index]
+        if (isArrayLikeModel(root.model))
             return root.model[index]
         if (root.model && root.model.get)
             return root.model.get(index)

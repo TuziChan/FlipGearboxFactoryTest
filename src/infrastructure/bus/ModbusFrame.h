@@ -22,7 +22,8 @@ public:
         ReadInputRegisters = 0x04,
         WriteSingleCoil = 0x05,
         WriteSingleRegister = 0x06,
-        WriteMultipleRegisters = 0x10
+        WriteMultipleRegisters = 0x10,
+        ReadDeviceIdentification = 0x2B
     };
     static QByteArray buildReadCoils(uint8_t slaveId, uint16_t startAddress, uint16_t count);
 
@@ -56,6 +57,22 @@ public:
     static QByteArray buildWriteSingleRegisterSigned(uint8_t slaveId, uint16_t registerAddress, int16_t value);
 
     /**
+     * @brief Build a Write Multiple Registers (0x10) request
+     * @param slaveId Modbus slave address
+     * @param startAddress Starting register address
+     * @param values Vector of register values to write
+     * @return Complete Modbus RTU frame with CRC
+     */
+    static QByteArray buildWriteMultipleRegisters(uint8_t slaveId, uint16_t startAddress, const QVector<uint16_t>& values);
+
+    /**
+     * @brief Build a Read Device Identification (0x2B) request
+     * @param slaveId Modbus slave address
+     * @return Complete Modbus RTU frame with CRC
+     */
+    static QByteArray buildReadDeviceIdentification(uint8_t slaveId);
+
+    /**
      * @brief Parse Read Holding Registers response
      * @param response Raw response frame
      * @param expectedCount Expected number of registers
@@ -87,6 +104,44 @@ public:
                                              bool expectedValue);
 
     /**
+     * @brief Parse Write Multiple Registers response
+     * @param response Raw response frame
+     * @param expectedAddress Expected starting register address
+     * @param expectedCount Expected number of registers written
+     * @return true if response is valid and matches expected values
+     */
+    static bool parseWriteMultipleRegistersResponse(const QByteArray& response,
+                                                     uint16_t expectedAddress,
+                                                     uint16_t expectedCount);
+
+    /**
+     * @brief Parse Read Device Identification response
+     * @param response Raw response frame
+     * @param outVendor Output vendor name
+     * @param outProduct Output product code
+     * @param outVersion Output version string
+     * @return true if parsing succeeded
+     */
+    static bool parseReadDeviceIdentificationResponse(const QByteArray& response,
+                                                       QString& outVendor,
+                                                       QString& outProduct,
+                                                       QString& outVersion);
+
+    /**
+     * @brief Parse Modbus exception response
+     * @param response Raw response frame
+     * @return QPair of exception code and description string
+     */
+    static QPair<uint8_t, QString> parseExceptionResponse(const QByteArray& response);
+
+    /**
+     * @brief Convert exception code to human-readable string
+     * @param code Exception code
+     * @return Description string
+     */
+    static QString exceptionCodeToString(uint8_t code);
+
+    /**
      * @brief Calculate Modbus RTU CRC16
      * @param data Data to calculate CRC for
      * @return CRC16 value (little-endian)
@@ -100,8 +155,21 @@ public:
      */
     static bool verifyCRC(const QByteArray& frame);
 
+    /**
+     * @brief Set CRC byte order mode
+     * @param bigEndian true for big-endian CRC, false for standard little-endian
+     */
+    static void setCrcByteOrder(bool bigEndian);
+
+    /**
+     * @brief Get current CRC byte order mode
+     * @return true if big-endian, false if little-endian
+     */
+    static bool isCrcBigEndian();
+
 private:
     ModbusFrame() = delete;
+    static bool s_crcBigEndian;
 };
 
 } // namespace Bus

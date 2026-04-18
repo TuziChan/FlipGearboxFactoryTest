@@ -30,6 +30,16 @@ public:
     virtual bool readAngle(double& angleDeg) = 0;
 
     /**
+     * @brief Read virtual multi-turn angle in degrees (accumulated total rotation)
+     */
+    virtual bool readVirtualMultiTurn(double& totalAngleDeg) = 0;
+
+    /**
+     * @brief Read angular velocity in RPM
+     */
+    virtual bool readAngularVelocity(double& velocityRpm) = 0;
+
+    /**
      * @brief Set current position as zero point
      */
     virtual bool setZeroPoint() = 0;

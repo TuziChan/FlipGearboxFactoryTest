@@ -27,6 +27,7 @@ Item {
             timeout: 1000,
             parity: "None",
             stopBits: 1,
+            communicationMode: 0,
             enabled: true
         },
         dyn200: {
@@ -36,6 +37,7 @@ Item {
             timeout: 1000,
             parity: "None",
             stopBits: 1,
+            communicationMode: 0,
             enabled: true
         },
         encoder: {
@@ -45,6 +47,7 @@ Item {
             timeout: 1000,
             parity: "None",
             stopBits: 1,
+            communicationMode: 0,
             resolution: 4096,
             enabled: true
         },
@@ -55,6 +58,7 @@ Item {
             timeout: 1000,
             parity: "None",
             stopBits: 1,
+            communicationMode: 0,
             channel: 1,
             enabled: true
         }
@@ -205,10 +209,48 @@ Item {
 
                     Repeater {
                         model: [
-                            {name: "AQMD 电机驱动器", key: "aqmd", hasResolution: false, hasChannel: false},
-                            {name: "DYN200 扭矩传感器", key: "dyn200", hasResolution: false, hasChannel: false},
-                            {name: "单圈绝对值编码器", key: "encoder", hasResolution: true, hasChannel: false},
-                            {name: "制动电源", key: "brake", hasResolution: false, hasChannel: true}
+                            {
+                                name: "AQMD 电机驱动器",
+                                key: "aqmd",
+                                hasResolution: false,
+                                hasChannel: false,
+                                protocolOptions: [
+                                    {value: 0, label: "Modbus RTU"}
+                                ]
+                            },
+                            {
+                                name: "DYN200 扭矩传感器",
+                                key: "dyn200",
+                                hasResolution: false,
+                                hasChannel: false,
+                                protocolOptions: [
+                                    {value: 0, label: "Modbus RTU"},
+                                    {value: 1, label: "HEX 6 字节主动上传"},
+                                    {value: 2, label: "HEX 8 字节主动上传"},
+                                    {value: 3, label: "ASCII 主动上传"}
+                                ]
+                            },
+                            {
+                                name: "单圈绝对值编码器",
+                                key: "encoder",
+                                hasResolution: true,
+                                hasChannel: false,
+                                protocolOptions: [
+                                    {value: 0, label: "查询模式"},
+                                    {value: 2, label: "自动回传单圈"},
+                                    {value: 3, label: "自动回传虚拟多圈"},
+                                    {value: 4, label: "自动回传角速度"}
+                                ]
+                            },
+                            {
+                                name: "制动电源",
+                                key: "brake",
+                                hasResolution: false,
+                                hasChannel: true,
+                                protocolOptions: [
+                                    {value: 0, label: "Modbus RTU"}
+                                ]
+                            }
                         ]
 
                         delegate: Components.AppCard {
@@ -340,6 +382,22 @@ Item {
                                         theme: root.theme
                                         onCurrentValueChanged: {
                                             root.deviceConfig[modelData.key].stopBits = parseInt(currentValue) || 1
+                                            root.isModified = true
+                                        }
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "通信协议:"
+                                        theme: root.theme
+                                    }
+                                    Components.AppSelect {
+                                        Layout.fillWidth: true
+                                        currentValue: root.deviceConfig[modelData.key].communicationMode
+                                        model: modelData.protocolOptions
+                                        enabled: modelData.protocolOptions.length > 1
+                                        theme: root.theme
+                                        onCurrentValueChanged: {
+                                            root.deviceConfig[modelData.key].communicationMode = currentValue
                                             root.isModified = true
                                         }
                                     }

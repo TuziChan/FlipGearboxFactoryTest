@@ -29,7 +29,8 @@ QVariantMap DeviceConfigService::defaultDeviceConfig() const {
             {"parity", c.parity},
             {"stopBits", c.stopBits},
             {"enabled", c.enabled},
-            {"pollIntervalUs", c.pollIntervalUs}
+            {"pollIntervalUs", c.pollIntervalUs},
+            {"communicationMode", c.communicationMode}
         };
     };
 
@@ -77,6 +78,7 @@ QVariantMap DeviceConfigService::loadDeviceConfig() const {
         if (deviceJson.contains("stopBits")) deviceMap["stopBits"] = deviceJson.value("stopBits").toInt(deviceMap.value("stopBits").toInt());
         if (deviceJson.contains("enabled")) deviceMap["enabled"] = deviceJson.value("enabled").toBool(deviceMap.value("enabled").toBool());
         if (deviceJson.contains("pollIntervalUs")) deviceMap["pollIntervalUs"] = deviceJson.value("pollIntervalUs").toInt(deviceMap.value("pollIntervalUs").toInt());
+        if (deviceJson.contains("communicationMode")) deviceMap["communicationMode"] = deviceJson.value("communicationMode").toInt(deviceMap.value("communicationMode").toInt());
         if (key == "encoder" && deviceJson.contains("resolution")) deviceMap["resolution"] = deviceJson.value("resolution").toInt(deviceMap.value("resolution").toInt());
         if (key == "brake" && deviceJson.contains("channel")) deviceMap["channel"] = deviceJson.value("channel").toInt(deviceMap.value("channel").toInt());
         result[key] = deviceMap;
@@ -113,6 +115,7 @@ bool DeviceConfigService::saveDeviceConfig(const QVariantMap& deviceConfig) {
         obj["stopBits"] = map.value("stopBits").toInt();
         obj["enabled"] = map.value("enabled", true).toBool();
         if (map.contains("pollIntervalUs")) obj["pollIntervalUs"] = map.value("pollIntervalUs").toInt();
+        if (map.contains("communicationMode")) obj["communicationMode"] = map.value("communicationMode").toInt();
         if (key == "encoder") obj["resolution"] = map.value("resolution").toInt();
         if (key == "brake") {
             obj["channel"] = map.value("channel", 1).toInt();

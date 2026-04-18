@@ -31,6 +31,8 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/devices/AqmdMotorDriveDevice.h
     src/infrastructure/devices/AqmdMotorDriveDevice.cpp
     src/infrastructure/devices/Dyn200TorqueSensorDevice.h
+    src/infrastructure/devices/Dyn200ProactiveListener.h
+    src/infrastructure/devices/Dyn200ProactiveListener.cpp
     src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
     src/infrastructure/devices/SingleTurnEncoderDevice.h
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
@@ -236,10 +238,15 @@ qt_add_executable(TestExecutionVerification
     src/infrastructure/config/ConfigLoader.cpp
     src/infrastructure/config/RecipeConfig.h
     src/infrastructure/config/RecipeConfig.cpp
+    src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/ModbusFrame.h
+    src/infrastructure/bus/ModbusFrame.cpp
     src/infrastructure/devices/IMotorDriveDevice.h
     src/infrastructure/devices/ITorqueSensorDevice.h
     src/infrastructure/devices/IEncoderDevice.h
     src/infrastructure/devices/IBrakePowerDevice.h
+    src/infrastructure/devices/BrakePowerSupplyDevice.h
+    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
     src/infrastructure/acquisition/TelemetryBuffer.h
     src/infrastructure/acquisition/DevicePoller.h
     src/infrastructure/acquisition/AcquisitionScheduler.h
@@ -254,6 +261,7 @@ target_include_directories(TestExecutionVerification PRIVATE ${CMAKE_CURRENT_SOU
 
 target_link_libraries(TestExecutionVerification
     PRIVATE
+        Qt6::Core
         Qt6::Test
 )
 

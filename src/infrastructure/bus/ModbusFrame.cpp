@@ -3,6 +3,8 @@
 namespace Infrastructure {
 namespace Bus {
 
+bool ModbusFrame::s_crcBigEndian = false;
+
 QByteArray ModbusFrame::buildReadCoils(uint8_t slaveId, uint16_t startAddress, uint16_t count) {
     QByteArray frame;
     frame.append(static_cast<char>(slaveId));
@@ -13,8 +15,13 @@ QByteArray ModbusFrame::buildReadCoils(uint8_t slaveId, uint16_t startAddress, u
     frame.append(static_cast<char>(count & 0xFF));
 
     const uint16_t crc = calculateCRC16(frame);
-    frame.append(static_cast<char>(crc & 0xFF));
-    frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
 
     return frame;
 }
@@ -29,8 +36,13 @@ QByteArray ModbusFrame::buildReadHoldingRegisters(uint8_t slaveId, uint16_t star
     frame.append(static_cast<char>(count & 0xFF));
     
     uint16_t crc = calculateCRC16(frame);
-    frame.append(static_cast<char>(crc & 0xFF));        // CRC low byte first
-    frame.append(static_cast<char>((crc >> 8) & 0xFF)); // CRC high byte
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
     
     return frame;
 }
@@ -45,8 +57,13 @@ QByteArray ModbusFrame::buildReadInputRegisters(uint8_t slaveId, uint16_t startA
     frame.append(static_cast<char>(count & 0xFF));
 
     const uint16_t crc = calculateCRC16(frame);
-    frame.append(static_cast<char>(crc & 0xFF));
-    frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
 
     return frame;
 }
@@ -61,8 +78,13 @@ QByteArray ModbusFrame::buildWriteSingleCoil(uint8_t slaveId, uint16_t coilAddre
     frame.append(static_cast<char>(0x00));
 
     const uint16_t crc = calculateCRC16(frame);
-    frame.append(static_cast<char>(crc & 0xFF));
-    frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
 
     return frame;
 }
@@ -77,8 +99,13 @@ QByteArray ModbusFrame::buildWriteSingleRegister(uint8_t slaveId, uint16_t regis
     frame.append(static_cast<char>(value & 0xFF));
     
     uint16_t crc = calculateCRC16(frame);
-    frame.append(static_cast<char>(crc & 0xFF));
-    frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
     
     return frame;
 }
@@ -87,6 +114,57 @@ QByteArray ModbusFrame::buildWriteSingleRegisterSigned(uint8_t slaveId, uint16_t
     // Reinterpret signed as unsigned for transmission
     uint16_t unsignedValue = static_cast<uint16_t>(value);
     return buildWriteSingleRegister(slaveId, registerAddress, unsignedValue);
+}
+
+QByteArray ModbusFrame::buildWriteMultipleRegisters(uint8_t slaveId, uint16_t startAddress, const QVector<uint16_t>& values) {
+    QByteArray frame;
+    frame.append(static_cast<char>(slaveId));
+    frame.append(static_cast<char>(FunctionCode::WriteMultipleRegisters));
+    frame.append(static_cast<char>((startAddress >> 8) & 0xFF));
+    frame.append(static_cast<char>(startAddress & 0xFF));
+    
+    uint16_t count = static_cast<uint16_t>(values.size());
+    frame.append(static_cast<char>((count >> 8) & 0xFF));
+    frame.append(static_cast<char>(count & 0xFF));
+    
+    uint8_t byteCount = static_cast<uint8_t>(count * 2);
+    frame.append(static_cast<char>(byteCount));
+    
+    for (uint16_t value : values) {
+        frame.append(static_cast<char>((value >> 8) & 0xFF));
+        frame.append(static_cast<char>(value & 0xFF));
+    }
+    
+    uint16_t crc = calculateCRC16(frame);
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
+    
+    return frame;
+}
+
+QByteArray ModbusFrame::buildReadDeviceIdentification(uint8_t slaveId) {
+    QByteArray frame;
+    frame.append(static_cast<char>(slaveId));
+    frame.append(static_cast<char>(FunctionCode::ReadDeviceIdentification));
+    frame.append(static_cast<char>(0x0E)); // MEI Type
+    frame.append(static_cast<char>(0x01)); // Read Device ID code (basic device identification)
+    frame.append(static_cast<char>(0x00)); // Object ID (start from VendorName)
+    
+    uint16_t crc = calculateCRC16(frame);
+    if (s_crcBigEndian) {
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+        frame.append(static_cast<char>(crc & 0xFF));
+    } else {
+        frame.append(static_cast<char>(crc & 0xFF));
+        frame.append(static_cast<char>((crc >> 8) & 0xFF));
+    }
+    
+    return frame;
 }
 
 bool ModbusFrame::parseReadHoldingRegistersResponse(const QByteArray& response, 
@@ -101,6 +179,10 @@ bool ModbusFrame::parseReadHoldingRegistersResponse(const QByteArray& response,
     }
 
     const uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
     if (functionCode != static_cast<uint8_t>(FunctionCode::ReadHoldingRegisters)) {
         return false;
     }
@@ -132,7 +214,12 @@ bool ModbusFrame::parseReadInputRegistersResponse(const QByteArray& response,
         return false;
     }
 
-    if (static_cast<uint8_t>(response[1]) != static_cast<uint8_t>(FunctionCode::ReadInputRegisters)) {
+    const uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
+    if (functionCode != static_cast<uint8_t>(FunctionCode::ReadInputRegisters)) {
         return false;
     }
 
@@ -165,7 +252,12 @@ bool ModbusFrame::parseReadCoilsResponse(const QByteArray& response,
         return false;
     }
 
-    if (static_cast<uint8_t>(response[1]) != static_cast<uint8_t>(FunctionCode::ReadCoils)) {
+    const uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
+    if (functionCode != static_cast<uint8_t>(FunctionCode::ReadCoils)) {
         return false;
     }
 
@@ -195,6 +287,10 @@ bool ModbusFrame::parseWriteSingleRegisterResponse(const QByteArray& response,
     }
     
     uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
     if (functionCode != static_cast<uint8_t>(FunctionCode::WriteSingleRegister)) {
         return false;
     }
@@ -216,7 +312,12 @@ bool ModbusFrame::parseWriteSingleCoilResponse(const QByteArray& response,
         return false;
     }
 
-    if (static_cast<uint8_t>(response[1]) != static_cast<uint8_t>(FunctionCode::WriteSingleCoil)) {
+    const uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
+    if (functionCode != static_cast<uint8_t>(FunctionCode::WriteSingleCoil)) {
         return false;
     }
 
@@ -224,6 +325,145 @@ bool ModbusFrame::parseWriteSingleCoilResponse(const QByteArray& response,
     const uint16_t value = (static_cast<uint8_t>(response[4]) << 8) | static_cast<uint8_t>(response[5]);
 
     return address == expectedAddress && value == (expectedValue ? 0xFF00 : 0x0000);
+}
+
+bool ModbusFrame::parseWriteMultipleRegistersResponse(const QByteArray& response,
+                                                       uint16_t expectedAddress,
+                                                       uint16_t expectedCount) {
+    // Response format: SlaveId(1) + FunctionCode(1) + Address(2) + Count(2) + CRC(2) = 8 bytes
+    if (response.size() != 8) {
+        return false;
+    }
+    
+    if (!verifyCRC(response)) {
+        return false;
+    }
+    
+    uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
+    if (functionCode != static_cast<uint8_t>(FunctionCode::WriteMultipleRegisters)) {
+        return false;
+    }
+    
+    uint16_t address = (static_cast<uint8_t>(response[2]) << 8) | static_cast<uint8_t>(response[3]);
+    uint16_t count = (static_cast<uint8_t>(response[4]) << 8) | static_cast<uint8_t>(response[5]);
+    
+    return (address == expectedAddress) && (count == expectedCount);
+}
+
+bool ModbusFrame::parseReadDeviceIdentificationResponse(const QByteArray& response,
+                                                         QString& outVendor,
+                                                         QString& outProduct,
+                                                         QString& outVersion) {
+    // Minimum response: SlaveId(1) + FunctionCode(1) + MEI(1) + ReadDevID(1) + Conformity(1) + MoreFollows(1) + NextObjectId(1) + NumObjects(1) + CRC(2) = 10 bytes
+    if (response.size() < 10) {
+        return false;
+    }
+    
+    if (!verifyCRC(response)) {
+        return false;
+    }
+    
+    uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    // Check for exception response
+    if (functionCode & 0x80) {
+        return false;
+    }
+    if (functionCode != static_cast<uint8_t>(FunctionCode::ReadDeviceIdentification)) {
+        return false;
+    }
+    
+    uint8_t meiType = static_cast<uint8_t>(response[2]);
+    if (meiType != 0x0E) {
+        return false;
+    }
+    
+    // Skip ReadDevID(1), Conformity(1), MoreFollows(1), NextObjectId(1)
+    uint8_t numObjects = static_cast<uint8_t>(response[7]);
+    
+    int offset = 8;
+    for (int i = 0; i < numObjects && offset < response.size() - 2; ++i) {
+        if (offset + 2 > response.size() - 2) break;
+        
+        uint8_t objectId = static_cast<uint8_t>(response[offset]);
+        uint8_t objectLength = static_cast<uint8_t>(response[offset + 1]);
+        offset += 2;
+        
+        if (offset + objectLength > response.size() - 2) break;
+        
+        QString objectValue = QString::fromLatin1(response.mid(offset, objectLength));
+        offset += objectLength;
+        
+        switch (objectId) {
+            case 0x00: // VendorName
+                outVendor = objectValue;
+                break;
+            case 0x01: // ProductCode
+                outProduct = objectValue;
+                break;
+            case 0x02: // MajorMinorRevision
+                outVersion = objectValue;
+                break;
+            default:
+                break;
+        }
+    }
+    
+    return true;
+}
+
+QPair<uint8_t, QString> ModbusFrame::parseExceptionResponse(const QByteArray& response) {
+    if (response.size() < 5) { // SlaveId + FunctionCode + ExceptionCode + CRC(2)
+        return QPair<uint8_t, QString>(0, "Invalid exception response length");
+    }
+    
+    if (!verifyCRC(response)) {
+        return QPair<uint8_t, QString>(0, "CRC verification failed");
+    }
+    
+    uint8_t functionCode = static_cast<uint8_t>(response[1]);
+    if (!(functionCode & 0x80)) {
+        return QPair<uint8_t, QString>(0, "Not an exception response");
+    }
+    
+    uint8_t exceptionCode = static_cast<uint8_t>(response[2]);
+    QString description = exceptionCodeToString(exceptionCode);
+    
+    return QPair<uint8_t, QString>(exceptionCode, description);
+}
+
+QString ModbusFrame::exceptionCodeToString(uint8_t code) {
+    switch (code) {
+        case 0x01:
+            return "Illegal Function (0x01)";
+        case 0x02:
+            return "Illegal Data Address (0x02)";
+        case 0x03:
+            return "Illegal Data Value (0x03)";
+        case 0x04:
+            return "Slave Device Failure (0x04)";
+        case 0x05:
+            return "Acknowledge (0x05)";
+        case 0x06:
+            return "Slave Device Busy (0x06)";
+        case 0x07:
+            return "Negative Acknowledge (0x07)";
+        case 0x08:
+            return "Memory Parity Error (0x08)";
+        case 0x0A:
+            return "Gateway Path Unavailable (0x0A)";
+        case 0x0B:
+            return "Gateway Target Device Failed to Respond (0x0B)";
+        case 0x40:
+            return "AQMD: Operation Forbidden (0x40)";
+        case 0xFF:
+            return "AQMD: Undefined Error (0xFF)";
+        default:
+            return QString("Unknown Exception Code (0x%1)").arg(code, 2, 16, QChar('0'));
+    }
 }
 
 uint16_t ModbusFrame::calculateCRC16(const QByteArray& data) {
@@ -249,16 +489,30 @@ bool ModbusFrame::verifyCRC(const QByteArray& frame) {
         return false;
     }
     
-    // Extract received CRC (last 2 bytes, little-endian)
+    // Extract received CRC
     int crcOffset = frame.size() - 2;
-    uint16_t receivedCRC = static_cast<uint8_t>(frame[crcOffset]) | 
-                           (static_cast<uint8_t>(frame[crcOffset + 1]) << 8);
+    uint16_t receivedCRC;
+    if (s_crcBigEndian) {
+        receivedCRC = (static_cast<uint8_t>(frame[crcOffset]) << 8) | 
+                      static_cast<uint8_t>(frame[crcOffset + 1]);
+    } else {
+        receivedCRC = static_cast<uint8_t>(frame[crcOffset]) | 
+                      (static_cast<uint8_t>(frame[crcOffset + 1]) << 8);
+    }
     
     // Calculate CRC for frame without CRC bytes
     QByteArray dataWithoutCRC = frame.left(frame.size() - 2);
     uint16_t calculatedCRC = calculateCRC16(dataWithoutCRC);
     
     return receivedCRC == calculatedCRC;
+}
+
+void ModbusFrame::setCrcByteOrder(bool bigEndian) {
+    s_crcBigEndian = bigEndian;
+}
+
+bool ModbusFrame::isCrcBigEndian() {
+    return s_crcBigEndian;
 }
 
 } // namespace Bus

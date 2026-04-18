@@ -31,6 +31,15 @@ public:
     QString lastError() const override;
 
     /**
+     * @brief Reconfigure serial port parameters at runtime
+     * @param baudRate New baud rate
+     * @param parity New parity setting ("None", "Even", "Odd")
+     * @param stopBits New stop bits (1 or 2)
+     * @return true if reconfiguration succeeded
+     */
+    bool reconfigure(int baudRate, const QString& parity, int stopBits);
+
+    /**
      * @brief Set inter-frame delay (T3.5 character times)
      * Default is calculated based on baud rate
      */
@@ -41,6 +50,11 @@ private:
     int m_timeoutMs;
     int m_interFrameDelayMs;
     QString m_lastError;
+    
+    // Cached parameters for reconfiguration when port is not open
+    int m_cachedBaudRate;
+    QString m_cachedParity;
+    int m_cachedStopBits;
 
     /**
      * @brief Calculate inter-frame delay based on baud rate

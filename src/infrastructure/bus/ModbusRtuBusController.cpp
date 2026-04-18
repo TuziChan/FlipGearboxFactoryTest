@@ -12,6 +12,9 @@ ModbusRtuBusController::ModbusRtuBusController(QObject* parent)
     , m_timeoutMs(500)
     , m_interFrameDelayMs(2)
     , m_lastError()
+    , m_cachedBaudRate(9600)
+    , m_cachedParity("None")
+    , m_cachedStopBits(1)
 {
 }
 
@@ -33,6 +36,11 @@ bool ModbusRtuBusController::open(const QString& portName, int baudRate, int tim
 
     m_timeoutMs = timeoutMs;
     m_interFrameDelayMs = calculateInterFrameDelay(baudRate);
+    
+    // Cache parameters
+    m_cachedBaudRate = baudRate;
+    m_cachedParity = parity;
+    m_cachedStopBits = stopBits;
 
     if (!m_serialPort->open(QIODevice::ReadWrite)) {
         m_lastError = QString("Failed to open port %1: %2")
@@ -94,6 +102,48 @@ bool ModbusRtuBusController::sendRequest(const QByteArray& request, QByteArray& 
 
 QString ModbusRtuBusController::lastError() const {
     return m_lastError;
+}
+
+bool ModbusRtuBusController::reconfigure(int baudRate, const QString& parity, int stopBits) {
+    // Cache parameters for future use
+    m_cachedBaudRate = baudRate;
+    m_cachedParity = parity;
+    m_cachedStopBits = stopBits;
+    
+    if (m_serialPort->isOpen()) {
+        // Apply immediately if port is open
+        if (!m_serialPort->setBaudRate(baudRate)) {
+            m_lastError = QString("Failed to set baud rate to %1").arg(baudRate);
+            return false;
+        }
+        
+        if (!m_serialPort->setParity(parseParity(parity))) {
+            m_lastError = QString("Failed to set parity to %1").arg(parity);
+            return false;
+        }
+        
+        if (!m_serialPort->setStopBits(parseStopBits(stopBits))) {
+            m_lastError = QString("Failed to set stop bits to %1").arg(stopBits);
+            return false;
+        }
+        
+        // Update inter-frame delay based on new baud rate
+        m_interFrameDelayMs = calculateInterFrameDelay(baudRate);
+        
+        qDebug() << "Modbus RTU bus reconfigured:"
+                 << "baudRate" << baudRate
+                 << "parity" << parity
+                 << "stopBits" << stopBits
+                 << "interFrameDelay" << m_interFrameDelayMs << "ms";
+    } else {
+        // Port not open, parameters will be used on next open()
+        qDebug() << "Modbus RTU bus parameters cached for next open:"
+                 << "baudRate" << baudRate
+                 << "parity" << parity
+                 << "stopBits" << stopBits;
+    }
+    
+    return true;
 }
 
 void ModbusRtuBusController::setInterFrameDelayMs(int delayMs) {

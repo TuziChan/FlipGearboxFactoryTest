@@ -33,6 +33,7 @@ std::unique_ptr<StationRuntime> StationRuntimeFactory::create(const StationConfi
         runtime->m_torque = std::make_unique<Devices::Dyn200TorqueSensorDevice>(
             runtime->m_dyn200Bus.get(),
             config.dyn200Config.slaveId,
+            config.dyn200Config.communicationMode,
             runtime.get()
         );
     }
@@ -42,6 +43,8 @@ std::unique_ptr<StationRuntime> StationRuntimeFactory::create(const StationConfi
             runtime->m_encoderBus.get(),
             config.encoderConfig.slaveId,
             config.encoderConfig.encoderResolution,
+            config.encoderConfig.communicationMode,
+            20, // Default auto-report interval: 20ms
             runtime.get()
         );
     }
