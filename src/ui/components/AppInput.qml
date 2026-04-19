@@ -51,7 +51,7 @@ Column {
 
             // shadcn/ui 风格的输入体验
             selectByMouse: true
-            cursorPreedit: Qt.IBeamCursor
+            cursorVisible: true
 
             // 焦点状态动画
             Behavior on opacity {
