@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC
+import Qt.labs.qmlmodels
 import "../components" as Components
 
 Item {
@@ -41,8 +42,16 @@ Item {
                         duration: r.duration || "",
                         operator: r.operator_ || r.operator || "",
                         idleForwardCurrent: r.idleForwardCurrentAvg || "",
+                        idleForwardCurrentMax: r.idleForwardCurrentMax || "",
+                        idleForwardSpeedAvg: r.idleForwardSpeedAvg || "",
+                        idleForwardSpeedMax: r.idleForwardSpeedMax || "",
                         idleReverseCurrent: r.idleReverseCurrentAvg || "",
+                        idleReverseCurrentMax: r.idleReverseCurrentMax || "",
+                        idleReverseSpeedAvg: r.idleReverseSpeedAvg || "",
+                        idleReverseSpeedMax: r.idleReverseSpeedMax || "",
+                        loadForwardCurrent: r.loadForwardCurrent || "",
                         loadForwardTorque: r.loadForwardTorque || "",
+                        loadReverseCurrent: r.loadReverseCurrent || "",
                         loadReverseTorque: r.loadReverseTorque || "",
                         failureReason: r.failureReason || ""
                     })
@@ -79,34 +88,20 @@ Item {
         selectedRecordId = ""
     }
 
-    function getFilteredModel() {
-        if (root.filterVerdict === "all" && root.searchText === "") return historyModel
-        var filtered = Qt.createQmlObject('import QtQml 2.15; ListModel {}', root)
-        for (var i = 0; i < historyModel.count; i++) {
-            var item = historyModel.get(i)
-            var matchVerdict = root.filterVerdict === "all" || item.verdict === root.filterVerdict
-            var matchSearch = root.searchText === "" ||
-                item.serialNumber.indexOf(root.searchText) >= 0 ||
-                item.recipeName.indexOf(root.searchText) >= 0
-            if (matchVerdict && matchSearch) {
-                filtered.append({
-                    id: item.id,
-                    serialNumber: item.serialNumber,
-                    recipeName: item.recipeName,
-                    verdict: item.verdict,
-                    startTime: item.startTime,
-                    endTime: item.endTime,
-                    duration: item.duration,
-                    operator: item.operator,
-                    idleForwardCurrent: item.idleForwardCurrent,
-                    idleReverseCurrent: item.idleReverseCurrent,
-                    loadForwardTorque: item.loadForwardTorque,
-                    loadReverseTorque: item.loadReverseTorque,
-                    failureReason: item.failureReason
-                })
+    SortFilterProxyModel {
+        id: filteredModel
+        model: historyModel
+        filters: [
+            FunctionFilter {
+                function filter(data): bool {
+                    var matchVerdict = root.filterVerdict === "all" || data.verdict === root.filterVerdict
+                    var matchSearch = root.searchText === "" ||
+                        (data.serialNumber !== undefined && data.serialNumber.indexOf(root.searchText) >= 0) ||
+                        (data.recipeName !== undefined && data.recipeName.indexOf(root.searchText) >= 0)
+                    return matchVerdict && matchSearch
+                }
             }
-        }
-        return filtered
+        ]
     }
 
     Rectangle {
@@ -221,7 +216,7 @@ Item {
 
                             ListView {
                                 id: historyListView
-                                model: root.getFilteredModel()
+                                model: filteredModel
                                 spacing: 8
 
                                 delegate: Rectangle {
@@ -241,10 +236,8 @@ Item {
                                     border.width: root.selectedRecordIndex === index ? 1 : 0
                                     border.color: root.theme.accent
 
-                                    MouseArea {
-                                        Layout.fillWidth: true
-                                        Layout.fillHeight: true
-                                        onClicked: root.selectRecord(id, index)
+                                    TapHandler {
+                                        onTapped: root.selectRecord(id, index)
                                     }
 
                                     RowLayout {
@@ -533,7 +526,7 @@ Item {
                                     rowSpacing: 8
 
                                     Components.AppLabel {
-                                        text: "正转电流:"
+                                        text: "正转电流平均:"
                                         color: root.theme.textSecondary
                                         theme: root.theme
                                     }
@@ -543,12 +536,72 @@ Item {
                                     }
 
                                     Components.AppLabel {
-                                        text: "反转电流:"
+                                        text: "正转电流峰值:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleForwardCurrentMax : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "正转转速平均:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleForwardSpeedAvg : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "正转转速峰值:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleForwardSpeedMax : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "反转电流平均:"
                                         color: root.theme.textSecondary
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
                                         text: root.currentRecord() ? root.currentRecord().idleReverseCurrent : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "反转电流峰值:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleReverseCurrentMax : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "反转转速平均:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleReverseSpeedAvg : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "反转转速峰值:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().idleReverseSpeedMax : ""
                                         theme: root.theme
                                     }
                                 }
@@ -572,12 +625,32 @@ Item {
                                     rowSpacing: 8
 
                                     Components.AppLabel {
+                                        text: "正转制动电流:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().loadForwardCurrent : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
                                         text: "正转扭矩:"
                                         color: root.theme.textSecondary
                                         theme: root.theme
                                     }
                                     Components.AppLabel {
                                         text: root.currentRecord() ? root.currentRecord().loadForwardTorque : ""
+                                        theme: root.theme
+                                    }
+
+                                    Components.AppLabel {
+                                        text: "反转制动电流:"
+                                        color: root.theme.textSecondary
+                                        theme: root.theme
+                                    }
+                                    Components.AppLabel {
+                                        text: root.currentRecord() ? root.currentRecord().loadReverseCurrent : ""
                                         theme: root.theme
                                     }
 
@@ -590,6 +663,28 @@ Item {
                                         text: root.currentRecord() ? root.currentRecord().loadReverseTorque : ""
                                         theme: root.theme
                                     }
+                                }
+
+                                Components.AppSeparator {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+                                    visible: root.currentRecord() && root.currentRecord().failureReason.length > 0
+                                }
+
+                                Components.AppLabel {
+                                    text: "失败原因"
+                                    fontSize: 14
+                                    fontWeight: 600
+                                    theme: root.theme
+                                    visible: root.currentRecord() && root.currentRecord().failureReason.length > 0
+                                }
+
+                                Components.AppAlert {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+                                    variant: "destructive"
+                                    description: root.currentRecord() ? root.currentRecord().failureReason : ""
+                                    visible: root.currentRecord() && root.currentRecord().failureReason.length > 0
                                 }
                             }
                         }

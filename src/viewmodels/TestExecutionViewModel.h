@@ -30,6 +30,11 @@ class TestExecutionViewModel : public QObject {
     Q_PROPERTY(bool ai1Level READ ai1Level NOTIFY telemetryChanged)
     Q_PROPERTY(QString overallVerdict READ overallVerdict NOTIFY resultsChanged)
     Q_PROPERTY(bool testPassed READ testPassed NOTIFY resultsChanged)
+    Q_PROPERTY(QVariantMap idleForwardResult READ idleForwardResult NOTIFY resultsChanged)
+    Q_PROPERTY(QVariantMap idleReverseResult READ idleReverseResult NOTIFY resultsChanged)
+    Q_PROPERTY(QVariantList angleResults READ angleResults NOTIFY resultsChanged)
+    Q_PROPERTY(QVariantMap loadForwardResult READ loadForwardResult NOTIFY resultsChanged)
+    Q_PROPERTY(QVariantMap loadReverseResult READ loadReverseResult NOTIFY resultsChanged)
 
 public:
     explicit TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
@@ -54,6 +59,11 @@ public:
     bool ai1Level() const { return m_ai1Level; }
     QString overallVerdict() const { return m_overallVerdict; }
     bool testPassed() const { return m_testPassed; }
+    QVariantMap idleForwardResult() const { return m_idleForwardResult; }
+    QVariantMap idleReverseResult() const { return m_idleReverseResult; }
+    QVariantList angleResults() const { return m_angleResults; }
+    QVariantMap loadForwardResult() const { return m_loadForwardResult; }
+    QVariantMap loadReverseResult() const { return m_loadReverseResult; }
 
     void setSerialNumber(const QString& sn);
     void setSelectedModel(const QString& model);
@@ -104,10 +114,18 @@ private:
     bool m_ai1Level;
     QString m_overallVerdict;
     bool m_testPassed;
+    QVariantMap m_idleForwardResult;
+    QVariantMap m_idleReverseResult;
+    QVariantList m_angleResults;
+    QVariantMap m_loadForwardResult;
+    QVariantMap m_loadReverseResult;
 
     QString recipeFilePathForModel(const QString& model) const;
     Domain::TestRecipe buildExecutionRecipe() const;
     void updateFromState(const Domain::TestRunState& state);
+    QVariantMap toVariantMap(const Domain::IdleRunResult& result) const;
+    QVariantMap toVariantMap(const Domain::LoadTestResult& result) const;
+    QVariantList toVariantList(const QVector<Domain::AngleResult>& results) const;
 };
 
 } // namespace ViewModels

@@ -18,6 +18,7 @@ Item {
     property bool motorConfirmVisible: false
     property string brakeCurrentInput: ""
     property string brakeVoltageInput: ""
+    property string brakeModeValue: root.brakeTel.mode || "CC"
 
     property var motorTel: viewModel ? viewModel.motorTelemetry : ({"currentA": 0, "ai1Level": false, "online": false})
     property var torqueTel: viewModel ? viewModel.torqueTelemetry : ({"torqueNm": 0, "speedRpm": 0, "powerW": 0, "online": false})
@@ -724,6 +725,57 @@ Item {
                         unit: "CH"
                         subtext: "当前通道"
                         accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                    }
+                }
+
+                // Brake mode switching
+                Components.AppCard {
+                    Layout.fillWidth: true
+                    theme: root.theme
+
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 8
+
+                        Components.AppLabel {
+                            text: "制动模式"
+                            fontSize: 13
+                            fontWeight: 600
+                            theme: root.theme
+                        }
+
+                        RowLayout {
+                            spacing: 10
+
+                            Components.AppButton {
+                                text: "恒流 (CC)"
+                                variant: root.brakeModeValue === "CC" ? "default" : "outline"
+                                theme: root.theme
+                                onClicked: {
+                                    root.brakeModeValue = "CC"
+                                    if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
+                                        root.viewModel.setBrakeMode("CC")
+                                }
+                            }
+
+                            Components.AppButton {
+                                text: "恒压 (CV)"
+                                variant: root.brakeModeValue === "CV" ? "default" : "outline"
+                                theme: root.theme
+                                onClicked: {
+                                    root.brakeModeValue = "CV"
+                                    if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
+                                        root.viewModel.setBrakeMode("CV")
+                                }
+                            }
+
+                            Components.AppLabel {
+                                text: "当前: " + root.brakeModeValue
+                                fontSize: 12
+                                color: root.theme.textSecondary
+                                theme: root.theme
+                            }
+                        }
                     }
                 }
 

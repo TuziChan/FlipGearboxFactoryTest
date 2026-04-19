@@ -1,4 +1,4 @@
-﻿pragma ComponentBehavior: Bound
+pragma ComponentBehavior: Bound
 
 import QtQuick
 
@@ -22,11 +22,11 @@ Item {
 
     property bool isEditing: false
 
-    property var editingRecipe: null
-
     property int currentTabIndex: 0
 
-    property var recipeServiceRef: typeof recipeService !== 'undefined' ? recipeService : null
+    property var recipeVM: typeof recipeViewModel !== 'undefined' ? recipeViewModel : null
+
+    property string validationError: root.recipeVM ? root.recipeVM.lastError : ""
 
     function currentRecipe() {
 
@@ -40,7 +40,7 @@ Item {
 
     function activeRecipeData() {
 
-        if (root.isEditing && root.editingRecipe) return root.editingRecipe
+        if (root.isEditing && root.recipeVM && root.recipeVM.editingRecipe) return root.recipeVM.editingRecipe
 
         return currentRecipe()
 
@@ -50,22 +50,19 @@ Item {
 
         id: recipeListModel
 
-        Component.onCompleted: {
+    }
 
-            if (root.recipeServiceRef) {
+    Connections {
+        target: root.recipeVM
+        enabled: root.recipeVM !== null
 
-                var recipes = root.recipeServiceRef.loadAll()
-
-                for (var i = 0; i < recipes.length; i++) {
-
-                    recipeListModel.append(recipes[i])
-
-                }
-
+        function onRecipesChanged() {
+            recipeListModel.clear()
+            var recipes = root.recipeVM.recipes
+            for (var i = 0; i < recipes.length; i++) {
+                recipeListModel.append(recipes[i])
             }
-
         }
-
     }
 
     function selectRecipe(index) {
@@ -73,6 +70,8 @@ Item {
         selectedRecipeIndex = index
 
         isEditing = false
+
+        if (root.recipeVM) root.recipeVM.cancelEdit()
 
     }
 
@@ -146,7 +145,7 @@ Item {
 
     function createNewRecipe() {
 
-        root.editingRecipe = defaultRecipe()
+        if (root.recipeVM) root.recipeVM.beginEdit(root.defaultRecipe())
 
         root.selectedRecipeIndex = -1
 
@@ -174,7 +173,7 @@ Item {
 
                 }
 
-                root.editingRecipe = d
+                if (root.recipeVM) root.recipeVM.beginEdit(d)
 
             }
 
@@ -186,45 +185,33 @@ Item {
 
     function saveRecipe() {
 
-        var data = root.editingRecipe
+        if (!root.recipeVM) return
 
-        if (!data) return
+        var savedFileName = root.recipeVM.editingRecipe ? root.recipeVM.editingRecipe.fileName : ""
 
-        if (root.recipeServiceRef) {
+        var wasNew = root.selectedRecipeIndex < 0
 
-            var ok = root.recipeServiceRef.save(data)
+        var ok = root.recipeVM.saveEdit()
 
-            if (!ok) {
-
-                console.warn("Failed to save recipe")
-
-                return
-
-            }
-
-        }
-
-        if (root.selectedRecipeIndex >= 0) {
-
-            var keys = Object.keys(data)
-
-            for (var i = 0; i < keys.length; i++) {
-
-                recipeListModel.setProperty(root.selectedRecipeIndex, keys[i], data[keys[i]])
-
-            }
-
-        } else {
-
-            recipeListModel.append(data)
-
-            root.selectedRecipeIndex = recipeListModel.count - 1
-
-        }
+        if (!ok) return
 
         root.isEditing = false
 
-        root.editingRecipe = null
+        if (wasNew && savedFileName) {
+
+            for (var i = 0; i < recipeListModel.count; i++) {
+
+                if (recipeListModel.get(i).fileName === savedFileName) {
+
+                    root.selectedRecipeIndex = i
+
+                    break
+
+                }
+
+            }
+
+        }
 
     }
 
@@ -234,13 +221,11 @@ Item {
 
         var r = currentRecipe()
 
-        if (r && root.recipeServiceRef) {
+        if (r && root.recipeVM) {
 
-            root.recipeServiceRef.remove(r.fileName)
+            root.recipeVM.remove(r.fileName)
 
         }
-
-        recipeListModel.remove(root.selectedRecipeIndex)
 
         root.selectedRecipeIndex = -1
 
@@ -250,9 +235,9 @@ Item {
 
         var r = currentRecipe()
 
-        if (r && root.recipeServiceRef) {
+        if (r && root.recipeVM) {
 
-            root.recipeServiceRef.exportTo(r.fileName, "exports/" + r.fileName)
+            root.recipeVM.exportTo(r.fileName, "exports/" + r.fileName)
 
         }
 
@@ -260,18 +245,16 @@ Item {
 
     function importRecipe() {
 
-        if (root.recipeServiceRef) {
+        if (root.recipeVM) {
 
-            var result = root.recipeServiceRef.importFrom("imports/recipe.json")
-
-            if (result && result.fileName) {
-
-                recipeListModel.append(result)
-
-            }
+            root.recipeVM.importFrom("imports/recipe.json")
 
         }
 
+    }
+
+    Component.onCompleted: {
+        if (root.recipeVM) root.recipeVM.loadAll()
     }
 
     Rectangle {
@@ -398,11 +381,9 @@ Item {
 
                                 border.color: root.theme.accent
 
-                                MouseArea {
+                                TapHandler {
 
-                                    anchors.fill: parent
-
-                                    onClicked: root.selectRecipe(recipeDelegate.index)
+                                    onTapped: root.selectRecipe(recipeDelegate.index)
 
                                 }
 
@@ -562,7 +543,7 @@ Item {
 
                             theme: root.theme
 
-                            onClicked: { root.isEditing = false; root.editingRecipe = null }
+                            onClicked: { if (root.recipeVM) root.recipeVM.cancelEdit(); root.isEditing = false }
 
                         }
 
@@ -573,6 +554,20 @@ Item {
                         Layout.fillWidth: true
 
                         theme: root.theme
+
+                    }
+
+                    Components.AppAlert {
+
+                        Layout.fillWidth: true
+
+                        theme: root.theme
+
+                        variant: "destructive"
+
+                        description: root.validationError
+
+                        visible: root.validationError.length > 0
 
                     }
 
@@ -666,6 +661,8 @@ Item {
 
                                 isEditing: root.isEditing
 
+                                recipeVM: root.recipeVM
+
                             }
 
                             RecipeForms.RecipeHomingForm {
@@ -675,6 +672,8 @@ Item {
                                 recipe: root.activeRecipeData()
 
                                 isEditing: root.isEditing
+
+                                recipeVM: root.recipeVM
 
                             }
 
@@ -686,6 +685,8 @@ Item {
 
                                 isEditing: root.isEditing
 
+                                recipeVM: root.recipeVM
+
                             }
 
                             RecipeForms.RecipeAngleForm {
@@ -696,6 +697,8 @@ Item {
 
                                 isEditing: root.isEditing
 
+                                recipeVM: root.recipeVM
+
                             }
 
                             RecipeForms.RecipeLoadForm {
@@ -705,6 +708,8 @@ Item {
                                 recipe: root.activeRecipeData()
 
                                 isEditing: root.isEditing
+
+                                recipeVM: root.recipeVM
 
                             }
 
@@ -721,4 +726,3 @@ Item {
     }
 
 }
-

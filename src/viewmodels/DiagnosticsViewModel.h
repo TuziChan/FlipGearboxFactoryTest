@@ -38,6 +38,7 @@ public:
     Q_INVOKABLE void setBrakeOutput(bool enabled);
     Q_INVOKABLE void setBrakeCurrent(double currentA);
     Q_INVOKABLE void setBrakeVoltage(double voltageV);
+    Q_INVOKABLE void setBrakeMode(const QString& mode);
     Q_INVOKABLE void setEncoderZero();
     Q_INVOKABLE void clearLog();
 

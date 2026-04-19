@@ -29,6 +29,7 @@ Domain::TestRecipe RecipeConfig::fromJson(const QJsonObject& json) {
     recipe.idleForwardSampleMs = readInt(json, "idleForwardSampleMs", recipe.idleForwardSampleMs);
     recipe.idleReverseSpinupMs = readInt(json, "idleReverseSpinupMs", recipe.idleReverseSpinupMs);
     recipe.idleReverseSampleMs = readInt(json, "idleReverseSampleMs", recipe.idleReverseSampleMs);
+    recipe.idleTimeoutMs = readInt(json, "idleTimeoutMs", recipe.idleTimeoutMs);
     recipe.idleForwardCurrentAvgMin = readDouble(json, "idleForwardCurrentAvgMin", recipe.idleForwardCurrentAvgMin);
     recipe.idleForwardCurrentAvgMax = readDouble(json, "idleForwardCurrentAvgMax", recipe.idleForwardCurrentAvgMax);
     recipe.idleForwardCurrentMaxMin = readDouble(json, "idleForwardCurrentMaxMin", recipe.idleForwardCurrentMaxMin);
@@ -55,6 +56,7 @@ Domain::TestRecipe RecipeConfig::fromJson(const QJsonObject& json) {
     recipe.returnZeroToleranceDeg = readDouble(json, "returnZeroToleranceDeg", recipe.returnZeroToleranceDeg);
     recipe.angleTimeoutMs = readInt(json, "angleTimeoutMs", readInt(json, "angleMoveTimeoutMs", recipe.angleTimeoutMs));
     recipe.loadDutyCycle = readDouble(json, "loadDutyCycle", recipe.loadDutyCycle);
+    recipe.loadTimeoutMs = readInt(json, "loadTimeoutMs", recipe.loadTimeoutMs);
     recipe.loadSpinupMs = readInt(json, "loadSpinupMs", recipe.loadSpinupMs);
     recipe.loadRampMs = readInt(json, "loadRampMs", recipe.loadRampMs);
     recipe.brakeRampStartCurrentA = readDouble(json, "brakeRampStartCurrentA", recipe.brakeRampStartCurrentA);
@@ -74,6 +76,8 @@ Domain::TestRecipe RecipeConfig::fromJson(const QJsonObject& json) {
     recipe.loadReverseCurrentMax = readDouble(json, "loadReverseCurrentMax", recipe.loadReverseCurrentMax);
     recipe.loadReverseTorqueMin = readDouble(json, "loadReverseTorqueMin", recipe.loadReverseTorqueMin);
     recipe.loadReverseTorqueMax = readDouble(json, "loadReverseTorqueMax", recipe.loadReverseTorqueMax);
+    recipe.returnZeroTimeoutMs = readInt(json, "returnZeroTimeoutMs", recipe.returnZeroTimeoutMs);
+    recipe.gearBacklashCompensationDeg = readDouble(json, "gearBacklashCompensationDeg", recipe.gearBacklashCompensationDeg);
     return recipe;
 }
 
@@ -89,6 +93,7 @@ QJsonObject RecipeConfig::toJson(const Domain::TestRecipe& recipe) {
     json["idleForwardSampleMs"] = recipe.idleForwardSampleMs;
     json["idleReverseSpinupMs"] = recipe.idleReverseSpinupMs;
     json["idleReverseSampleMs"] = recipe.idleReverseSampleMs;
+    json["idleTimeoutMs"] = recipe.idleTimeoutMs;
     json["idleForwardCurrentAvgMin"] = recipe.idleForwardCurrentAvgMin;
     json["idleForwardCurrentAvgMax"] = recipe.idleForwardCurrentAvgMax;
     json["idleForwardCurrentMaxMin"] = recipe.idleForwardCurrentMaxMin;
@@ -116,6 +121,7 @@ QJsonObject RecipeConfig::toJson(const Domain::TestRecipe& recipe) {
     json["angleTimeoutMs"] = recipe.angleTimeoutMs;
     json["angleMoveTimeoutMs"] = recipe.angleTimeoutMs;
     json["loadDutyCycle"] = recipe.loadDutyCycle;
+    json["loadTimeoutMs"] = recipe.loadTimeoutMs;
     json["loadSpinupMs"] = recipe.loadSpinupMs;
     json["loadRampMs"] = recipe.loadRampMs;
     json["brakeRampStartCurrentA"] = recipe.brakeRampStartCurrentA;
@@ -135,6 +141,8 @@ QJsonObject RecipeConfig::toJson(const Domain::TestRecipe& recipe) {
     json["loadReverseCurrentMax"] = recipe.loadReverseCurrentMax;
     json["loadReverseTorqueMin"] = recipe.loadReverseTorqueMin;
     json["loadReverseTorqueMax"] = recipe.loadReverseTorqueMax;
+    json["returnZeroTimeoutMs"] = recipe.returnZeroTimeoutMs;
+    json["gearBacklashCompensationDeg"] = recipe.gearBacklashCompensationDeg;
     return json;
 }
 

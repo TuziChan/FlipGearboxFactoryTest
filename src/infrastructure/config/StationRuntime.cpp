@@ -93,7 +93,7 @@ bool StationRuntime::initialize() {
 
 bool StationRuntime::initializeBus(const QString& displayName,
                                    const BusConfig& config,
-                                   const std::unique_ptr<Bus::ModbusRtuBusController>& bus,
+                                   const std::unique_ptr<Bus::IBusController>& bus,
                                    bool enabled) {
     if (!enabled) {
         qDebug() << displayName << "device disabled in station config, skipping bus initialization";

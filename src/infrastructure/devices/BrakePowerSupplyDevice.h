@@ -34,6 +34,7 @@ public:
     bool readVoltage(int channel, double& voltageV) override;
     bool readPower(int channel, double& powerW) override;
     bool readMode(int channel, int& mode) override;
+    bool setBrakeMode(int channel, const QString& mode) override;
     QString lastError() const override;
 
 private:

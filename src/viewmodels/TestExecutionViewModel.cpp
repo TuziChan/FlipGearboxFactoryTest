@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDebug>
+#include <QVariantMap>
 
 namespace ViewModels {
 
@@ -29,6 +30,11 @@ TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRu
     , m_ai1Level(false)
     , m_overallVerdict("Pending")
     , m_testPassed(false)
+    , m_idleForwardResult()
+    , m_idleReverseResult()
+    , m_angleResults()
+    , m_loadForwardResult()
+    , m_loadReverseResult()
 {
     if (!m_selectedModel.isEmpty()) {
         loadRecipe(m_selectedModel);
@@ -106,6 +112,11 @@ void TestExecutionViewModel::resetTest() {
         m_elapsedMs = 0;
         m_overallVerdict = "Pending";
         m_testPassed = false;
+        m_idleForwardResult.clear();
+        m_idleReverseResult.clear();
+        m_angleResults.clear();
+        m_loadForwardResult.clear();
+        m_loadReverseResult.clear();
 
         emit runningChanged();
         emit currentPhaseChanged();
@@ -148,6 +159,11 @@ void TestExecutionViewModel::onTestCompleted(const Domain::TestResults& results)
     m_running = false;
     m_testPassed = results.overallPassed;
     m_overallVerdict = results.overallPassed ? "PASSED" : "FAILED";
+    m_idleForwardResult = toVariantMap(results.idleForward);
+    m_idleReverseResult = toVariantMap(results.idleReverse);
+    m_angleResults = toVariantList(results.angleResults);
+    m_loadForwardResult = toVariantMap(results.loadForward);
+    m_loadReverseResult = toVariantMap(results.loadReverse);
 
     emit runningChanged();
     emit resultsChanged();
@@ -265,6 +281,48 @@ Domain::TestRecipe TestExecutionViewModel::buildExecutionRecipe() const {
     recipe.position3TargetDeg += m_backlashCompensationDeg;
     recipe.encoderZeroAngleDeg += m_backlashCompensationDeg;
     return recipe;
+}
+
+QVariantMap TestExecutionViewModel::toVariantMap(const Domain::IdleRunResult& result) const {
+    return {
+        {"direction", result.direction},
+        {"currentAvg", result.currentAvg},
+        {"currentMax", result.currentMax},
+        {"speedAvg", result.speedAvg},
+        {"speedMax", result.speedMax},
+        {"currentAvgPassed", result.currentAvgPassed},
+        {"currentMaxPassed", result.currentMaxPassed},
+        {"speedAvgPassed", result.speedAvgPassed},
+        {"speedMaxPassed", result.speedMaxPassed},
+        {"overallPassed", result.overallPassed}
+    };
+}
+
+QVariantMap TestExecutionViewModel::toVariantMap(const Domain::LoadTestResult& result) const {
+    return {
+        {"direction", result.direction},
+        {"lockCurrentA", result.lockCurrentA},
+        {"lockTorqueNm", result.lockTorqueNm},
+        {"currentPassed", result.currentPassed},
+        {"torquePassed", result.torquePassed},
+        {"overallPassed", result.overallPassed},
+        {"lockAchieved", result.lockAchieved}
+    };
+}
+
+QVariantList TestExecutionViewModel::toVariantList(const QVector<Domain::AngleResult>& results) const {
+    QVariantList list;
+    for (const auto& r : results) {
+        list.append(QVariantMap{
+            {"positionName", r.positionName},
+            {"targetAngleDeg", r.targetAngleDeg},
+            {"measuredAngleDeg", r.measuredAngleDeg},
+            {"deviationDeg", r.deviationDeg},
+            {"toleranceDeg", r.toleranceDeg},
+            {"passed", r.passed}
+        });
+    }
+    return list;
 }
 
 } // namespace ViewModels

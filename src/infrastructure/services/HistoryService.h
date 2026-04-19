@@ -23,11 +23,18 @@ public:
                                            const QString& dateFrom,
                                            const QString& dateTo) const;
     Q_INVOKABLE QString lastError() const;
+    
+    // Cache management
+    Q_INVOKABLE void invalidateCache();
 
 private:
     QString dataFilePath() const;
     bool ensureDataDir() const;
     mutable QString m_lastError;
+    
+    // Cache for performance optimization
+    mutable QVariantList m_cachedRecords;
+    mutable bool m_cacheValid;
 };
 
 } // namespace Services

@@ -57,8 +57,12 @@ struct TestRecipe {
     double returnZeroToleranceDeg;  // Tolerance for return-to-zero
     int angleTimeoutMs;             // Timeout for each angle move
     
+    // Idle run timeout
+    int idleTimeoutMs;              // Timeout for entire idle run phase
+
     // Load test parameters
     double loadDutyCycle;           // % for load test
+    int loadTimeoutMs;              // Timeout for entire load test phase
     int loadSpinupMs;               // Spinup time before brake ramp
     int loadRampMs;                 // Brake current ramp duration
     double brakeRampStartCurrentA;  // Starting brake current
@@ -82,7 +86,13 @@ struct TestRecipe {
     double loadReverseCurrentMax;
     double loadReverseTorqueMin;
     double loadReverseTorqueMax;
-    
+
+    // Return to zero
+    int returnZeroTimeoutMs;        // Timeout for return-to-zero phase
+
+    // Gear backlash compensation
+    double gearBacklashCompensationDeg; // Added to target angle during execution
+
     TestRecipe()
         : name("Default")
         , homeDutyCycle(20.0)
@@ -94,6 +104,7 @@ struct TestRecipe {
         , idleForwardSampleMs(2000)
         , idleReverseSpinupMs(3000)
         , idleReverseSampleMs(2000)
+        , idleTimeoutMs(60000)
         , idleForwardCurrentAvgMin(0.5)
         , idleForwardCurrentAvgMax(2.0)
         , idleForwardCurrentMaxMin(0.6)
@@ -120,6 +131,7 @@ struct TestRecipe {
         , returnZeroToleranceDeg(1.0)
         , angleTimeoutMs(15000)
         , loadDutyCycle(50.0)
+        , loadTimeoutMs(60000)
         , loadSpinupMs(3000)
         , loadRampMs(2000)
         , brakeRampStartCurrentA(0.0)
@@ -139,6 +151,8 @@ struct TestRecipe {
         , loadReverseCurrentMax(3.0)
         , loadReverseTorqueMin(10.0)
         , loadReverseTorqueMax(50.0)
+        , returnZeroTimeoutMs(15000)
+        , gearBacklashCompensationDeg(0.0)
     {}
 };
 

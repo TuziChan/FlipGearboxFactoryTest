@@ -114,6 +114,9 @@ private:
     double m_currentBrakeVoltage = 0.0;
     quint64 m_settlingTargetMs = 0;
 
+    // Phase time accumulator (total time across sub-states within a phase)
+    qint64 m_phaseAccumulatedMs = 0;
+
     // Phase management
     void transitionToPhase(TestPhase newPhase, TestSubState newSubState);
     void transitionToSubState(TestSubState newSubState);

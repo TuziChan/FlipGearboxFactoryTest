@@ -258,6 +258,43 @@ bool BrakePowerSupplyDevice::readMode(int channel, int& mode) {
     return true;
 }
 
+bool BrakePowerSupplyDevice::setBrakeMode(int channel, const QString& mode) {
+    if (channel < 1 || channel > 2) {
+        m_lastError = "Invalid channel number (must be 1 or 2)";
+        return false;
+    }
+
+    // First, read current hardware mode
+    QVector<uint16_t> values;
+    if (!readInputRegisters(REG_MODE, 1, values)) {
+        m_lastError = QString("Failed to read mode for setting brake mode on channel %1: %2").arg(channel).arg(m_lastError);
+        return false;
+    }
+
+    int hardwareMode = static_cast<int>(values[0]);
+    int desiredMode = (mode == "CV") ? 1 : 0;
+
+    // Check if hardware mode matches desired mode
+    if (hardwareMode != desiredMode) {
+        qWarning() << QString("Hardware mode (%1) does not match requested mode (%2) for channel %3. "
+                                "Use SW5 to change hardware mode. Current settings will be auto-cleared.")
+                      .arg(hardwareMode == 1 ? "CV" : "CC")
+                      .arg(mode)
+                      .arg(channel);
+        // We don't return false here as the mode setting is for software logic only
+    }
+
+    // For CV mode, ensure voltage is set properly
+    if (mode == "CV") {
+        // Voltage will be set separately via setVoltage()
+        qDebug() << QString("Channel %1 set to CV mode (hardware mode: %2)").arg(channel).arg(hardwareMode == 1 ? "CV" : "CC");
+    } else {
+        qDebug() << QString("Channel %1 set to CC mode (hardware mode: %2)").arg(channel).arg(hardwareMode == 1 ? "CV" : "CC");
+    }
+
+    return true;
+}
+
 uint16_t BrakePowerSupplyDevice::getSetVoltageRegister(int channel) const {
     return (channel == 1) ? REG_CH1_SET_VOLTAGE : REG_CH2_SET_VOLTAGE;
 }

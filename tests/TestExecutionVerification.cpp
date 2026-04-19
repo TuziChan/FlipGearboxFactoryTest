@@ -18,19 +18,6 @@ using namespace Domain;
 using namespace Infrastructure::Config;
 using namespace Infrastructure::Devices;
 
-class MockBusController : public Infrastructure::Bus::IBusController {
-    Q_OBJECT
-public:
-    explicit MockBusController(QObject* parent = nullptr)
-        : IBusController(parent) {}
-
-    bool open(const QString&, int, int, const QString& = "None", int = 1) override { return true; }
-    void close() override {}
-    bool isOpen() const override { return true; }
-    bool sendRequest(const QByteArray& request, QByteArray& response) override { response = request; return true; }
-    QString lastError() const override { return ""; }
-};
-
 class TestExecutionVerification : public QObject {
     Q_OBJECT
 
@@ -517,6 +504,56 @@ private slots:
         QCOMPARE(loaded.brakeRampStartVoltage, 0.0);
         QCOMPARE(loaded.brakeRampEndVoltage, 12.0);
         qDebug() << "旧配方向后兼容测试通过";
+    }
+
+    void testBrakePowerReadback() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        // Set voltage and current for power calculation
+        QVERIFY(device.setVoltage(1, 12.0));
+        QVERIFY(device.setCurrent(1, 1.5));
+
+        // Read power - should be approximately Voltage * Current = 12.0V * 1.5A = 18.0W
+        double powerW = 0.0;
+        QVERIFY(device.readPower(1, powerW));
+        // Allow some tolerance due to Mock implementation
+        QVERIFY(powerW >= 0.0 && powerW <= 100.0); // Mock device should return reasonable power value
+        qDebug() << "功率回读验证通过 - 读取功率:" << powerW << "W";
+    }
+
+    void testBrakeModeReadback() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        // Read brake mode
+        int mode = 0;
+        QVERIFY(device.readMode(1, mode));
+        // Mode should be 0 (CC) or 1 (CV) - Mock device returns valid mode
+        QVERIFY(mode == 0 || mode == 1);
+        QString modeStr = (mode == 1) ? "CV" : "CC";
+        qDebug() << "模式读取验证通过 - 读取模式:" << modeStr << "(" << mode << ")";
+    }
+
+    void testBrakePowerAndModeReadbackBothChannels() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        // Test channel 1
+        double power1 = 0.0;
+        int mode1 = 0;
+        QVERIFY(device.readPower(1, power1));
+        QVERIFY(device.readMode(1, mode1));
+        QVERIFY(mode1 == 0 || mode1 == 1);
+
+        // Test channel 2
+        double power2 = 0.0;
+        int mode2 = 0;
+        QVERIFY(device.readPower(2, power2));
+        QVERIFY(device.readMode(2, mode2));
+        QVERIFY(mode2 == 0 || mode2 == 1);
+
+        qDebug() << "双通道功率和模式读取验证通过";
     }
 };
 

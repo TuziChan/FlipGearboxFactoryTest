@@ -14,6 +14,7 @@ namespace Services {
 HistoryService::HistoryService(QObject* parent)
     : QObject(parent)
     , m_lastError()
+    , m_cacheValid(false)
 {
 }
 
@@ -42,11 +43,18 @@ bool HistoryService::ensureDataDir() const
 
 QVariantList HistoryService::loadAll()
 {
+    // Check if cache is valid
+    if (m_cacheValid) {
+        return m_cachedRecords;
+    }
+
     QVariantList records;
     const QString filePath = dataFilePath();
     QFile file(filePath);
 
     if (!file.exists()) {
+        m_cachedRecords = records;
+        m_cacheValid = true;
         return records;
     }
 
@@ -71,12 +79,17 @@ QVariantList HistoryService::loadAll()
     }
     file.close();
 
+    // Sort by startTime descending (most recent first)
     std::sort(records.begin(), records.end(),
               [](const QVariant& a, const QVariant& b) {
                   const QString timeA = a.toMap().value(QStringLiteral("startTime")).toString();
                   const QString timeB = b.toMap().value(QStringLiteral("startTime")).toString();
                   return timeA > timeB;
               });
+
+    // Update cache
+    m_cachedRecords = records;
+    m_cacheValid = true;
 
     return records;
 }
@@ -100,6 +113,9 @@ bool HistoryService::addRecord(const QVariantMap& record)
     file.write(doc.toJson(QJsonDocument::Compact));
     file.write("\n");
     file.close();
+
+    // Invalidate cache
+    m_cacheValid = false;
 
     return true;
 }
@@ -181,6 +197,10 @@ bool HistoryService::deleteRecord(const QString& recordId)
         file.write("\n");
     }
     file.close();
+
+    // Invalidate cache
+    m_cacheValid = false;
+
     return true;
 }
 
@@ -188,38 +208,49 @@ QVariantList HistoryService::filteredModel(const QString& verdictFilter,
                                            const QString& dateFrom,
                                            const QString& dateTo) const
 {
+    // Load all records (uses cache if available)
     QVariantList all;
     {
         HistoryService* nonConst = const_cast<HistoryService*>(this);
         all = nonConst->loadAll();
     }
 
-    QVariantList filtered;
+    // Early return if no filters applied
+    const bool hasVerdictFilter = (verdictFilter != QStringLiteral("ALL"));
     const QDate fromDate = QDate::fromString(dateFrom, QStringLiteral("yyyy-MM-dd"));
     const QDate toDate = QDate::fromString(dateTo, QStringLiteral("yyyy-MM-dd"));
+    const bool hasDateFilter = fromDate.isValid() || toDate.isValid();
+
+    if (!hasVerdictFilter && !hasDateFilter) {
+        return all;
+    }
+
+    // Apply filters efficiently
+    QVariantList filtered;
+    filtered.reserve(all.size()); // Pre-allocate to avoid reallocations
 
     for (const QVariant& item : all) {
         const QVariantMap record = item.toMap();
-        const QString verdict = record.value(QStringLiteral("verdict")).toString();
 
-        if (verdictFilter != QStringLiteral("ALL")) {
+        // Verdict filter
+        if (hasVerdictFilter) {
+            const QString verdict = record.value(QStringLiteral("verdict")).toString();
             if (verdict != verdictFilter) {
                 continue;
             }
         }
 
-        const QString startTimeStr = record.value(QStringLiteral("startTime")).toString();
-        const QDateTime startDt = QDateTime::fromString(startTimeStr, Qt::ISODate);
-        const QDate startDate = startDt.date();
+        // Date filter
+        if (hasDateFilter) {
+            const QString startTimeStr = record.value(QStringLiteral("startTime")).toString();
+            const QDateTime startDt = QDateTime::fromString(startTimeStr, Qt::ISODate);
+            const QDate startDate = startDt.date();
 
-        if (fromDate.isValid()) {
-            if (startDate < fromDate) {
+            if (fromDate.isValid() && startDate < fromDate) {
                 continue;
             }
-        }
 
-        if (toDate.isValid()) {
-            if (startDate > toDate) {
+            if (toDate.isValid() && startDate > toDate) {
                 continue;
             }
         }
@@ -228,6 +259,12 @@ QVariantList HistoryService::filteredModel(const QString& verdictFilter,
     }
 
     return filtered;
+}
+
+void HistoryService::invalidateCache()
+{
+    m_cacheValid = false;
+    m_cachedRecords.clear();
 }
 
 QString HistoryService::lastError() const

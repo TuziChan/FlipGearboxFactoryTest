@@ -44,6 +44,7 @@ Item {
     ListModel { id: stepModel }
     ListModel { id: angleModel }
     ListModel { id: loadModel }
+    ListModel { id: idleModel }
 
     // Connect to ViewModel signals
     Connections {
@@ -85,6 +86,7 @@ Item {
                 root.infoText = "测试完成，整机判定 NG"
                 root.infoType = "error"
             }
+            root.populateResultModels()
         }
 
         function onErrorOccurred(message) {
@@ -170,6 +172,10 @@ Item {
         loadModel.clear()
         loadModel.append({ direction: "正转", brakeCurrent: "--", torque: "--", limit: "-- N·m", result: "待测" })
         loadModel.append({ direction: "反转", brakeCurrent: "--", torque: "--", limit: "-- N·m", result: "待测" })
+
+        idleModel.clear()
+        idleModel.append({ direction: "正转", currentAvg: "--", currentMax: "--", speedAvg: "--", speedMax: "--", result: "待测" })
+        idleModel.append({ direction: "反转", currentAvg: "--", currentMax: "--", speedAvg: "--", speedMax: "--", result: "待测" })
     }
 
     function updateCurrentPhaseIndex() {
@@ -210,6 +216,58 @@ Item {
         array.push(value)
         if (array.length > 120)
             array.shift()
+    }
+
+    function populateResultModels() {
+        if (!viewModel) return
+
+        if (typeof viewModel.idleForwardResult !== 'undefined') {
+            var fwd = viewModel.idleForwardResult
+            if (idleModel.count > 0) {
+                idleModel.setProperty(0, "currentAvg", typeof fwd.currentAvg === 'number' ? fwd.currentAvg.toFixed(2) : "--")
+                idleModel.setProperty(0, "currentMax", typeof fwd.currentMax === 'number' ? fwd.currentMax.toFixed(2) : "--")
+                idleModel.setProperty(0, "speedAvg", typeof fwd.speedAvg === 'number' ? fwd.speedAvg.toFixed(0) : "--")
+                idleModel.setProperty(0, "speedMax", typeof fwd.speedMax === 'number' ? fwd.speedMax.toFixed(0) : "--")
+                idleModel.setProperty(0, "result", fwd.overallPassed ? "OK" : "NG")
+            }
+        }
+        if (typeof viewModel.idleReverseResult !== 'undefined') {
+            var rev = viewModel.idleReverseResult
+            if (idleModel.count > 1) {
+                idleModel.setProperty(1, "currentAvg", typeof rev.currentAvg === 'number' ? rev.currentAvg.toFixed(2) : "--")
+                idleModel.setProperty(1, "currentMax", typeof rev.currentMax === 'number' ? rev.currentMax.toFixed(2) : "--")
+                idleModel.setProperty(1, "speedAvg", typeof rev.speedAvg === 'number' ? rev.speedAvg.toFixed(0) : "--")
+                idleModel.setProperty(1, "speedMax", typeof rev.speedMax === 'number' ? rev.speedMax.toFixed(0) : "--")
+                idleModel.setProperty(1, "result", rev.overallPassed ? "OK" : "NG")
+            }
+        }
+
+        if (typeof viewModel.angleResults !== 'undefined') {
+            var angles = viewModel.angleResults
+            for (var i = 0; i < Math.min(angles.length, angleModel.count); i++) {
+                var a = angles[i]
+                angleModel.setProperty(i, "currentAngle", typeof a.measuredAngleDeg === 'number' ? a.measuredAngleDeg.toFixed(2) + "°" : "--")
+                angleModel.setProperty(i, "deviation", typeof a.deviationDeg === 'number' ? a.deviationDeg.toFixed(2) + "°" : "--")
+                angleModel.setProperty(i, "result", a.passed ? "OK" : "NG")
+            }
+        }
+
+        if (typeof viewModel.loadForwardResult !== 'undefined') {
+            var lf = viewModel.loadForwardResult
+            if (loadModel.count > 0) {
+                loadModel.setProperty(0, "brakeCurrent", typeof lf.lockCurrentA === 'number' ? lf.lockCurrentA.toFixed(2) + " A" : "--")
+                loadModel.setProperty(0, "torque", typeof lf.lockTorqueNm === 'number' ? lf.lockTorqueNm.toFixed(2) + " N·m" : "--")
+                loadModel.setProperty(0, "result", lf.overallPassed ? "OK" : "NG")
+            }
+        }
+        if (typeof viewModel.loadReverseResult !== 'undefined') {
+            var lr = viewModel.loadReverseResult
+            if (loadModel.count > 1) {
+                loadModel.setProperty(1, "brakeCurrent", typeof lr.lockCurrentA === 'number' ? lr.lockCurrentA.toFixed(2) + " A" : "--")
+                loadModel.setProperty(1, "torque", typeof lr.lockTorqueNm === 'number' ? lr.lockTorqueNm.toFixed(2) + " N·m" : "--")
+                loadModel.setProperty(1, "result", lr.overallPassed ? "OK" : "NG")
+            }
+        }
     }
 
     function resetRun() {
@@ -319,6 +377,7 @@ Item {
                 stepModel: stepModel
                 angleModel: angleModel
                 loadModel: loadModel
+                idleModel: idleModel
                 chartSpeed: root.chartSpeed
                 chartTorque: root.chartTorque
                 chartCurrent: root.chartCurrent

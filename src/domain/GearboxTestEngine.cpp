@@ -208,46 +208,145 @@ void GearboxTestEngine::transitionToPhase(TestPhase newPhase, TestSubState newSu
     m_state.phase = newPhase;
     m_state.subState = newSubState;
     m_phaseTimer.restart();
-    
+    m_phaseAccumulatedMs = 0;
+
     qDebug() << "Phase transition:" << m_state.phaseString() << "SubState:" << static_cast<int>(newSubState);
 }
 
 void GearboxTestEngine::transitionToSubState(TestSubState newSubState) {
+    m_phaseAccumulatedMs += m_phaseTimer.elapsed();
     m_state.subState = newSubState;
     m_phaseTimer.restart();
-    
+
     qDebug() << "SubState transition:" << static_cast<int>(newSubState);
 }
 
 void GearboxTestEngine::updateProgress() {
-    // Simple progress calculation based on phase
-    int phaseProgress = 0;
+    double progress = 0.0;
+
     switch (m_state.phase) {
-        case TestPhase::Idle:
-            phaseProgress = 0;
+    case TestPhase::Idle:
+        progress = 0.0;
+        break;
+
+    case TestPhase::PrepareAndHome: {
+        // 0-15%
+        double maxTime = qMax(1, m_recipe.homeTimeoutMs);
+        switch (m_state.subState) {
+        case TestSubState::SeekingMagnet: {
+            double frac = qMin(1.0, static_cast<double>(m_phaseTimer.elapsed()) / maxTime);
+            progress = frac * 10.0;
             break;
-        case TestPhase::PrepareAndHome:
-            phaseProgress = 10;
+        }
+        case TestSubState::AdvancingToEncoderZero: {
+            double frac = qMin(1.0, static_cast<double>(m_phaseTimer.elapsed()) / maxTime);
+            progress = 10.0 + frac * 4.0;
             break;
-        case TestPhase::IdleRun:
-            phaseProgress = 30;
+        }
+        case TestSubState::HomeSettled:
+            progress = 15.0;
             break;
-        case TestPhase::AnglePositioning:
-            phaseProgress = 50;
+        default:
+            progress = 10.0;
             break;
-        case TestPhase::LoadRampAndLock:
-            phaseProgress = 80;
-            break;
-        case TestPhase::ReturnToZero:
-            phaseProgress = 95;
-            break;
-        case TestPhase::Completed:
-        case TestPhase::Failed:
-            phaseProgress = 100;
-            break;
+        }
+        break;
     }
-    
-    m_state.progressPercent = phaseProgress;
+
+    case TestPhase::IdleRun: {
+        // 15-35%: proportional to estimated total idle run time
+        double totalExpected = m_recipe.idleForwardSpinupMs + m_recipe.idleForwardSampleMs +
+                               500.0 + m_recipe.idleReverseSpinupMs + m_recipe.idleReverseSampleMs + 500.0;
+        qint64 totalPhaseMs = m_phaseAccumulatedMs + m_phaseTimer.elapsed();
+        double phaseFrac = qMin(1.0, static_cast<double>(totalPhaseMs) / qMax(1.0, totalExpected));
+        progress = 15.0 + phaseFrac * 20.0;
+        break;
+    }
+
+    case TestPhase::AnglePositioning: {
+        // 35-60%: 9 sub-states
+        static const TestSubState states[] = {
+            TestSubState::MoveToPosition1,
+            TestSubState::MoveToPosition2,
+            TestSubState::SettlingPosition2Delay,
+            TestSubState::MoveBackToPosition1,
+            TestSubState::SettlingPosition1ReturnDelay,
+            TestSubState::MoveToPosition3,
+            TestSubState::SettlingPosition3Delay,
+            TestSubState::MoveBackToZero,
+            TestSubState::SettlingZeroDelay,
+        };
+        int idx = -1;
+        for (int i = 0; i < 9; i++) {
+            if (m_state.subState == states[i]) { idx = i; break; }
+        }
+        if (idx >= 0) {
+            double base = 35.0 + idx * (25.0 / 9.0);
+            double subRange = 25.0 / 9.0;
+            double refTime = qMax(1, m_recipe.angleTimeoutMs);
+            if (m_state.subState == TestSubState::SettlingPosition2Delay ||
+                m_state.subState == TestSubState::SettlingPosition1ReturnDelay ||
+                m_state.subState == TestSubState::SettlingPosition3Delay ||
+                m_state.subState == TestSubState::SettlingZeroDelay) {
+                refTime = qMax(1, static_cast<int>(m_settlingTargetMs));
+            }
+            double frac = qMin(1.0, static_cast<double>(m_phaseTimer.elapsed()) / refTime);
+            progress = base + frac * subRange;
+        } else {
+            progress = 35.0;
+        }
+        break;
+    }
+
+    case TestPhase::LoadRampAndLock: {
+        // 60-85%: 6 sub-states
+        static const TestSubState states[] = {
+            TestSubState::SpinupLoadForward,
+            TestSubState::RampBrakeForward,
+            TestSubState::SettlingLoadForwardDelay,
+            TestSubState::SpinupLoadReverse,
+            TestSubState::RampBrakeReverse,
+            TestSubState::SettlingLoadReverseDelay,
+        };
+        int idx = -1;
+        for (int i = 0; i < 6; i++) {
+            if (m_state.subState == states[i]) { idx = i; break; }
+        }
+        if (idx >= 0) {
+            double base = 60.0 + idx * (25.0 / 6.0);
+            double subRange = 25.0 / 6.0;
+            double refTime = qMax(1, m_recipe.loadSpinupMs);
+            if (m_state.subState == TestSubState::RampBrakeForward ||
+                m_state.subState == TestSubState::RampBrakeReverse) {
+                refTime = qMax(1, m_recipe.loadRampMs);
+            } else if (m_state.subState == TestSubState::SettlingLoadForwardDelay ||
+                       m_state.subState == TestSubState::SettlingLoadReverseDelay) {
+                refTime = qMax(1, static_cast<int>(m_settlingTargetMs));
+            }
+            double frac = qMin(1.0, static_cast<double>(m_phaseTimer.elapsed()) / refTime);
+            progress = base + frac * subRange;
+        } else {
+            progress = 60.0;
+        }
+        break;
+    }
+
+    case TestPhase::ReturnToZero: {
+        // 85-100%
+        double refTime = qMax(1, m_recipe.returnZeroTimeoutMs);
+        qint64 totalPhaseMs = m_phaseAccumulatedMs + m_phaseTimer.elapsed();
+        double frac = qMin(1.0, static_cast<double>(totalPhaseMs) / refTime);
+        progress = 85.0 + frac * 15.0;
+        break;
+    }
+
+    case TestPhase::Completed:
+    case TestPhase::Failed:
+        progress = 100.0;
+        break;
+    }
+
+    m_state.progressPercent = qBound(0, static_cast<int>(progress), 100);
 }
 
 bool GearboxTestEngine::setMotorForward(double dutyCycle) {
@@ -407,6 +506,13 @@ void GearboxTestEngine::handleAdvancingToEncoderZero() {
 }
 
 void GearboxTestEngine::handleIdleRunPhase() {
+    // Phase-level timeout check (total time across sub-states)
+    qint64 totalPhaseMs = m_phaseAccumulatedMs + m_state.phaseElapsedMs;
+    if (totalPhaseMs > m_recipe.idleTimeoutMs) {
+        failTest(FailureCategory::Process, "Idle run phase timeout");
+        return;
+    }
+
     switch (m_state.subState) {
         case TestSubState::SpinupForward:
             handleSpinupForward();
@@ -670,6 +776,9 @@ void GearboxTestEngine::handleMoveBackToZero() {
     double angleDiff = qAbs(currentAngle - targetAngle);
     if (angleDiff < m_recipe.returnZeroToleranceDeg) {
         stopMotor();
+        // Record zero position angle result (5th measurement)
+        evaluateAngleResult("Zero", m_recipe.encoderZeroAngleDeg,
+                           m_recipe.returnZeroToleranceDeg, currentAngle);
         m_settlingTargetMs = 500;
         transitionToSubState(TestSubState::SettlingZeroDelay);
         return;
@@ -682,6 +791,13 @@ void GearboxTestEngine::handleMoveBackToZero() {
 }
 
 void GearboxTestEngine::handleLoadTestPhase() {
+    // Phase-level timeout check (total time across sub-states)
+    qint64 totalPhaseMs = m_phaseAccumulatedMs + m_state.phaseElapsedMs;
+    if (totalPhaseMs > m_recipe.loadTimeoutMs) {
+        failTest(FailureCategory::Process, "Load test phase timeout");
+        return;
+    }
+
     switch (m_state.subState) {
         case TestSubState::SpinupLoadForward:
             handleSpinupLoadForward();
@@ -724,16 +840,25 @@ void GearboxTestEngine::handleSpinupLoadForward() {
 
     // Wait for spinup time
     if (m_state.phaseElapsedMs >= m_recipe.loadSpinupMs) {
+        // Set brake mode before enabling
+        if (m_recipe.brakeMode == "CV") {
+            if (!m_brake->setBrakeMode(m_brakeChannel, "CV")) {
+                failTest(FailureCategory::Communication, "Failed to set brake mode to CV");
+                return;
+            }
+            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
+        } else {
+            if (!m_brake->setBrakeMode(m_brakeChannel, "CC")) {
+                failTest(FailureCategory::Communication, "Failed to set brake mode to CC");
+                return;
+            }
+        }
         // Enable brake and start ramping
         if (!m_brake->setOutputEnable(m_brakeChannel, true)) {
             failTest(FailureCategory::Communication, "Failed to enable brake");
             return;
         }
         m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA;
-        if (m_recipe.brakeMode == "CV") {
-            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
-            m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage);
-        }
         m_lockConditionMet = false;
         transitionToSubState(TestSubState::RampBrakeForward);
     }
@@ -806,16 +931,25 @@ void GearboxTestEngine::handleSpinupLoadReverse() {
 
     // Wait for spinup time
     if (m_state.phaseElapsedMs >= m_recipe.loadSpinupMs) {
+        // Set brake mode before enabling
+        if (m_recipe.brakeMode == "CV") {
+            if (!m_brake->setBrakeMode(m_brakeChannel, "CV")) {
+                failTest(FailureCategory::Communication, "Failed to set brake mode to CV");
+                return;
+            }
+            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
+        } else {
+            if (!m_brake->setBrakeMode(m_brakeChannel, "CC")) {
+                failTest(FailureCategory::Communication, "Failed to set brake mode to CC");
+                return;
+            }
+        }
         // Enable brake and start ramping
         if (!m_brake->setOutputEnable(m_brakeChannel, true)) {
             failTest(FailureCategory::Communication, "Failed to enable brake");
             return;
         }
         m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA;
-        if (m_recipe.brakeMode == "CV") {
-            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
-            m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage);
-        }
         m_lockConditionMet = false;
         transitionToSubState(TestSubState::RampBrakeReverse);
     }
@@ -877,7 +1011,22 @@ void GearboxTestEngine::handleConfirmLockReverse() {
 }
 
 void GearboxTestEngine::handleReturnToZeroPhase() {
-    handleReturnFinalZero();
+    qint64 totalPhaseMs = m_phaseAccumulatedMs + m_state.phaseElapsedMs;
+    if (totalPhaseMs > m_recipe.returnZeroTimeoutMs) {
+        failTest(FailureCategory::Process, "Return to zero phase timeout");
+        return;
+    }
+
+    switch (m_state.subState) {
+    case TestSubState::ReturnFinalZero:
+        handleReturnFinalZero();
+        break;
+    case TestSubState::FinalZeroSettled:
+        completeTest();
+        break;
+    default:
+        break;
+    }
 }
 
 void GearboxTestEngine::handleReturnFinalZero() {
@@ -892,18 +1041,14 @@ void GearboxTestEngine::handleReturnFinalZero() {
 
     double currentAngle = m_state.currentTelemetry.encoderAngleDeg;
     double targetAngle = m_recipe.encoderZeroAngleDeg;
-    
+
     // Check if we've reached zero
     double angleDiff = qAbs(currentAngle - targetAngle);
     if (angleDiff < m_recipe.returnZeroToleranceDeg) {
         stopMotor();
-        completeTest();
+        m_state.statusMessage = "Final zero settled";
+        transitionToSubState(TestSubState::FinalZeroSettled);
         return;
-    }
-
-    // Check timeout
-    if (m_state.phaseElapsedMs > m_recipe.angleTimeoutMs) {
-        failTest(FailureCategory::Process, "Timeout during final return to zero");
     }
 }
 

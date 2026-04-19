@@ -15,6 +15,7 @@ Item {
     required property var stepModel
     required property var angleModel
     required property var loadModel
+    required property var idleModel
     required property var chartSpeed
     required property var chartTorque
     required property var chartCurrent
@@ -221,18 +222,35 @@ Item {
                     }
 
                     SectionCard {
-                        visible: root.currentPhaseIndex === 2
+                        visible: root.currentPhaseIndex === 1
+                                 || root.currentPhaseIndex === 2
                                  || root.currentPhaseIndex === 3
+                                 || (root.idleModel.count > 0 && root.idleModel.get(0).result !== "待测")
                                  || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
                                  || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
                         Layout.fillWidth: true
                         theme: root.theme
                         title: "阶段明细"
-                        subtitle: root.currentPhaseIndex === 3 ? "负载测试结果" : "角度定位结果"
+                        subtitle: root.currentPhaseIndex === 1 ? "空载测试结果"
+                                   : root.currentPhaseIndex === 2 ? "角度定位结果"
+                                   : root.currentPhaseIndex === 3 ? "负载测试结果"
+                                   : "测试结果汇总"
 
                         ColumnLayout {
                             width: parent.width
                             spacing: 12
+
+                            DataTableCard {
+                                visible: root.currentPhaseIndex === 1
+                                         || (root.idleModel.count > 0 && root.idleModel.get(0).result !== "待测")
+                                width: parent.width
+                                theme: root.theme
+                                headers: ["方向", "电流平均", "电流峰值", "转速平均", "转速峰值", "判定"]
+                                rowModel: root.idleModel
+                                columnKeys: ["direction", "currentAvg", "currentMax", "speedAvg", "speedMax", "result"]
+                                resultKey: "result"
+                                pendingText: "待测"
+                            }
 
                             DataTableCard {
                                 visible: root.currentPhaseIndex === 2

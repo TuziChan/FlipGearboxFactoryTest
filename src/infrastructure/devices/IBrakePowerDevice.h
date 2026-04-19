@@ -74,6 +74,13 @@ public:
     virtual bool readMode(int channel, int& mode) = 0;
 
     /**
+     * @brief Set brake mode for channel
+     * @param channel Channel number (1 or 2)
+     * @param mode Mode string ("CC" for constant current, "CV" for constant voltage)
+     */
+    virtual bool setBrakeMode(int channel, const QString& mode) = 0;
+
+    /**
      * @brief Get last error message
      */
     virtual QString lastError() const = 0;

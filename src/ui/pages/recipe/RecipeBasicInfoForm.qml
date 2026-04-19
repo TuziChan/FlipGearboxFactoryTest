@@ -8,6 +8,7 @@ Components.AppScrollArea {
 
     required property var recipe
     required property bool isEditing
+    property var recipeVM: null
 
     ColumnLayout {
         id: contentColumn
@@ -27,7 +28,7 @@ Components.AppScrollArea {
                 text: root.recipe ? root.recipe.fileName : ""
                 readOnly: !root.isEditing
                 theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.fileName = text
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("fileName", text)
             }
 
             Components.AppLabel { text: "配方名称:"; theme: root.theme }
@@ -37,7 +38,7 @@ Components.AppScrollArea {
                 text: root.recipe ? root.recipe.name : ""
                 readOnly: !root.isEditing
                 theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.name = text
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("name", text)
             }
 
             Components.AppLabel { text: "描述:"; theme: root.theme; Layout.alignment: Qt.AlignTop }
@@ -47,7 +48,7 @@ Components.AppScrollArea {
                 text: root.recipe ? (root.recipe.description || "") : ""
                 readOnly: !root.isEditing
                 theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.description = text
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("description", text)
             }
         }
     }

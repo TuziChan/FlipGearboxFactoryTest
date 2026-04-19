@@ -8,6 +8,7 @@ Components.AppScrollArea {
 
     required property var recipe
     required property bool isEditing
+    property var recipeVM: null
 
     function fv(val, d) { return typeof val === 'number' ? val.toFixed(d) : "" }
     function fi(val) { return typeof val === 'number' ? val.toString() : "" }
@@ -28,7 +29,7 @@ Components.AppScrollArea {
                 Layout.fillWidth: true
                 text: root.recipe ? fv(root.recipe.homeDutyCycle, 1) : ""
                 readOnly: !root.isEditing; theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.homeDutyCycle = parseFloat(text) || 0
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("homeDutyCycle", parseFloat(text) || 0)
             }
 
             Components.AppLabel { text: "前进占空比 (%):"; theme: root.theme }
@@ -36,7 +37,7 @@ Components.AppScrollArea {
                 Layout.fillWidth: true
                 text: root.recipe ? fv(root.recipe.homeAdvanceDutyCycle, 1) : ""
                 readOnly: !root.isEditing; theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.homeAdvanceDutyCycle = parseFloat(text) || 0
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("homeAdvanceDutyCycle", parseFloat(text) || 0)
             }
 
             Components.AppLabel { text: "编码器零点角度 (°):"; theme: root.theme }
@@ -44,7 +45,7 @@ Components.AppScrollArea {
                 Layout.fillWidth: true
                 text: root.recipe ? fv(root.recipe.encoderZeroAngleDeg, 1) : ""
                 readOnly: !root.isEditing; theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.encoderZeroAngleDeg = parseFloat(text) || 0
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("encoderZeroAngleDeg", parseFloat(text) || 0)
             }
 
             Components.AppLabel { text: "归零超时 (ms):"; theme: root.theme }
@@ -52,7 +53,7 @@ Components.AppScrollArea {
                 Layout.fillWidth: true
                 text: root.recipe ? fi(root.recipe.homeTimeoutMs) : ""
                 readOnly: !root.isEditing; theme: root.theme
-                onTextChanged: if (root.isEditing && root.recipe) root.recipe.homeTimeoutMs = parseInt(text) || 0
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("homeTimeoutMs", parseInt(text) || 0)
             }
         }
     }

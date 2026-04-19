@@ -149,6 +149,17 @@ void DiagnosticsViewModel::setBrakeVoltage(double voltageV) {
     refresh();
 }
 
+void DiagnosticsViewModel::setBrakeMode(const QString& mode) {
+    if (!m_runtime || !m_runtime->brake()) {
+        appendLog("发送", "制动电源", "制动电源未启用，无法切换模式", false);
+        return;
+    }
+    const bool ok = m_runtime->brake()->setBrakeMode(m_runtime->brakeChannel(), mode);
+    appendLog("发送", "制动电源", ok ? QString("切换为 %1 模式").arg(mode)
+                                     : QString("切换模式失败: %1").arg(m_runtime->brake()->lastError()), ok);
+    refresh();
+}
+
 void DiagnosticsViewModel::setEncoderZero() {
     if (!m_runtime || !m_runtime->encoder()) {
         appendLog("发送", "编码器", "编码器未启用，无法置零", false);

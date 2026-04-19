@@ -1,11 +1,12 @@
 #ifndef STATIONRUNTIME_H
 #define STATIONRUNTIME_H
 
-#include "../bus/ModbusRtuBusController.h"
-#include "../devices/AqmdMotorDriveDevice.h"
-#include "../devices/Dyn200TorqueSensorDevice.h"
-#include "../devices/SingleTurnEncoderDevice.h"
-#include "../devices/BrakePowerSupplyDevice.h"
+#include "../bus/IBusController.h"
+#include "../devices/IMotorDriveDevice.h"
+#include "../devices/ITorqueSensorDevice.h"
+#include "../devices/IEncoderDevice.h"
+#include "../devices/IBrakePowerDevice.h"
+#include "../simulation/SimulationContext.h"
 #include "../acquisition/AcquisitionScheduler.h"
 #include "../../domain/GearboxTestEngine.h"
 #include <QObject>
@@ -24,10 +25,10 @@ public:
     explicit StationRuntime(QObject* parent = nullptr);
     ~StationRuntime() override;
 
-    Devices::AqmdMotorDriveDevice* motor() const { return m_motor.get(); }
-    Devices::Dyn200TorqueSensorDevice* torque() const { return m_torque.get(); }
-    Devices::SingleTurnEncoderDevice* encoder() const { return m_encoder.get(); }
-    Devices::BrakePowerSupplyDevice* brake() const { return m_brake.get(); }
+    Devices::IMotorDriveDevice* motor() const { return m_motor.get(); }
+    Devices::ITorqueSensorDevice* torque() const { return m_torque.get(); }
+    Devices::IEncoderDevice* encoder() const { return m_encoder.get(); }
+    Devices::IBrakePowerDevice* brake() const { return m_brake.get(); }
     Bus::IBusController* aqmdBus() const { return m_aqmdBus.get(); }
     Bus::IBusController* dyn200Bus() const { return m_dyn200Bus.get(); }
     Bus::IBusController* encoderBus() const { return m_encoderBus.get(); }
@@ -45,10 +46,10 @@ public:
 private:
     friend class StationRuntimeFactory;
 
-    std::unique_ptr<Bus::ModbusRtuBusController> m_aqmdBus;
-    std::unique_ptr<Bus::ModbusRtuBusController> m_dyn200Bus;
-    std::unique_ptr<Bus::ModbusRtuBusController> m_encoderBus;
-    std::unique_ptr<Bus::ModbusRtuBusController> m_brakeBus;
+    std::unique_ptr<Bus::IBusController> m_aqmdBus;
+    std::unique_ptr<Bus::IBusController> m_dyn200Bus;
+    std::unique_ptr<Bus::IBusController> m_encoderBus;
+    std::unique_ptr<Bus::IBusController> m_brakeBus;
 
     struct BusConfig {
         QString portName;
@@ -63,11 +64,12 @@ private:
     BusConfig m_encoderBusConfig;
     BusConfig m_brakeBusConfig;
 
-    std::unique_ptr<Devices::AqmdMotorDriveDevice> m_motor;
-    std::unique_ptr<Devices::Dyn200TorqueSensorDevice> m_torque;
-    std::unique_ptr<Devices::SingleTurnEncoderDevice> m_encoder;
-    std::unique_ptr<Devices::BrakePowerSupplyDevice> m_brake;
+    std::unique_ptr<Devices::IMotorDriveDevice> m_motor;
+    std::unique_ptr<Devices::ITorqueSensorDevice> m_torque;
+    std::unique_ptr<Devices::IEncoderDevice> m_encoder;
+    std::unique_ptr<Devices::IBrakePowerDevice> m_brake;
     std::unique_ptr<Domain::GearboxTestEngine> m_testEngine;
+    std::shared_ptr<Simulation::SimulationContext> m_simulationContext;
     std::unique_ptr<Acquisition::AcquisitionScheduler> m_acquisitionScheduler;
 
     QString m_lastError;
@@ -75,7 +77,7 @@ private:
     bool m_initialized = false;
     bool initializeBus(const QString& displayName,
                        const BusConfig& config,
-                       const std::unique_ptr<Bus::ModbusRtuBusController>& bus,
+                       const std::unique_ptr<Bus::IBusController>& bus,
                        bool enabled);
 };
 
