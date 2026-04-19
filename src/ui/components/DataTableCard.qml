@@ -27,7 +27,7 @@ Rectangle {
 
     implicitHeight: tableColumn.implicitHeight + 12
 
-    Column {
+    ColumnLayout {
         id: tableColumn
         width: parent.width
         anchors.margins: 6
@@ -35,8 +35,8 @@ Rectangle {
         spacing: 0
 
         Rectangle {
-            width: parent.width
-            height: 30
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
             color: root.theme.sectionColor
 
             RowLayout {
@@ -66,8 +66,8 @@ Rectangle {
                 required property int index
                 property var rowItem: root.rowAt(index) || ({})
 
-                width: parent.width
-                height: 32
+                Layout.fillWidth: true
+                Layout.preferredHeight: 32
                 color: "transparent"
                 border.color: root.theme.dividerColor
                 border.width: 0.5

@@ -1,4 +1,6 @@
-﻿import QtQuick
+pragma ComponentBehavior: Bound
+
+import QtQuick
 
 QtObject {
     id: root

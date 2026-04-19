@@ -17,8 +17,8 @@ Item {
     property alias triggerContent: triggerContentRow.data
     signal toggled(bool open)
 
-    readonly property bool hovered: triggerArea.containsMouse
-    readonly property bool pressed: triggerArea.pressed
+    readonly property bool hovered: triggerArea.hovered
+    readonly property bool pressed: triggerTap.pressed
     readonly property color headerColor: disabled
                                         ? theme.muted
                                         : (pressed

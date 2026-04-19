@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 
@@ -20,7 +22,7 @@ Rectangle {
     border.color: theme.dividerColor
     implicitHeight: 58
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         anchors.leftMargin: 12
         anchors.rightMargin: 12
@@ -29,7 +31,7 @@ Rectangle {
         spacing: 3
 
         RowLayout {
-            width: parent.width
+            Layout.fillWidth: true
             spacing: 8
 
             Rectangle {
@@ -63,6 +65,7 @@ Rectangle {
         }
 
         Text {
+            Layout.fillWidth: true
             text: root.detail
             color: root.theme.textSecondary
             font.pixelSize: 10

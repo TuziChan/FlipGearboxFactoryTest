@@ -297,17 +297,18 @@ Item {
                             Text {
                                 visible: root.itemShortcutAt(itemDelegate.index).length > 0
                                 text: root.itemShortcutAt(itemDelegate.index)
-                                color: mouse.containsMouse || itemDelegate.selected ? root.theme.accentForeground : root.theme.textMuted
+                                color: mouse.hovered || itemDelegate.selected ? root.theme.accentForeground : root.theme.textMuted
                                 font.pixelSize: 10
                             }
                         }
 
-                        MouseArea {
+                        TapHandler {
+                            onTapped: root.selectIndex(itemDelegate.index)
+                        }
+
+                        HoverHandler {
                             id: mouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: root.highlightedIndex = itemDelegate.index
-                            onClicked: root.selectIndex(itemDelegate.index)
+                            onHoveredChanged: if (hovered) root.highlightedIndex = itemDelegate.index
                         }
                     }
                 }

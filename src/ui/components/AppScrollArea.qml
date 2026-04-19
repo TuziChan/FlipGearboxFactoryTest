@@ -8,10 +8,10 @@ Item {
 
     required property AppTheme theme
     default property alias content: contentColumn.data
-    readonly property bool atVerticalEnd: flick.contentY >= Math.max(0, flick.contentHeight - flick.height - 1)
+    readonly property bool atVerticalEnd: scrollView.contentItem.contentY >= Math.max(0, scrollView.contentItem.contentHeight - scrollView.contentItem.height - 1)
 
     function scrollToEnd() {
-        flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+        scrollView.contentItem.contentY = Math.max(0, scrollView.contentItem.contentHeight - scrollView.contentItem.height)
         return true
     }
 
@@ -26,25 +26,17 @@ Item {
         border.color: root.theme.dividerColor
     }
 
-    Flickable {
-        id: flick
+    ScrollView {
+        id: scrollView
         anchors.fill: parent
         anchors.margins: 1
         clip: true
-        contentWidth: width
-        contentHeight: contentColumn.height
-        boundsBehavior: Flickable.StopAtBounds
-        acceptedButtons: Qt.NoButton
 
         Column {
             id: contentColumn
-            width: flick.width
+            width: scrollView.width - (scrollView.ScrollBar.vertical.visible ? scrollView.ScrollBar.vertical.width : 0)
             spacing: root.theme.spacingSmall
             padding: root.theme.spacingMedium
-        }
-
-        ScrollBar.vertical: ScrollBar {
-            policy: flick.contentHeight > flick.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
         }
     }
 }

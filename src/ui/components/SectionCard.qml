@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 
@@ -14,14 +16,16 @@ Rectangle {
     border.color: theme.dividerColor
     implicitHeight: sectionColumn.implicitHeight + 28
 
-    Column {
+    ColumnLayout {
         id: sectionColumn
-        anchors.fill: parent
-        anchors.margins: 14
+        width: parent.width - 28
+        x: 14
+        y: 14
         spacing: 12
 
-        Column {
+        ColumnLayout {
             visible: root.title.length > 0 || root.subtitle.length > 0
+            Layout.fillWidth: true
             spacing: 2
 
             Text {
@@ -40,9 +44,9 @@ Rectangle {
             }
         }
 
-        Column {
+        ColumnLayout {
             id: contentColumn
-            width: parent.width
+            Layout.fillWidth: true
             spacing: 8
         }
     }

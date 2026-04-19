@@ -160,7 +160,7 @@ Item {
                     required property int index
                     readonly property bool expanded: root.isExpanded(itemRoot.index)
                     readonly property bool disabled: root.itemDisabledAt(itemRoot.index)
-                    readonly property bool hovered: triggerArea.containsMouse
+                    readonly property bool hovered: triggerArea.hovered
 
                     width: root.fillWidth && column.width > 0 ? column.width : implicitWidth
                     implicitWidth: 280
@@ -206,7 +206,7 @@ Item {
                                 anchors.margins: root.itemPadding
                                 spacing: 12
 
-                                Column {
+                                ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 2
 

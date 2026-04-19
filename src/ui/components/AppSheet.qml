@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
@@ -44,9 +46,8 @@ Item {
             blurMultiplier: 1.0
         }
 
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.closeSheet()
+        TapHandler {
+            onTapped: root.closeSheet()
         }
 
         NumberAnimation {

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 // Icon component using SVG/Shape for optimal scaling and performance

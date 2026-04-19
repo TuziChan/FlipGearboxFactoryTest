@@ -60,9 +60,8 @@ Rectangle {
                 }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.expanded = !root.expanded
+            TapHandler {
+                onTapped: root.expanded = !root.expanded
             }
         }
 

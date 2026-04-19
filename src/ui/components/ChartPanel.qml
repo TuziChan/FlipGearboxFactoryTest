@@ -99,9 +99,8 @@ Rectangle {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: root.onToggleChannel(modelData.key)
+                    TapHandler {
+                        onTapped: root.onToggleChannel(modelData.key)
                     }
                 }
             }

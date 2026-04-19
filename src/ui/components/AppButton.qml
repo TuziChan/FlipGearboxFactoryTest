@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 
@@ -151,10 +153,13 @@ Rectangle {
                   root.size === "icon-lg" ? 16 : 16
     }
 
-    MouseArea {
-        anchors.fill: parent
+    TapHandler {
         enabled: !root.disabled
-        hoverEnabled: true
-        onClicked: root.clicked()
+        onTapped: root.clicked()
+    }
+
+    HoverHandler {
+        id: buttonHover
+        enabled: !root.disabled
     }
 }

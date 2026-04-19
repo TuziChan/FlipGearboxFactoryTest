@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import "../components" as Components
 
@@ -243,18 +244,17 @@ Item {
         color: root.theme.bgColor
     }
 
-    Flickable {
+    ScrollView {
         id: flickable
         anchors.fill: parent
         anchors.margins: 18
-        contentWidth: width
-        contentHeight: contentColumn.implicitHeight
+        contentWidth: availableWidth
         clip: true
-        acceptedButtons: Qt.NoButton
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
         Column {
             id: contentColumn
-            width: flickable.width
+            width: flickable.availableWidth
             spacing: 24
 
             Components.SectionCard {
@@ -1987,3 +1987,5 @@ Item {
         targetTheme: root.theme
     }
 }
+
+

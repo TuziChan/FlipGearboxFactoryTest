@@ -24,7 +24,7 @@ RowLayout {
 
     spacing: 8  // gap-2
 
-    Column {
+    ColumnLayout {
         id: headerLeft
         Layout.fillWidth: true
         spacing: 2

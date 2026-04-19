@@ -53,10 +53,11 @@ Rectangle {
         }
     }
 
-    MouseArea {
+    TapHandler {
+        onTapped: root.triggered()
+    }
+
+    HoverHandler {
         id: mouse
-        anchors.fill: parent
-        hoverEnabled: true
-        onClicked: root.triggered()
     }
 }

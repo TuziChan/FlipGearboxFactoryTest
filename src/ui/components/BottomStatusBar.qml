@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 
@@ -13,9 +15,9 @@ Rectangle {
     implicitHeight: 34
 
     RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
+        width: parent.width - 36
+        height: parent.height
+        x: 18
         spacing: 16
 
         Repeater {

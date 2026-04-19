@@ -58,9 +58,8 @@ Item {
             blurMultiplier: 1.0
         }
 
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.closeDrawer()
+        TapHandler {
+            onTapped: root.closeDrawer()
         }
 
         NumberAnimation {

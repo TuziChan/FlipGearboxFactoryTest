@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 Rectangle {
@@ -31,9 +33,8 @@ Rectangle {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: {
+    TapHandler {
+        onTapped: {
             root.checked = !root.checked
             root.toggled(root.checked)
         }

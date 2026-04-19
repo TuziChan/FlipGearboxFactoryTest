@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 
@@ -20,11 +22,9 @@ Rectangle {
     implicitHeight: 108
 
     ColumnLayout {
-        anchors.fill: parent
-        anchors.topMargin: 16
-        anchors.bottomMargin: 16
-        anchors.leftMargin: 20
-        anchors.rightMargin: 20
+        width: parent.width - 40
+        x: 20
+        y: 16
         spacing: 4
 
         Text {

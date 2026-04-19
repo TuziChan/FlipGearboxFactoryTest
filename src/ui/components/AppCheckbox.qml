@@ -77,12 +77,11 @@ Item {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        anchors.margins: -8
+    TapHandler {
         enabled: !root.disabled
+        margin: -8
         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-        onClicked: root.toggle()
+        onTapped: root.toggle()
     }
 
     Keys.onPressed: function(event) {

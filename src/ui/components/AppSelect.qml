@@ -159,10 +159,9 @@ Column {
             }
         }
 
-        MouseArea {
-            anchors.fill: parent
+        TapHandler {
             enabled: root.enabled
-            onClicked: root.openPopup()
+            onTapped: root.openPopup()
         }
 
         Keys.onPressed: function(event) {
@@ -247,7 +246,7 @@ Column {
                     width: listView.width
                     height: root.size === "sm" ? 24 : 28
                     radius: root.theme.radiusSmall
-                    color: mouse.containsMouse || itemDelegate.highlighted ? root.theme.accentWeak : "transparent"
+                    color: mouse.hovered || itemDelegate.highlighted ? root.theme.accentWeak : "transparent"
 
                     RowLayout {
                         anchors.fill: parent
@@ -258,7 +257,7 @@ Column {
                         Text {
                             Layout.fillWidth: true
                             text: root.itemTextAt(itemDelegate.index)
-                            color: mouse.containsMouse || itemDelegate.highlighted ? root.theme.accentForeground : root.theme.textPrimary
+                            color: mouse.hovered || itemDelegate.highlighted ? root.theme.accentForeground : root.theme.textPrimary
                             font.pixelSize: 11
                             elide: Text.ElideRight
                         }
@@ -266,16 +265,18 @@ Column {
                         AppIcon {
                             visible: itemDelegate.selected
                             name: "check"
-                            color: mouse.containsMouse || itemDelegate.highlighted ? root.theme.accentForeground : root.theme.accent
+                            color: mouse.hovered || itemDelegate.highlighted ? root.theme.accentForeground : root.theme.accent
                             iconSize: 12
                         }
                     }
 
-                    MouseArea {
+                    TapHandler {
+                        onTapped: root.selectIndex(itemDelegate.index)
+                    }
+
+                    HoverHandler {
                         id: mouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: root.selectIndex(itemDelegate.index)
+                        onHoveredChanged: if (hovered) root.highlightedIndex = itemDelegate.index
                     }
                 }
             }
@@ -294,9 +295,8 @@ Column {
                     font.pixelSize: 10
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: listView.contentY = Math.min(listView.contentHeight - listView.height, listView.contentY + 48)
+                TapHandler {
+                    onTapped: listView.contentY = Math.min(listView.contentHeight - listView.height, listView.contentY + 48)
                 }
             }
         }

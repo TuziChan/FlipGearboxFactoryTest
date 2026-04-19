@@ -174,10 +174,9 @@ Item {
                     ColorAnimation { duration: 200 }
                 }
 
-                MouseArea {
-                    anchors.fill: parent
+                TapHandler {
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.goTo(index)
+                    onTapped: root.goTo(index)
                 }
             }
         }

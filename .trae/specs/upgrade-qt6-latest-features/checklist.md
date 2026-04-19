@@ -1,0 +1,12 @@
+- [ ] 所有可交互组件（AppButton, AppSwitch, AppCheckbox 等）不再包含 `MouseArea`，全部使用 `TapHandler`/`HoverHandler`
+- [ ] AppCombobox 使用 `SearchField` + `SortFilterProxyModel` 替代手写搜索过滤，保留原有 `activated`/`currentIndex`/`currentText` 接口
+- [ ] HistoryPage 使用 `SortFilterProxyModel` + `FunctionFilter` 替代 `getFilteredModel()` 手写函数
+- [ ] Main.qml 使用 `ApplicationWindow` 替代 `Window`
+- [ ] AppShell 的 6 个页面通过 `Loader` + `StackLayout.isCurrentItem` 实现懒加载
+- [ ] AppCollapsible.qml 第一行包含 `pragma ComponentBehavior: Bound`
+- [ ] AppSlider 使用 `Synchronizer` 替代 `_syncing` 标志位
+- [ ] AppProgress 支持 `indeterminate` 属性，激活时显示无限循环动画
+- [ ] AppScrollArea 使用 `ScrollView` 替代手动 `Flickable` + `ScrollBar`
+- [ ] 全部 QML 文件编译通过，无 qmllint 警告
+- [ ] QML 冒烟测试通过（如果可用）
+- [ ] 所有页面的点击、悬停、键盘导航行为与改造前一致

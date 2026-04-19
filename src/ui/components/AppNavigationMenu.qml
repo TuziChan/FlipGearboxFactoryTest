@@ -117,7 +117,7 @@ Item {
                         width: listColumn.width
                         height: 48
                         radius: root.theme.radiusSmall
-                        color: itemMouse.containsMouse ? root.theme.accentWeak : "transparent"
+                        color: itemMouse.hovered ? root.theme.accentWeak : "transparent"
 
                         Column {
                             anchors.fill: parent
@@ -140,11 +140,12 @@ Item {
                             }
                         }
 
-                        MouseArea {
+                        TapHandler {
+                            onTapped: root.selectItem(navItemDelegate.index)
+                        }
+
+                        HoverHandler {
                             id: itemMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: root.selectItem(navItemDelegate.index)
                         }
                     }
                 }

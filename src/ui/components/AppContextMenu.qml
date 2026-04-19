@@ -323,12 +323,14 @@ Item {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
+                    TapHandler {
                         enabled: itemDelegate.optionEnabled
-                        hoverEnabled: true
-                        onEntered: root.highlightedIndex = itemDelegate.index
-                        onClicked: root.selectIndex(itemDelegate.index)
+                        onTapped: root.selectIndex(itemDelegate.index)
+                    }
+
+                    HoverHandler {
+                        enabled: itemDelegate.optionEnabled
+                        onHoveredChanged: if (hovered) root.highlightedIndex = itemDelegate.index
                     }
                 }
             }
