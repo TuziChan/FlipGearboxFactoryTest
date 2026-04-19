@@ -46,6 +46,34 @@ public:
     virtual bool readCurrent(int channel, double& currentA) = 0;
 
     /**
+     * @brief Set output voltage in Volts
+     * @param channel Channel number (1 or 2)
+     * @param voltageV Voltage in Volts
+     */
+    virtual bool setVoltage(int channel, double voltageV) = 0;
+
+    /**
+     * @brief Read actual output voltage
+     * @param channel Channel number (1 or 2)
+     * @param voltageV Output voltage in Volts
+     */
+    virtual bool readVoltage(int channel, double& voltageV) = 0;
+
+    /**
+     * @brief Read actual output power
+     * @param channel Channel number (1 or 2)
+     * @param powerW Output power in Watts
+     */
+    virtual bool readPower(int channel, double& powerW) = 0;
+
+    /**
+     * @brief Read device operating mode
+     * @param channel Channel number (1 or 2)
+     * @param mode Operating mode (1=CV, 0=CC)
+     */
+    virtual bool readMode(int channel, int& mode) = 0;
+
+    /**
      * @brief Get last error message
      */
     virtual QString lastError() const = 0;

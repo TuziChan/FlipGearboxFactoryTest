@@ -13,6 +13,10 @@ class DiagnosticsViewModel : public QObject {
     Q_PROPERTY(QVariantList communicationLogs READ communicationLogs NOTIFY communicationLogsChanged)
     Q_PROPERTY(QString statusMessage READ statusMessage NOTIFY statusMessageChanged)
     Q_PROPERTY(bool runtimeInitialized READ runtimeInitialized NOTIFY deviceStatusesChanged)
+    Q_PROPERTY(QVariantMap motorTelemetry READ motorTelemetry NOTIFY motorTelemetryChanged)
+    Q_PROPERTY(QVariantMap torqueTelemetry READ torqueTelemetry NOTIFY torqueTelemetryChanged)
+    Q_PROPERTY(QVariantMap encoderTelemetry READ encoderTelemetry NOTIFY encoderTelemetryChanged)
+    Q_PROPERTY(QVariantMap brakeTelemetry READ brakeTelemetry NOTIFY brakeTelemetryChanged)
 
 public:
     explicit DiagnosticsViewModel(Infrastructure::Config::StationRuntime* runtime, QObject* parent = nullptr);
@@ -21,6 +25,10 @@ public:
     QVariantList communicationLogs() const { return m_communicationLogs; }
     QString statusMessage() const { return m_statusMessage; }
     bool runtimeInitialized() const;
+    QVariantMap motorTelemetry() const { return m_motorTelemetry; }
+    QVariantMap torqueTelemetry() const { return m_torqueTelemetry; }
+    QVariantMap encoderTelemetry() const { return m_encoderTelemetry; }
+    QVariantMap brakeTelemetry() const { return m_brakeTelemetry; }
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshIncremental();
@@ -29,6 +37,7 @@ public:
     Q_INVOKABLE void stopMotor();
     Q_INVOKABLE void setBrakeOutput(bool enabled);
     Q_INVOKABLE void setBrakeCurrent(double currentA);
+    Q_INVOKABLE void setBrakeVoltage(double voltageV);
     Q_INVOKABLE void setEncoderZero();
     Q_INVOKABLE void clearLog();
 
@@ -36,6 +45,10 @@ signals:
     void deviceStatusesChanged();
     void communicationLogsChanged();
     void statusMessageChanged();
+    void motorTelemetryChanged();
+    void torqueTelemetryChanged();
+    void encoderTelemetryChanged();
+    void brakeTelemetryChanged();
 
 private:
     Infrastructure::Config::StationRuntime* m_runtime;
@@ -43,6 +56,10 @@ private:
     QVariantList m_communicationLogs;
     QString m_statusMessage;
     int m_nextRefreshIndex;
+    QVariantMap m_motorTelemetry;
+    QVariantMap m_torqueTelemetry;
+    QVariantMap m_encoderTelemetry;
+    QVariantMap m_brakeTelemetry;
 
     void initializeStatuses();
     void updateDeviceStatus(int index);

@@ -242,12 +242,14 @@ Item {
                                     border.color: root.theme.accent
 
                                     MouseArea {
-                                        anchors.fill: parent
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
                                         onClicked: root.selectRecord(id, index)
                                     }
 
                                     RowLayout {
-                                        anchors.fill: parent
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
                                         anchors.margins: 12
                                         spacing: 12
 

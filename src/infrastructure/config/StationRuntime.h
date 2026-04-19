@@ -28,12 +28,16 @@ public:
     Devices::Dyn200TorqueSensorDevice* torque() const { return m_torque.get(); }
     Devices::SingleTurnEncoderDevice* encoder() const { return m_encoder.get(); }
     Devices::BrakePowerSupplyDevice* brake() const { return m_brake.get(); }
+    Bus::IBusController* aqmdBus() const { return m_aqmdBus.get(); }
+    Bus::IBusController* dyn200Bus() const { return m_dyn200Bus.get(); }
+    Bus::IBusController* encoderBus() const { return m_encoderBus.get(); }
+    Bus::IBusController* brakeBus() const { return m_brakeBus.get(); }
     Domain::GearboxTestEngine* testEngine() const { return m_testEngine.get(); }
     Acquisition::AcquisitionScheduler* acquisitionScheduler() const { return m_acquisitionScheduler.get(); }
     int brakeChannel() const { return m_brakeChannel; }
-    bool isInitialized() const { return m_initialized; }
+    Q_INVOKABLE bool isInitialized() const { return m_initialized; }
 
-    bool initialize();
+    Q_INVOKABLE bool initialize();
     void shutdown();
 
     QString lastError() const { return m_lastError; }

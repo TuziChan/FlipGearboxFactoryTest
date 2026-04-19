@@ -1,717 +1,724 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 
 import QtQuick
+
 import QtQuick.Layouts
+
 import QtQuick.Controls as QQC
+
 import "../components" as Components
 
+import "recipe" as RecipeForms
+
 Item {
+
     id: root
+
     objectName: "recipePage"
 
     required property Components.AppTheme theme
 
     property int selectedRecipeIndex: -1
+
     property bool isEditing: false
+
     property var editingRecipe: null
 
+    property int currentTabIndex: 0
+
+    property var recipeServiceRef: typeof recipeService !== 'undefined' ? recipeService : null
+
     function currentRecipe() {
+
         if (selectedRecipeIndex >= 0 && selectedRecipeIndex < recipeListModel.count)
+
             return recipeListModel.get(selectedRecipeIndex)
+
         return null
+
+    }
+
+    function activeRecipeData() {
+
+        if (root.isEditing && root.editingRecipe) return root.editingRecipe
+
+        return currentRecipe()
+
     }
 
     ListModel {
+
         id: recipeListModel
 
         Component.onCompleted: {
-            if (typeof recipeService !== 'undefined' && recipeService) {
-                var recipes = recipeService.loadAll()
+
+            if (root.recipeServiceRef) {
+
+                var recipes = root.recipeServiceRef.loadAll()
+
                 for (var i = 0; i < recipes.length; i++) {
-                    var r = recipes[i]
-                    append({
-                        fileName: r.fileName || "",
-                        name: r.name || "",
-                        homeDutyCycle: r.homeDutyCycle || 0,
-                        idleDutyCycle: r.idleDutyCycle || 0,
-                        idleSpeedMin: r.idleForwardSpeedAvgMin || 0,
-                        idleSpeedMax: r.idleForwardSpeedAvgMax || 0,
-                        idleCurrentMax: r.idleForwardCurrentAvgMax || 0,
-                        loadDutyCycle: r.loadDutyCycle || 0,
-                        loadTorqueMin: r.loadForwardTorqueMin || 0,
-                        brakeRampStep: r.brakeRampEndCurrentA || 0,
-                        brakeRampInterval: r.loadRampMs || 0,
-                        lockSpeedThreshold: r.lockSpeedThresholdRpm || 0,
-                        lockDuration: r.lockHoldMs || 0,
-                        anglePositions: (r.position1TargetDeg || 0) + ", " + (r.position2TargetDeg || 0) + ", " + (r.position2ToleranceDeg || 0) + ", " + (r.position3TargetDeg || 0) + ", 0.0",
-                        angleTolerance: r.position1ToleranceDeg || 0
-                    })
+
+                    recipeListModel.append(recipes[i])
+
                 }
+
             }
+
         }
+
     }
 
     function selectRecipe(index) {
+
         selectedRecipeIndex = index
+
         isEditing = false
+
+    }
+
+    function defaultRecipe() {
+
+        return {
+
+            fileName: "", name: "", description: "",
+
+            homeDutyCycle: 20.0, homeAdvanceDutyCycle: 20.0,
+
+            encoderZeroAngleDeg: 3.0, homeTimeoutMs: 30000,
+
+            idleDutyCycle: 50.0,
+
+            idleForwardSpinupMs: 3000, idleForwardSampleMs: 2000,
+
+            idleReverseSpinupMs: 3000, idleReverseSampleMs: 2000,
+
+            idleForwardCurrentAvgMin: 0.5, idleForwardCurrentAvgMax: 2.0,
+
+            idleForwardCurrentMaxMin: 0.6, idleForwardCurrentMaxMax: 2.5,
+
+            idleForwardSpeedAvgMin: 50.0, idleForwardSpeedAvgMax: 150.0,
+
+            idleForwardSpeedMaxMin: 60.0, idleForwardSpeedMaxMax: 160.0,
+
+            idleReverseCurrentAvgMin: 0.5, idleReverseCurrentAvgMax: 2.0,
+
+            idleReverseCurrentMaxMin: 0.6, idleReverseCurrentMaxMax: 2.5,
+
+            idleReverseSpeedAvgMin: 50.0, idleReverseSpeedAvgMax: 150.0,
+
+            idleReverseSpeedMaxMin: 60.0, idleReverseSpeedMaxMax: 160.0,
+
+            angleTestDutyCycle: 30.0,
+
+            position1TargetDeg: 3.0, position1ToleranceDeg: 3.0,
+
+            position2TargetDeg: 49.0, position2ToleranceDeg: 3.0,
+
+            position3TargetDeg: 113.5, position3ToleranceDeg: 3.0,
+
+            returnZeroToleranceDeg: 1.0, angleTimeoutMs: 15000,
+
+            loadDutyCycle: 50.0, loadSpinupMs: 3000,
+
+            brakeMode: "CC",
+
+            brakeRampStartCurrentA: 0.0, brakeRampEndCurrentA: 3.0,
+
+            brakeRampStartVoltage: 0.0, brakeRampEndVoltage: 12.0,
+
+            loadRampMs: 2000,
+
+            lockSpeedThresholdRpm: 2.0, lockAngleWindowMs: 100,
+
+            lockAngleDeltaDeg: 5.0, lockHoldMs: 500,
+
+            loadForwardCurrentMin: 1.0, loadForwardCurrentMax: 3.0,
+
+            loadForwardTorqueMin: 10.0, loadForwardTorqueMax: 50.0,
+
+            loadReverseCurrentMin: 1.0, loadReverseCurrentMax: 3.0,
+
+            loadReverseTorqueMin: 10.0, loadReverseTorqueMax: 50.0
+
+        }
+
     }
 
     function createNewRecipe() {
-        root.editingRecipe = {
-            fileName: "",
-            name: "",
-            homeDutyCycle: 40,
-            idleDutyCycle: 40,
-            idleSpeedMin: 0,
-            idleSpeedMax: 9999,
-            idleCurrentMax: 5,
-            loadDutyCycle: 40,
-            loadTorqueMin: 0,
-            brakeRampStep: 3.0,
-            brakeRampInterval: 10000,
-            lockSpeedThreshold: 10,
-            lockDuration: 500,
-            anglePositions: "0, 90, 5, 180, 0.0",
-            angleTolerance: 5,
-            description: ""
-        }
+
+        root.editingRecipe = defaultRecipe()
+
         root.selectedRecipeIndex = -1
+
         root.isEditing = true
+
     }
 
     function editRecipe() {
+
         if (selectedRecipeIndex >= 0) {
+
             var r = currentRecipe()
+
             if (r) {
-                root.editingRecipe = {
-                    fileName: r.fileName,
-                    name: r.name,
-                    homeDutyCycle: r.homeDutyCycle,
-                    idleDutyCycle: r.idleDutyCycle,
-                    idleSpeedMin: r.idleSpeedMin,
-                    idleSpeedMax: r.idleSpeedMax,
-                    idleCurrentMax: r.idleCurrentMax,
-                    loadDutyCycle: r.loadDutyCycle,
-                    loadTorqueMin: r.loadTorqueMin,
-                    brakeRampStep: r.brakeRampStep,
-                    brakeRampInterval: r.brakeRampInterval,
-                    lockSpeedThreshold: r.lockSpeedThreshold,
-                    lockDuration: r.lockDuration,
-                    anglePositions: r.anglePositions,
-                    angleTolerance: r.angleTolerance,
-                    description: r.description || ""
+
+                var d = defaultRecipe()
+
+                var keys = Object.keys(d)
+
+                for (var i = 0; i < keys.length; i++) {
+
+                    var k = keys[i]
+
+                    if (typeof r[k] !== 'undefined') d[k] = r[k]
+
                 }
+
+                root.editingRecipe = d
+
             }
+
             root.isEditing = true
+
         }
+
     }
 
     function saveRecipe() {
+
         var data = root.editingRecipe
+
         if (!data) return
 
-        if (typeof recipeService !== 'undefined' && recipeService) {
-            var payload = {
-                fileName: data.fileName,
-                name: data.name,
-                homeDutyCycle: data.homeDutyCycle,
-                idleDutyCycle: data.idleDutyCycle,
-                idleForwardSpeedAvgMin: data.idleSpeedMin,
-                idleForwardSpeedAvgMax: data.idleSpeedMax,
-                idleForwardCurrentAvgMax: data.idleCurrentMax,
-                loadDutyCycle: data.loadDutyCycle,
-                loadForwardTorqueMin: data.loadTorqueMin,
-                brakeRampEndCurrentA: data.brakeRampStep,
-                loadRampMs: data.brakeRampInterval,
-                lockSpeedThresholdRpm: data.lockSpeedThreshold,
-                lockHoldMs: data.lockDuration,
-                position1ToleranceDeg: data.angleTolerance
-            }
-            var ok = recipeService.save(payload)
+        if (root.recipeServiceRef) {
+
+            var ok = root.recipeServiceRef.save(data)
+
             if (!ok) {
+
                 console.warn("Failed to save recipe")
+
                 return
+
             }
+
         }
 
         if (root.selectedRecipeIndex >= 0) {
+
             var keys = Object.keys(data)
+
             for (var i = 0; i < keys.length; i++) {
+
                 recipeListModel.setProperty(root.selectedRecipeIndex, keys[i], data[keys[i]])
+
             }
+
         } else {
+
             recipeListModel.append(data)
+
             root.selectedRecipeIndex = recipeListModel.count - 1
+
         }
 
         root.isEditing = false
+
         root.editingRecipe = null
+
     }
 
     function deleteRecipe() {
-        if (selectedRecipeIndex < 0) return
+
+        if (root.selectedRecipeIndex < 0) return
+
         var r = currentRecipe()
-        if (r && typeof recipeService !== 'undefined' && recipeService) {
-            recipeService.remove(r.fileName)
+
+        if (r && root.recipeServiceRef) {
+
+            root.recipeServiceRef.remove(r.fileName)
+
         }
-        recipeListModel.remove(selectedRecipeIndex)
-        selectedRecipeIndex = -1
+
+        recipeListModel.remove(root.selectedRecipeIndex)
+
+        root.selectedRecipeIndex = -1
+
     }
 
     function exportRecipe() {
+
         var r = currentRecipe()
-        if (r && typeof recipeService !== 'undefined' && recipeService) {
-            recipeService.exportTo(r.fileName, "exports/" + r.fileName)
+
+        if (r && root.recipeServiceRef) {
+
+            root.recipeServiceRef.exportTo(r.fileName, "exports/" + r.fileName)
+
         }
+
     }
 
     function importRecipe() {
-        if (typeof recipeService !== 'undefined' && recipeService) {
-            var result = recipeService.importFrom("imports/recipe.json")
+
+        if (root.recipeServiceRef) {
+
+            var result = root.recipeServiceRef.importFrom("imports/recipe.json")
+
             if (result && result.fileName) {
-                recipeListModel.append({
-                    fileName: result.fileName || "",
-                    name: result.name || "",
-                    homeDutyCycle: result.homeDutyCycle || 0,
-                    idleDutyCycle: result.idleDutyCycle || 0,
-                    idleSpeedMin: result.idleForwardSpeedAvgMin || 0,
-                    idleSpeedMax: result.idleForwardSpeedAvgMax || 0,
-                    idleCurrentMax: result.idleForwardCurrentAvgMax || 0,
-                    loadDutyCycle: result.loadDutyCycle || 0,
-                    loadTorqueMin: result.loadForwardTorqueMin || 0,
-                    brakeRampStep: result.brakeRampEndCurrentA || 0,
-                    brakeRampInterval: result.loadRampMs || 0,
-                    lockSpeedThreshold: result.lockSpeedThresholdRpm || 0,
-                    lockDuration: result.lockHoldMs || 0,
-                    anglePositions: (result.position1TargetDeg || 0) + ", " + (result.position2TargetDeg || 0) + ", " + (result.position2ToleranceDeg || 0) + ", " + (result.position3TargetDeg || 0) + ", 0.0",
-                    angleTolerance: result.position1ToleranceDeg || 0
-                })
+
+                recipeListModel.append(result)
+
             }
+
         }
+
     }
 
     Rectangle {
+
         anchors.fill: parent
+
         color: root.theme.bgColor
 
         RowLayout {
+
             anchors.fill: parent
+
             anchors.margins: 16
+
             spacing: 16
 
-            // 左侧：配方列表
             Components.AppCard {
+
                 Layout.fillHeight: true
+
                 Layout.preferredWidth: 360
+
                 theme: root.theme
 
                 ColumnLayout {
-                    width: parent.width
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
                     spacing: 12
 
-                    // 标题栏
                     RowLayout {
+
                         Layout.fillWidth: true
+
                         spacing: 8
 
                         Components.AppLabel {
+
                             text: "配方列表"
+
                             fontSize: 16
+
                             fontWeight: 600
+
                             theme: root.theme
+
                         }
 
                         Item { Layout.fillWidth: true }
 
                         Components.AppButton {
+
                             text: "新建"
+
                             variant: "default"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.createNewRecipe()
+
                         }
 
                         Components.AppButton {
+
                             text: "导入"
+
                             variant: "outline"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.importRecipe()
+
                         }
+
                     }
 
                     Components.AppSeparator {
+
                         Layout.fillWidth: true
+
                         theme: root.theme
+
                     }
 
-                    // 配方列表
                     QQC.ScrollView {
+
                         Layout.fillWidth: true
+
                         Layout.fillHeight: true
+
                         clip: true
 
                         ListView {
+
                             id: recipeListView
+
                             model: recipeListModel
+
                             spacing: 8
 
                             delegate: Rectangle {
+
+                                id: recipeDelegate
+
                                 required property int index
+
                                 required property string name
+
                                 required property string fileName
 
                                 width: ListView.view.width
+
                                 height: 80
+
                                 radius: 6
-                                color: root.selectedRecipeIndex === index ? root.theme.accent + "20" : "transparent"
-                                border.width: root.selectedRecipeIndex === index ? 1 : 0
+
+                                color: root.selectedRecipeIndex === recipeDelegate.index ? root.theme.accent + "20" : "transparent"
+
+                                border.width: root.selectedRecipeIndex === recipeDelegate.index ? 1 : 0
+
                                 border.color: root.theme.accent
 
                                 MouseArea {
+
                                     anchors.fill: parent
-                                    onClicked: root.selectRecipe(index)
+
+                                    onClicked: root.selectRecipe(recipeDelegate.index)
+
                                 }
 
                                 ColumnLayout {
+
                                     anchors.fill: parent
+
                                     anchors.margins: 12
+
                                     spacing: 4
 
                                     Components.AppLabel {
-                                        text: name
+
+                                        text: recipeDelegate.name
+
                                         fontSize: 14
+
                                         fontWeight: 500
+
                                         theme: root.theme
+
                                     }
 
                                     Components.AppLabel {
-                                        text: fileName
+
+                                        text: recipeDelegate.fileName
+
                                         fontSize: 12
+
                                         color: root.theme.textSecondary
+
                                         theme: root.theme
+
                                     }
 
                                     Item { Layout.fillHeight: true }
+
                                 }
+
                             }
+
                         }
+
                     }
+
                 }
+
             }
 
-            // 右侧：配方详情/编辑
             Components.AppCard {
+
                 Layout.fillWidth: true
+
                 Layout.fillHeight: true
+
                 theme: root.theme
 
                 ColumnLayout {
-                    width: parent.width
-                    spacing: 16
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                    // 标题栏
+                    spacing: 8
+
                     RowLayout {
+
                         Layout.fillWidth: true
+
                         spacing: 8
 
                         Components.AppLabel {
+
                             text: root.isEditing ? (root.selectedRecipeIndex >= 0 ? "编辑配方" : "新建配方") : "配方详情"
+
                             fontSize: 16
+
                             fontWeight: 600
+
                             theme: root.theme
+
                         }
 
                         Item { Layout.fillWidth: true }
 
                         Components.AppButton {
+
                             visible: !root.isEditing && root.selectedRecipeIndex >= 0
+
                             text: "编辑"
+
                             variant: "default"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.editRecipe()
+
                         }
 
                         Components.AppButton {
+
                             visible: !root.isEditing && root.selectedRecipeIndex >= 0
+
                             text: "导出"
+
                             variant: "outline"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.exportRecipe()
+
                         }
 
                         Components.AppButton {
+
                             visible: !root.isEditing && root.selectedRecipeIndex >= 0
+
                             text: "删除"
+
                             variant: "destructive"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.deleteRecipe()
+
                         }
 
                         Components.AppButton {
+
                             visible: root.isEditing
+
                             text: "保存"
+
                             variant: "default"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: root.saveRecipe()
+
                         }
 
                         Components.AppButton {
+
                             visible: root.isEditing
+
                             text: "取消"
+
                             variant: "outline"
+
                             size: "sm"
+
                             theme: root.theme
+
                             onClicked: { root.isEditing = false; root.editingRecipe = null }
+
                         }
+
                     }
 
                     Components.AppSeparator {
+
                         Layout.fillWidth: true
+
                         theme: root.theme
+
                     }
 
-                    // 内容区域
-                    QQC.ScrollView {
+                    Item {
+
+                        visible: root.selectedRecipeIndex < 0 && !root.isEditing
+
                         Layout.fillWidth: true
+
                         Layout.fillHeight: true
-                        clip: true
-                        contentWidth: availableWidth
 
                         ColumnLayout {
-                            width: parent.width
-                            spacing: 20
 
-                            // 空状态提示
-                            Item {
-                                visible: root.selectedRecipeIndex < 0 && !root.isEditing
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 200
+                            anchors.centerIn: parent
 
-                                ColumnLayout {
-                                    anchors.centerIn: parent
-                                    spacing: 12
+                            spacing: 12
 
-                                    Components.AppLabel {
-                                        text: "请从左侧选择配方"
-                                        fontSize: 14
-                                        color: root.theme.textMuted
-                                        theme: root.theme
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
+                            Components.AppLabel {
 
-                                    Components.AppButton {
-                                        text: "新建配方"
-                                        variant: "default"
-                                        theme: root.theme
-                                        Layout.alignment: Qt.AlignHCenter
-                                        onClicked: root.createNewRecipe()
-                                    }
-                                }
+                                text: "请从左侧选择配方"
+
+                                fontSize: 14
+
+                                color: root.theme.textMuted
+
+                                theme: root.theme
+
+                                Layout.alignment: Qt.AlignHCenter
+
                             }
 
-                            // 配方参数表单
-                            ColumnLayout {
-                                visible: root.selectedRecipeIndex >= 0 || root.isEditing
-                                Layout.fillWidth: true
-                                spacing: 16
+                            Components.AppButton {
 
-                                // 基本信息
-                                Components.AppLabel {
-                                    text: "基本信息"
-                                    fontSize: 14
-                                    fontWeight: 600
-                                    theme: root.theme
-                                }
+                                text: "新建配方"
 
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 2
-                                    columnSpacing: 16
-                                    rowSpacing: 12
+                                variant: "default"
 
-                                    Components.AppLabel {
-                                        text: "配方ID:"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        placeholderText: "GBX-XXX"
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.fileName : (root.currentRecipe() ? root.currentRecipe().fileName : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.fileName = text
-                                    }
+                                theme: root.theme
 
-                                    Components.AppLabel {
-                                        text: "配方名称:"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        placeholderText: "输入配方名称"
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.name : (root.currentRecipe() ? root.currentRecipe().name : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.name = text
-                                    }
+                                Layout.alignment: Qt.AlignHCenter
 
-                                    Components.AppLabel {
-                                        text: "描述:"
-                                        theme: root.theme
-                                        Layout.alignment: Qt.AlignTop
-                                    }
-                                    Components.AppTextarea {
-                                        Layout.fillWidth: true
-                                        placeholderText: "输入配方描述"
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.description : (root.currentRecipe() ? (root.currentRecipe().description || "") : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.description = text
-                                    }
-                                }
+                                onClicked: root.createNewRecipe()
 
-                                Components.AppSeparator {
-                                    Layout.fillWidth: true
-                                    theme: root.theme
-                                }
-
-                                // 归零参数
-                                Components.AppLabel {
-                                    text: "归零参数"
-                                    fontSize: 14
-                                    fontWeight: 600
-                                    theme: root.theme
-                                }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 2
-                                    columnSpacing: 16
-                                    rowSpacing: 12
-
-                                    Components.AppLabel {
-                                        text: "归零占空比 (%):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.homeDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().homeDutyCycle.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.homeDutyCycle = parseFloat(text) || 0
-                                    }
-                                }
-
-                                Components.AppSeparator {
-                                    Layout.fillWidth: true
-                                    theme: root.theme
-                                }
-
-                                Components.AppLabel {
-                                    text: "空载测试参数"
-                                    fontSize: 14
-                                    fontWeight: 600
-                                    theme: root.theme
-                                }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 2
-                                    columnSpacing: 16
-                                    rowSpacing: 12
-
-                                    Components.AppLabel {
-                                        text: "空载占空比 (%):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleDutyCycle.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleDutyCycle = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "转速下限 (RPM):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleSpeedMin.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleSpeedMin.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleSpeedMin = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "转速上限 (RPM):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleSpeedMax.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().idleSpeedMax.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleSpeedMax = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "电流上限 (A):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.idleCurrentMax.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().idleCurrentMax.toFixed(2) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.idleCurrentMax = parseFloat(text) || 0
-                                    }
-                                }
-
-                                Components.AppSeparator {
-                                    Layout.fillWidth: true
-                                    theme: root.theme
-                                }
-
-                                Components.AppLabel {
-                                    text: "角度定位参数"
-                                    fontSize: 14
-                                    fontWeight: 600
-                                    theme: root.theme
-                                }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 2
-                                    columnSpacing: 16
-                                    rowSpacing: 12
-
-                                    Components.AppLabel {
-                                        text: "目标角度序列 (°):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.anglePositions : (root.currentRecipe() ? root.currentRecipe().anglePositions : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.anglePositions = text
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "角度容差 (°):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.angleTolerance.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().angleTolerance.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.angleTolerance = parseFloat(text) || 0
-                                    }
-                                }
-
-                                Components.AppSeparator {
-                                    Layout.fillWidth: true
-                                    theme: root.theme
-                                }
-
-                                Components.AppLabel {
-                                    text: "负载测试参数"
-                                    fontSize: 14
-                                    fontWeight: 600
-                                    theme: root.theme
-                                }
-
-                                GridLayout {
-                                    Layout.fillWidth: true
-                                    columns: 2
-                                    columnSpacing: 16
-                                    rowSpacing: 12
-
-                                    Components.AppLabel {
-                                        text: "负载占空比 (%):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.loadDutyCycle.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().loadDutyCycle.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.loadDutyCycle = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "扭矩下限 (N·m):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.loadTorqueMin.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().loadTorqueMin.toFixed(2) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.loadTorqueMin = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "制动电流步进 (A):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.brakeRampStep.toFixed(2) : (root.currentRecipe() ? root.currentRecipe().brakeRampStep.toFixed(2) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.brakeRampStep = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "步进间隔 (ms):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.brakeRampInterval.toString() : (root.currentRecipe() ? root.currentRecipe().brakeRampInterval.toString() : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.brakeRampInterval = parseInt(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "锁止转速阈值 (RPM):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.lockSpeedThreshold.toFixed(1) : (root.currentRecipe() ? root.currentRecipe().lockSpeedThreshold.toFixed(1) : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.lockSpeedThreshold = parseFloat(text) || 0
-                                    }
-
-                                    Components.AppLabel {
-                                        text: "锁止确认时长 (ms):"
-                                        theme: root.theme
-                                    }
-                                    Components.AppInput {
-                                        Layout.fillWidth: true
-                                        text: root.isEditing && root.editingRecipe ? root.editingRecipe.lockDuration.toString() : (root.currentRecipe() ? root.currentRecipe().lockDuration.toString() : "")
-                                        readOnly: !root.isEditing
-                                        theme: root.theme
-                                        onTextChanged: if (root.isEditing && root.editingRecipe) root.editingRecipe.lockDuration = parseInt(text) || 0
-                                    }
-                                }
                             }
+
                         }
+
                     }
+
+                    ColumnLayout {
+
+                        visible: root.selectedRecipeIndex >= 0 || root.isEditing
+
+                        Layout.fillWidth: true
+
+                        Layout.fillHeight: true
+
+                        spacing: 8
+
+                        Components.AppTabs {
+
+                            id: tabBar
+
+                            Layout.fillWidth: true
+
+                            theme: root.theme
+
+                            model: ["基本信息", "归零参数", "空载测试", "角度定位", "负载测试"]
+
+                            currentIndex: root.currentTabIndex
+
+                            showContent: false
+
+                            onCurrentIndexChanged: root.currentTabIndex = currentIndex
+
+                        }
+
+                        StackLayout {
+
+                            Layout.fillWidth: true
+
+                            Layout.fillHeight: true
+
+                            currentIndex: root.currentTabIndex
+
+                            RecipeForms.RecipeBasicInfoForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                            }
+
+                            RecipeForms.RecipeHomingForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                            }
+
+                            RecipeForms.RecipeIdleForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                            }
+
+                            RecipeForms.RecipeAngleForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                            }
+
+                            RecipeForms.RecipeLoadForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                            }
+
+                        }
+
+                    }
+
                 }
+
             }
+
         }
+
     }
+
 }
+

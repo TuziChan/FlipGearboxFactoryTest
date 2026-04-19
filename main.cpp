@@ -42,12 +42,6 @@ int main(int argc, char *argv[])
 
     // Create station runtime
     auto runtime = Infrastructure::Config::StationRuntimeFactory::create(stationConfig);
-    
-    // Initialize runtime (will fail if devices not connected, but that's OK for UI testing)
-    if (!runtime->initialize()) {
-        qWarning() << "Failed to initialize station runtime:" << runtime->lastError();
-        qWarning() << "Continuing anyway for UI testing...";
-    }
 
     // Create ViewModel
     auto viewModel = new ViewModels::TestExecutionViewModel(runtime.get(), &app);
@@ -58,6 +52,7 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     
     // Expose ViewModel to QML
+    engine.rootContext()->setContextProperty("stationRuntime", runtime.get());
     engine.rootContext()->setContextProperty("testViewModel", viewModel);
     engine.rootContext()->setContextProperty("diagnosticsViewModel", diagnosticsViewModel);
     engine.rootContext()->setContextProperty("deviceConfigService", deviceConfigService);

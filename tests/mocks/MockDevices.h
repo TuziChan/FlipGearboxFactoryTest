@@ -138,11 +138,15 @@ class MockBrakeDevice : public Infrastructure::Devices::IBrakePowerDevice {
     Q_OBJECT
 public:
     double mockCurrentA = 0.0;
+    double mockVoltageV = 0.0;
+    double mockPowerW = 0.0;
+    int mockMode = 0;
     bool mockFailSetCurrent = false;
     bool mockFailSetOutput = false;
     bool mockFailReadCurrent = false;
     bool outputEnabled = false;
     double lastSetCurrent = 0.0;
+    double lastSetVoltage = 0.0;
     int lastChannel = 0;
     bool initialized = false;
 
@@ -170,6 +174,31 @@ public:
         if (mockFailReadCurrent) { m_lastError = "Mock: readCurrent failed"; return false; }
         lastChannel = channel;
         currentA = mockCurrentA;
+        return true;
+    }
+
+    bool setVoltage(int channel, double voltageV) override {
+        lastChannel = channel;
+        lastSetVoltage = voltageV;
+        mockVoltageV = voltageV;
+        return true;
+    }
+
+    bool readVoltage(int channel, double& voltageV) override {
+        lastChannel = channel;
+        voltageV = mockVoltageV;
+        return true;
+    }
+
+    bool readPower(int channel, double& powerW) override {
+        lastChannel = channel;
+        powerW = mockPowerW;
+        return true;
+    }
+
+    bool readMode(int channel, int& mode) override {
+        lastChannel = channel;
+        mode = mockMode;
         return true;
     }
 

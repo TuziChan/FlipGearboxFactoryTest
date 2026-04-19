@@ -1,21 +1,23 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
+
+// CardContent — shadcn/ui parity
+// px-6 padding area for card body content.
 
 Item {
     id: root
 
     required property AppTheme theme
-    property alias content: container.data
-    width: parent ? parent.width : implicitWidth
-    height: implicitHeight
-    implicitWidth: parent ? parent.width : container.childrenRect.width + 24
-    implicitHeight: container.childrenRect.height + 24
+    default property alias content: container.data
+
+    Layout.fillWidth: true
+    implicitHeight: container.childrenRect.height
 
     Item {
         id: container
-        anchors.fill: parent
-        anchors.margins: 12
-        anchors.topMargin: 0
+        width: root.width
+        height: root.height > 0 ? root.height : container.childrenRect.height
     }
 }

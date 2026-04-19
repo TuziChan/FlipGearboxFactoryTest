@@ -158,6 +158,11 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/PlaceholderPage.qml
         src/ui/components/TestExecutionWorkspace.qml
         src/ui/pages/RecipePage.qml
+        src/ui/pages/recipe/RecipeBasicInfoForm.qml
+        src/ui/pages/recipe/RecipeHomingForm.qml
+        src/ui/pages/recipe/RecipeIdleForm.qml
+        src/ui/pages/recipe/RecipeAngleForm.qml
+        src/ui/pages/recipe/RecipeLoadForm.qml
         src/ui/pages/HistoryPage.qml
         src/ui/pages/DeviceConfigPage.qml
         src/ui/pages/DiagnosticsPage.qml

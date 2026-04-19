@@ -27,7 +27,7 @@ public:
     bool open(const QString&, int, int, const QString& = "None", int = 1) override { return true; }
     void close() override {}
     bool isOpen() const override { return true; }
-    bool sendRequest(const QByteArray&, QByteArray&) override { return true; }
+    bool sendRequest(const QByteArray& request, QByteArray& response) override { response = request; return true; }
     QString lastError() const override { return ""; }
 };
 
@@ -452,6 +452,71 @@ private slots:
             QVERIFY(!device.lastError().isEmpty());
         }
         qDebug() << "制动电流负值拒绝验证通过";
+    }
+
+    void testBrakeVoltageSafetyLimitNormalRange() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double normalValues[] = {0.0, 5.0, 12.0, 23.99, 24.0};
+        for (double v : normalValues) {
+            QVERIFY2(device.setVoltage(1, v), QString("Expected %1V to be accepted").arg(v).toUtf8().constData());
+        }
+        qDebug() << "制动电压正常范围验证通过";
+    }
+
+    void testBrakeVoltageSafetyLimitExceedsMax() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double overValues[] = {24.01, 30.0, 100.0};
+        for (double v : overValues) {
+            QVERIFY2(!device.setVoltage(1, v), QString("Expected %1V to be rejected").arg(v).toUtf8().constData());
+            QVERIFY(!device.lastError().isEmpty());
+        }
+        qDebug() << "制动电压超限拒绝验证通过";
+    }
+
+    void testBrakeVoltageSafetyLimitNegative() {
+        MockBusController bus;
+        BrakePowerSupplyDevice device(&bus, 4, this);
+
+        double negativeValues[] = {-0.01, -1.0, -100.0};
+        for (double v : negativeValues) {
+            QVERIFY2(!device.setVoltage(1, v), QString("Expected %1V to be rejected").arg(v).toUtf8().constData());
+            QVERIFY(!device.lastError().isEmpty());
+        }
+        qDebug() << "制动电压负值拒绝验证通过";
+    }
+
+    void testRecipeConfigRoundTripNewFields() {
+        Domain::TestRecipe recipe;
+        recipe.name = "TestRecipe";
+        recipe.brakeMode = "CV";
+        recipe.brakeRampStartVoltage = 2.0;
+        recipe.brakeRampEndVoltage = 18.5;
+
+        QJsonObject json = Infrastructure::Config::RecipeConfig::toJson(recipe);
+        Domain::TestRecipe loaded = Infrastructure::Config::RecipeConfig::fromJson(json);
+
+        QCOMPARE(loaded.name, QString("TestRecipe"));
+        QCOMPARE(loaded.brakeMode, QString("CV"));
+        QCOMPARE(loaded.brakeRampStartVoltage, 2.0);
+        QCOMPARE(loaded.brakeRampEndVoltage, 18.5);
+        qDebug() << "配方序列化新增字段往返测试通过";
+    }
+
+    void testRecipeConfigBackwardCompatibility() {
+        QJsonObject oldJson;
+        oldJson["name"] = "OldRecipe";
+
+        Domain::TestRecipe loaded = Infrastructure::Config::RecipeConfig::fromJson(oldJson);
+
+        QCOMPARE(loaded.name, QString("OldRecipe"));
+        QCOMPARE(loaded.brakeMode, QString("CC"));
+        QCOMPARE(loaded.brakeRampStartVoltage, 0.0);
+        QCOMPARE(loaded.brakeRampEndVoltage, 12.0);
+        qDebug() << "旧配方向后兼容测试通过";
     }
 };
 

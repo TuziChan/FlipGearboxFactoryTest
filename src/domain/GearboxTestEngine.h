@@ -111,6 +111,7 @@ private:
 
     // Brake ramp state
     double m_currentBrakeCurrent;
+    double m_currentBrakeVoltage = 0.0;
     quint64 m_settlingTargetMs = 0;
 
     // Phase management

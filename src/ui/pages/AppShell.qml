@@ -147,14 +147,6 @@ Item {
             }
         }
 
-        Components.ThemeSwitcherPanel {
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.rightMargin: 16
-            anchors.bottomMargin: 46
-            z: 10
-            theme: theme
-            targetTheme: theme
-        }
+        // ThemeSwitcherPanel is now only shown in the ComponentGalleryPage
     }
 }

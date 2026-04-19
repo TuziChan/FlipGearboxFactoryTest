@@ -63,6 +63,9 @@ struct TestRecipe {
     int loadRampMs;                 // Brake current ramp duration
     double brakeRampStartCurrentA;  // Starting brake current
     double brakeRampEndCurrentA;    // Ending brake current
+    QString brakeMode;               // "CC" or "CV", default "CC"
+    double brakeRampStartVoltage;    // Starting voltage for CV mode ramp
+    double brakeRampEndVoltage;      // Ending voltage for CV mode ramp
     double lockSpeedThresholdRpm;   // Speed threshold for lock detection
     int lockAngleWindowMs;          // Window for angle change check
     double lockAngleDeltaDeg;       // Max angle change in window
@@ -121,6 +124,9 @@ struct TestRecipe {
         , loadRampMs(2000)
         , brakeRampStartCurrentA(0.0)
         , brakeRampEndCurrentA(3.0)
+        , brakeMode("CC")
+        , brakeRampStartVoltage(0.0)
+        , brakeRampEndVoltage(12.0)
         , lockSpeedThresholdRpm(2.0)
         , lockAngleWindowMs(100)
         , lockAngleDeltaDeg(5.0)

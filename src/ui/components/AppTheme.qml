@@ -166,18 +166,24 @@ QtObject {
     readonly property color mutedColor: _palette.muted
     readonly property color ringColor: _palette.primary
 
+    readonly property color secondary: _palette.secondary
+    readonly property color secondaryForeground: _palette.secondaryForeground
+
     readonly property color ok: darkMode ? "#3CCF7A" : "#1F9A55"
     readonly property color okColor: ok
     readonly property color okWeak: darkMode ? "#1A2A21" : "#E6F7EE"
     readonly property color okBg: okWeak
+    readonly property color okForeground: "#FFFFFF"
     readonly property color danger: darkMode ? "#FF6B6B" : "#D64545"
     readonly property color dangerWeak: darkMode ? "#321B1B" : "#FCEBEC"
     readonly property color ngColor: danger
     readonly property color ngBg: dangerWeak
+    readonly property color dangerForeground: "#FFFFFF"
     readonly property color warn: darkMode ? "#F2B94B" : "#A16207"
     readonly property color warnWeak: darkMode ? "#342A18" : "#FFF5DB"
     readonly property color warnColor: warn
     readonly property color warnBg: warnWeak
+    readonly property color warnForeground: "#FFFFFF"
 
     readonly property int radiusSmall: _style.radiusSmall
     readonly property int radiusMedium: _style.radiusMedium

@@ -27,6 +27,8 @@ struct TelemetrySnapshot {
     
     // Brake power supply
     double brakeCurrentA;
+    double brakeVoltageV;
+    double brakePowerW;
     
     TelemetrySnapshot()
         : timestamp(QDateTime::currentDateTime())
@@ -37,6 +39,8 @@ struct TelemetrySnapshot {
         , dynPowerW(0.0)
         , encoderAngleDeg(0.0)
         , brakeCurrentA(0.0)
+        , brakeVoltageV(0.0)
+        , brakePowerW(0.0)
     {}
 };
 

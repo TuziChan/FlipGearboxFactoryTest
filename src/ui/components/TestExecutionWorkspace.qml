@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 
 Item {
     id: root
@@ -94,6 +95,7 @@ Item {
                 contentWidth: width
                 contentHeight: centerColumn.height + 20
                 clip: true
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                 ColumnLayout {
                     id: centerColumn

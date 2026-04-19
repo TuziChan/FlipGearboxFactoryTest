@@ -3,21 +3,21 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
+// CardFooter — shadcn/ui parity
+// flex items-center px-6
+
 Item {
     id: root
 
     required property AppTheme theme
-    property alias content: rowLayout.data
-    width: parent ? parent.width : implicitWidth
-    height: implicitHeight
-    implicitWidth: parent ? parent.width : rowLayout.implicitWidth + 24
-    implicitHeight: rowLayout.implicitHeight + 24
+    default property alias content: rowLayout.data
+
+    Layout.fillWidth: true
+    implicitHeight: rowLayout.implicitHeight
 
     RowLayout {
         id: rowLayout
-        anchors.fill: parent
-        anchors.margins: 12
-        anchors.topMargin: 0
+        width: root.width
         spacing: 8
     }
 }

@@ -191,6 +191,9 @@ bool GearboxTestEngine::acquireTelemetry(TelemetrySnapshot& snapshot) {
         return false;
     }
 
+    m_brake->readVoltage(m_brakeChannel, snapshot.brakeVoltageV);
+    m_brake->readPower(m_brakeChannel, snapshot.brakePowerW);
+
     return true;
 }
 
@@ -727,6 +730,10 @@ void GearboxTestEngine::handleSpinupLoadForward() {
             return;
         }
         m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA;
+        if (m_recipe.brakeMode == "CV") {
+            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
+            m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage);
+        }
         m_lockConditionMet = false;
         transitionToSubState(TestSubState::RampBrakeForward);
     }
@@ -739,12 +746,22 @@ void GearboxTestEngine::handleRampBrakeForward() {
     double rampProgress = static_cast<double>(m_state.phaseElapsedMs) / m_recipe.loadRampMs;
     rampProgress = qBound(0.0, rampProgress, 1.0);
     
-    m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA + 
-                            (m_recipe.brakeRampEndCurrentA - m_recipe.brakeRampStartCurrentA) * rampProgress;
-    
-    if (!m_brake->setCurrent(m_brakeChannel, m_currentBrakeCurrent)) {
-        failTest(FailureCategory::Communication, "Failed to set brake current");
-        return;
+    if (m_recipe.brakeMode == "CV") {
+        m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage +
+                                (m_recipe.brakeRampEndVoltage - m_recipe.brakeRampStartVoltage) * rampProgress;
+        m_currentBrakeVoltage = qBound(0.0, m_currentBrakeVoltage, 24.0);
+        if (!m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage)) {
+            failTest(FailureCategory::Communication, "Failed to set brake voltage");
+            return;
+        }
+    } else {
+        m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA +
+                                (m_recipe.brakeRampEndCurrentA - m_recipe.brakeRampStartCurrentA) * rampProgress;
+        m_currentBrakeCurrent = qBound(0.0, m_currentBrakeCurrent, 5.0);
+        if (!m_brake->setCurrent(m_brakeChannel, m_currentBrakeCurrent)) {
+            failTest(FailureCategory::Communication, "Failed to set brake current");
+            return;
+        }
     }
 
     // Check for lock condition
@@ -795,6 +812,10 @@ void GearboxTestEngine::handleSpinupLoadReverse() {
             return;
         }
         m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA;
+        if (m_recipe.brakeMode == "CV") {
+            m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage;
+            m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage);
+        }
         m_lockConditionMet = false;
         transitionToSubState(TestSubState::RampBrakeReverse);
     }
@@ -807,12 +828,22 @@ void GearboxTestEngine::handleRampBrakeReverse() {
     double rampProgress = static_cast<double>(m_state.phaseElapsedMs) / m_recipe.loadRampMs;
     rampProgress = qBound(0.0, rampProgress, 1.0);
     
-    m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA + 
-                            (m_recipe.brakeRampEndCurrentA - m_recipe.brakeRampStartCurrentA) * rampProgress;
-    
-    if (!m_brake->setCurrent(m_brakeChannel, m_currentBrakeCurrent)) {
-        failTest(FailureCategory::Communication, "Failed to set brake current");
-        return;
+    if (m_recipe.brakeMode == "CV") {
+        m_currentBrakeVoltage = m_recipe.brakeRampStartVoltage +
+                                (m_recipe.brakeRampEndVoltage - m_recipe.brakeRampStartVoltage) * rampProgress;
+        m_currentBrakeVoltage = qBound(0.0, m_currentBrakeVoltage, 24.0);
+        if (!m_brake->setVoltage(m_brakeChannel, m_currentBrakeVoltage)) {
+            failTest(FailureCategory::Communication, "Failed to set brake voltage");
+            return;
+        }
+    } else {
+        m_currentBrakeCurrent = m_recipe.brakeRampStartCurrentA +
+                                (m_recipe.brakeRampEndCurrentA - m_recipe.brakeRampStartCurrentA) * rampProgress;
+        m_currentBrakeCurrent = qBound(0.0, m_currentBrakeCurrent, 5.0);
+        if (!m_brake->setCurrent(m_brakeChannel, m_currentBrakeCurrent)) {
+            failTest(FailureCategory::Communication, "Failed to set brake current");
+            return;
+        }
     }
 
     // Check for lock condition

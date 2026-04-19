@@ -894,38 +894,38 @@ Item {
                                 width: parent.width
                                 theme: root.theme
 
-                                header: [
-                                    Components.AppCardHeader {
+                                Components.AppCardHeader {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+
+                                    Components.AppCardTitle {
+                                        theme: root.theme
+                                        text: "卡片标题"
+                                    }
+
+                                    Components.AppCardDescription {
+                                        theme: root.theme
+                                        text: "这是卡片的描述文本"
+                                    }
+
+                                    action: Components.AppCardAction {
                                         theme: root.theme
 
-                                        Components.AppCardTitle {
+                                        Components.AppButton {
                                             theme: root.theme
-                                            text: "卡片标题"
-                                        }
-
-                                        Components.AppCardDescription {
-                                            theme: root.theme
-                                            text: "这是卡片的描述文本"
-                                        }
-
-                                        Components.AppCardAction {
-                                            theme: root.theme
-
-                                            Components.AppButton {
-                                                theme: root.theme
-                                                iconName: "more-vertical"
-                                                size: "icon-sm"
-                                                variant: "ghost"
-                                            }
+                                            iconName: "more-vertical"
+                                            size: "icon-sm"
+                                            variant: "ghost"
                                         }
                                     }
-                                ]
+                                }
 
                                 Components.AppCardContent {
+                                    Layout.fillWidth: true
                                     theme: root.theme
 
                                     Text {
-                                        width: parent.width
+                                        Layout.fillWidth: true
                                         text: "卡片内容区域，可以放置任意内容。"
                                         color: root.theme.textSecondary
                                         font.pixelSize: 12
@@ -933,24 +933,23 @@ Item {
                                     }
                                 }
 
-                                footer: [
-                                    Components.AppCardFooter {
+                                Components.AppCardFooter {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+
+                                    Components.AppButton {
                                         theme: root.theme
-
-                                        Components.AppButton {
-                                            theme: root.theme
-                                            text: "确认"
-                                            size: "sm"
-                                        }
-
-                                        Components.AppButton {
-                                            theme: root.theme
-                                            text: "取消"
-                                            variant: "outline"
-                                            size: "sm"
-                                        }
+                                        text: "确认"
+                                        size: "sm"
                                     }
-                                ]
+
+                                    Components.AppButton {
+                                        theme: root.theme
+                                        text: "取消"
+                                        variant: "outline"
+                                        size: "sm"
+                                    }
+                                }
                             }
                         }
 
@@ -1976,5 +1975,15 @@ Item {
             { text: "切换到紧凑视图", shortcut: "Ctrl+2" },
             { text: "打开检查器", shortcut: "Ctrl+3" }
         ]
+    }
+
+    Components.ThemeSwitcherPanel {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: 16
+        anchors.bottomMargin: 16
+        z: 10
+        theme: root.theme
+        targetTheme: root.theme
     }
 }

@@ -54,7 +54,6 @@ Rectangle {
                 }
             }
 
-
             Column {
                 width: root.fieldGroupWidth
                 spacing: 4

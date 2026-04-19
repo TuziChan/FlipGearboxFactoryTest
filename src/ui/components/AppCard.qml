@@ -3,70 +3,47 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
+// Card — shadcn/ui parity
+//
+// Container: flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm
+//
+// Supports two sizing modes:
+//   1. Intrinsic: Card sizes to content (implicitWidth/implicitHeight)
+//   2. Fill: Card stretches when placed in a layout with Layout.fillWidth/Height
+//
+// Children go into a ColumnLayout with gap-6 spacing and py-6 padding.
+// Use Layout.fillWidth/Layout.fillHeight on children to stretch them.
+// Do NOT use anchors.fill: parent on children — use Layout attached props.
+
 Rectangle {
     id: root
 
     required property AppTheme theme
-    property string size: "default"
-    property alias header: headerContainer.data
-    property alias footer: footerContainer.data
-    default property alias content: contentContainer.data
-    readonly property real cardPadding: 16
-    readonly property real headerImplicitHeight: root.sectionImplicitHeight(headerContainer)
-    readonly property real contentImplicitHeight: root.sectionImplicitHeight(contentContainer)
-    readonly property real footerImplicitHeight: root.sectionImplicitHeight(footerContainer)
+    default property alias content: cardLayout.data
+
+    readonly property real _gap: 24       // gap-6
+    readonly property real _paddingX: 24   // px-6
+    readonly property real _paddingY: 24   // py-6
 
     implicitWidth: 350
-    implicitHeight: headerImplicitHeight + contentImplicitHeight + footerImplicitHeight + cardPadding * 2
-    radius: root.theme.radiusLarge
-    color: root.theme.cardColor
+    implicitHeight: cardLayout.implicitHeight + _paddingY * 2
+
+    radius: theme.radiusLarge
+    color: theme.cardColor
     border.width: 1
-    border.color: root.theme.borderColor
+    border.color: theme.dividerColor
     clip: true
 
-    function sectionImplicitHeight(container) {
-        let maxBottom = 0
-        for (let i = 0; i < container.children.length; ++i) {
-            const child = container.children[i]
-            if (!child || !child.visible)
-                continue
-
-            const childHeight = child.implicitHeight > 0 ? child.implicitHeight : child.height
-            maxBottom = Math.max(maxBottom, child.y + childHeight)
-        }
-        return maxBottom
-    }
-
-    Column {
+    ColumnLayout {
         id: cardLayout
-        anchors.fill: parent
-        anchors.margins: root.cardPadding
-        spacing: 0
-
-        Item {
-            id: headerContainer
-            width: parent.width
-            height: implicitHeight
-            implicitHeight: root.headerImplicitHeight
-            visible: children.length > 0
-        }
-
-        Item {
-            id: contentContainer
-            width: parent.width
-            height: root.height > 0
-                    ? Math.max(root.contentImplicitHeight,
-                               root.height - root.cardPadding * 2 - headerContainer.height - footerContainer.height)
-                    : implicitHeight
-            implicitHeight: root.contentImplicitHeight
-        }
-
-        Item {
-            id: footerContainer
-            width: parent.width
-            height: implicitHeight
-            implicitHeight: root.footerImplicitHeight
-            visible: children.length > 0
-        }
+        x: root._paddingX
+        y: root._paddingY
+        width: root.width - root._paddingX * 2
+        // When card has explicit height (fill mode), stretch content;
+        // otherwise use implicitHeight for intrinsic sizing.
+        height: root.height > _paddingY * 2
+            ? root.height - root._paddingY * 2
+            : implicitHeight
+        spacing: root._gap
     }
 }

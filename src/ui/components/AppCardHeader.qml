@@ -3,22 +3,38 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
-Item {
+// CardHeader — shadcn/ui parity
+// RowLayout with title/description on the left, optional action on the right.
+//
+// Usage:
+//   AppCardHeader {
+//       theme: root.theme
+//       AppCardTitle { text: "Title" }
+//       AppCardDescription { text: "Subtitle" }
+//       // Optional action slot:
+//       action: AppCardAction { ... }
+//   }
+
+RowLayout {
     id: root
 
     required property AppTheme theme
-    property alias content: gridLayout.data
-    width: parent ? parent.width : implicitWidth
-    height: implicitHeight
-    implicitWidth: parent ? parent.width : gridLayout.implicitWidth + 24
-    implicitHeight: gridLayout.implicitHeight + 24
+    default property alias content: headerLeft.data
+    property alias action: actionSlot.data
 
-    GridLayout {
-        id: gridLayout
-        anchors.fill: parent
-        anchors.margins: 12
-        columns: 2
-        rowSpacing: 4
-        columnSpacing: 8
+    spacing: 8  // gap-2
+
+    Column {
+        id: headerLeft
+        Layout.fillWidth: true
+        spacing: 2
+    }
+
+    Item {
+        id: actionSlot
+        Layout.alignment: Qt.AlignTop
+        visible: actionSlot.children.length > 0
+        implicitWidth: actionSlot.children.length > 0 ? actionSlot.children[0].implicitWidth : 0
+        implicitHeight: actionSlot.children.length > 0 ? actionSlot.children[0].implicitHeight : 0
     }
 }

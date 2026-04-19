@@ -16,6 +16,7 @@ Item {
     property int rowHeight: 32
     property int headerHeight: 32
     property string rowVariantKey: "variant"
+    property var columnWidthHints: []
 
     function cellText(row, columnIndex) {
         if (row === undefined || row === null)
@@ -63,6 +64,65 @@ Item {
         if (variant === "warning")
             return root.theme.warn
         return root.theme.textSecondary
+    }
+
+    function columnWidth(colIndex) {
+        const totalCols = root.headers.length
+        if (totalCols === 0)
+            return 120
+
+        const availableWidth = tableScroll.width
+        const hint = root.columnWidthHints.length > colIndex
+                     ? root.columnWidthHints[colIndex] : null
+
+        if (hint) {
+            if (hint.mode === "flex")
+                return root._flexWidth
+            if (typeof hint.minWidth === "number")
+                return Math.max(hint.minWidth, hint.minWidth)
+        }
+
+        if (availableWidth <= 0)
+            return 120
+
+        var fixedTotal = 0
+        var flexCount = 0
+        for (var i = 0; i < totalCols; i++) {
+            var h = root.columnWidthHints.length > i ? root.columnWidthHints[i] : null
+            if (h && h.mode === "flex") {
+                flexCount++
+            } else if (h && typeof h.minWidth === "number") {
+                fixedTotal += h.minWidth
+            } else {
+                fixedTotal += 120
+            }
+        }
+
+        if (hint && hint.mode === "flex") {
+            return flexCount > 0 ? Math.max(120, (availableWidth - fixedTotal) / flexCount) : 120
+        }
+
+        return Math.max(120, hint ? hint.minWidth : 120)
+    }
+
+    property real _flexWidth: {
+        const totalCols = root.headers.length
+        if (totalCols === 0) return 120
+        const availableWidth = tableScroll.width
+        if (availableWidth <= 0) return 120
+        var fixedTotal = 0
+        var flexCount = 0
+        for (var i = 0; i < totalCols; i++) {
+            var h = root.columnWidthHints.length > i ? root.columnWidthHints[i] : null
+            if (h && h.mode === "flex") {
+                flexCount++
+            } else if (h && typeof h.minWidth === "number") {
+                fixedTotal += h.minWidth
+            } else {
+                fixedTotal += 120
+            }
+        }
+        return flexCount > 0 ? Math.max(120, (availableWidth - fixedTotal) / flexCount) : 120
     }
 
     implicitWidth: Math.max(320, tableColumn.implicitWidth)
@@ -113,7 +173,8 @@ Item {
                             delegate: Rectangle {
                                 id: headerCell
                                 required property var modelData
-                                width: Math.max(120, headerLabel.implicitWidth + 24)
+                                required property int index
+                                width: root.columnWidth(headerCell.index)
                                 height: root.headerHeight
                                 color: "transparent"
 
@@ -122,10 +183,14 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     anchors.left: parent.left
                                     anchors.leftMargin: 12
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
                                     text: String(headerCell.modelData)
                                     color: root.theme.textPrimary
                                     font.pixelSize: 11
                                     font.bold: true
+                                    elide: Text.ElideRight
+                                    clip: true
                                 }
                             }
                         }
@@ -146,7 +211,16 @@ Item {
                             required property int index
                             required property var modelData
                             width: bodyColumn.width
-                            height: root.rowHeight
+                            height: {
+                                var hasLongText = false
+                                for (var ci = 0; ci < root.headers.length; ci++) {
+                                    if (root.cellText(rowDelegate.modelData, ci).length > 40) {
+                                        hasLongText = true
+                                        break
+                                    }
+                                }
+                                return hasLongText ? root.rowHeight * 2 : root.rowHeight
+                            }
                             color: root.rowFillColor(rowDelegate.modelData, rowDelegate.index)
                             border.width: 0
 
@@ -160,11 +234,19 @@ Item {
                                     delegate: Rectangle {
                                         id: bodyCell
                                         required property int index
-                                        width: headerRow.children[index] ? headerRow.children[index].width : 120
-                                        height: root.rowHeight
+                                        width: {
+                                            var w = 120
+                                            if (bodyCell.index < headerRow.children.length) {
+                                                var hdr = headerRow.children[bodyCell.index]
+                                                if (hdr) w = hdr.width
+                                            }
+                                            w
+                                        }
+                                        height: bodyCell.parent ? bodyCell.parent.height : root.rowHeight
                                         color: "transparent"
 
                                         Text {
+                                            id: bodyCellText
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.left: parent.left
                                             anchors.leftMargin: 12
@@ -175,7 +257,23 @@ Item {
                                             font.pixelSize: 11
                                             font.bold: root.rowVariant(rowDelegate.modelData) === "selected"
                                             elide: Text.ElideRight
+                                            wrapMode: Text.NoWrap
+                                            clip: true
                                         }
+
+                                        MouseArea {
+                                            id: bodyCellHover
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            acceptedButtons: Qt.NoButton
+                                        }
+
+                                        ToolTip.delay: 400
+                                        ToolTip.visible: bodyCellHover.containsMouse
+                                                         && bodyCellText.text.length > 0
+                                                         && (bodyCellText.paintedWidth > bodyCellText.width
+                                                             || bodyCellText.paintedHeight > bodyCellText.height)
+                                        ToolTip.text: bodyCellText.text
                                     }
                                 }
                             }
@@ -225,11 +323,14 @@ Item {
                                 delegate: Rectangle {
                                     id: footerCell
                                     required property int index
-                                    width: headerRow.children[index] ? headerRow.children[index].width : 120
+                                    width: headerRow.children[footerCell.index]
+                                           ? headerRow.children[footerCell.index].width
+                                           : 120
                                     height: root.rowHeight
                                     color: "transparent"
 
                                     Text {
+                                        id: footerCellText
                                         anchors.verticalCenter: parent.verticalCenter
                                         anchors.left: parent.left
                                         anchors.leftMargin: 12
@@ -240,7 +341,22 @@ Item {
                                         font.pixelSize: 11
                                         font.bold: true
                                         elide: Text.ElideRight
+                                        clip: true
                                     }
+
+                                    MouseArea {
+                                        id: footerCellHover
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        acceptedButtons: Qt.NoButton
+                                    }
+
+                                    ToolTip.delay: 400
+                                    ToolTip.visible: footerCellHover.containsMouse
+                                                     && footerCellText.text.length > 0
+                                                     && (footerCellText.paintedWidth > footerCellText.width
+                                                         || footerCellText.paintedHeight > footerCellText.height)
+                                    ToolTip.text: footerCellText.text
                                 }
                             }
                         }
@@ -250,15 +366,13 @@ Item {
 
             Text {
                 visible: root.caption.length > 0
-                width: parent.width
-                leftPadding: 12
-                rightPadding: 12
-                topPadding: 10
-                bottomPadding: 10
+                width: parent.width - 24
+                x: 12
+                padding: 8
                 text: root.caption
                 color: root.theme.textMuted
                 font.pixelSize: 11
-                wrapMode: Text.WordWrap
+                font.italic: true
             }
         }
     }

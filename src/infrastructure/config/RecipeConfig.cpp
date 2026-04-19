@@ -59,6 +59,9 @@ Domain::TestRecipe RecipeConfig::fromJson(const QJsonObject& json) {
     recipe.loadRampMs = readInt(json, "loadRampMs", recipe.loadRampMs);
     recipe.brakeRampStartCurrentA = readDouble(json, "brakeRampStartCurrentA", recipe.brakeRampStartCurrentA);
     recipe.brakeRampEndCurrentA = readDouble(json, "brakeRampEndCurrentA", recipe.brakeRampEndCurrentA);
+    recipe.brakeMode = json.value("brakeMode").isString() ? json.value("brakeMode").toString() : recipe.brakeMode;
+    recipe.brakeRampStartVoltage = readDouble(json, "brakeRampStartVoltage", recipe.brakeRampStartVoltage);
+    recipe.brakeRampEndVoltage = readDouble(json, "brakeRampEndVoltage", recipe.brakeRampEndVoltage);
     recipe.lockSpeedThresholdRpm = readDouble(json, "lockSpeedThresholdRpm", recipe.lockSpeedThresholdRpm);
     recipe.lockAngleWindowMs = readInt(json, "lockAngleWindowMs", recipe.lockAngleWindowMs);
     recipe.lockAngleDeltaDeg = readDouble(json, "lockAngleDeltaDeg", recipe.lockAngleDeltaDeg);
@@ -117,6 +120,9 @@ QJsonObject RecipeConfig::toJson(const Domain::TestRecipe& recipe) {
     json["loadRampMs"] = recipe.loadRampMs;
     json["brakeRampStartCurrentA"] = recipe.brakeRampStartCurrentA;
     json["brakeRampEndCurrentA"] = recipe.brakeRampEndCurrentA;
+    json["brakeMode"] = recipe.brakeMode;
+    json["brakeRampStartVoltage"] = recipe.brakeRampStartVoltage;
+    json["brakeRampEndVoltage"] = recipe.brakeRampEndVoltage;
     json["lockSpeedThresholdRpm"] = recipe.lockSpeedThresholdRpm;
     json["lockAngleWindowMs"] = recipe.lockAngleWindowMs;
     json["lockAngleDeltaDeg"] = recipe.lockAngleDeltaDeg;

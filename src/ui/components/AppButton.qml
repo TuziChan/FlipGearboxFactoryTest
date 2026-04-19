@@ -41,26 +41,24 @@ Rectangle {
     color: disabled
            ? theme.muted
            : dangerVariant
-             ? theme.dangerWeak
+             ? theme.danger
              : primaryVariant
                ? theme.accent
                : outlineVariant
                  ? theme.cardColor
                  : secondaryVariant
-                   ? theme.surface
+                   ? theme.secondary
                    : ghostVariant
                      ? "transparent"
                      : linkVariant
                        ? "transparent"
                        : theme.cardColor
-    border.width: outlineVariant || secondaryVariant ? 1 : 0
+    border.width: outlineVariant ? 1 : 0
     border.color: disabled
                   ? theme.stroke
                   : outlineVariant
-                    ? theme.stroke
-                    : secondaryVariant
-                      ? theme.stroke
-                      : "transparent"
+                    ? theme.borderColor
+                    : "transparent"
     opacity: disabled ? 0.6 : 1
     focus: true
 
@@ -103,7 +101,7 @@ Rectangle {
                    : (root.primaryVariant
                       ? root.theme.primaryForeground
                       : root.dangerVariant
-                        ? root.theme.danger
+                        ? root.theme.dangerForeground
                         : root.linkVariant
                           ? root.theme.accent
                           : root.theme.textPrimary)
@@ -131,7 +129,7 @@ Rectangle {
                : (root.primaryVariant
                   ? root.theme.primaryForeground
                   : root.dangerVariant
-                    ? root.theme.danger
+                    ? root.theme.dangerForeground
                     : root.theme.textPrimary)
         font.pixelSize: 14
         font.weight: Font.Medium
@@ -146,7 +144,7 @@ Rectangle {
                : (root.primaryVariant
                   ? root.theme.primaryForeground
                   : root.dangerVariant
-                    ? root.theme.danger
+                    ? root.theme.dangerForeground
                     : root.theme.textPrimary)
         iconSize: root.size === "icon-xs" ? 12 :
                   root.size === "icon-sm" ? 16 :

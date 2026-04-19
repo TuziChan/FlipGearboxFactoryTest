@@ -82,11 +82,20 @@ Item {
     }
 
     function testConnection() {
-        connectionStatus = "untested"
+        if (typeof stationRuntime === "undefined" || !stationRuntime) {
+            connectionStatus = "error"
+            return
+        }
+        connectionStatus = "connecting"
+        if (stationRuntime.initialize()) {
+            connectionStatus = "connected"
+        } else {
+            connectionStatus = "error"
+        }
     }
 
     function testDevice(deviceName) {
-        connectionStatus = "untested"
+        testConnection()
     }
 
     Component.onCompleted: {
@@ -453,7 +462,6 @@ Item {
                                         }
                                     }
                                 }
-
 
                                 Components.AppButton {
                                     Layout.fillWidth: true

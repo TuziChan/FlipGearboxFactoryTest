@@ -30,6 +30,10 @@ public:
     bool setCurrent(int channel, double currentA) override;
     bool setOutputEnable(int channel, bool enable) override;
     bool readCurrent(int channel, double& currentA) override;
+    bool setVoltage(int channel, double voltageV) override;
+    bool readVoltage(int channel, double& voltageV) override;
+    bool readPower(int channel, double& powerW) override;
+    bool readMode(int channel, int& mode) override;
     QString lastError() const override;
 
 private:
@@ -50,6 +54,14 @@ private:
     static constexpr uint16_t COIL_CH1_OUTPUT_ENABLE = 0x0000;
     static constexpr uint16_t COIL_CH2_OUTPUT_ENABLE = 0x0001;
 
+    static constexpr uint16_t REG_CH1_SET_VOLTAGE = 0x0000;
+    static constexpr uint16_t REG_CH2_SET_VOLTAGE = 0x0002;
+    static constexpr uint16_t REG_CH1_READ_VOLTAGE = 0x0000;
+    static constexpr uint16_t REG_CH2_READ_VOLTAGE = 0x0003;
+    static constexpr uint16_t REG_CH1_READ_POWER = 0x0002;
+    static constexpr uint16_t REG_CH2_READ_POWER = 0x0006;
+    static constexpr uint16_t REG_MODE = 0x0009;
+
     bool readHoldingRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values);
     bool readInputRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values);
     bool writeRegister(uint16_t address, uint16_t value);
@@ -57,6 +69,9 @@ private:
     uint16_t getSetCurrentRegister(int channel) const;
     uint16_t getOutputEnableCoil(int channel) const;
     uint16_t getReadCurrentRegister(int channel) const;
+    uint16_t getSetVoltageRegister(int channel) const;
+    uint16_t getReadVoltageRegister(int channel) const;
+    uint16_t getReadPowerRegister(int channel) const;
 };
 
 } // namespace Devices
