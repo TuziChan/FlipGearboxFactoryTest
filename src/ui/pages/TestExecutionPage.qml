@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import "../components" as Components
 
 Item {
@@ -12,6 +13,7 @@ Item {
 
     // ViewModel connection - exposed from main.cpp as "testViewModel"
     property var viewModel: typeof testViewModel !== "undefined" ? testViewModel : null
+    property var runtimeManager: typeof runtimeManager !== "undefined" ? runtimeManager : null
 
     // Local UI state derived from ViewModel
     property bool running: viewModel ? viewModel.running : false
@@ -40,6 +42,9 @@ Item {
     property var chartCurrent: []
     property var chartAngle: []
     property string phaseTitle: viewModel ? viewModel.currentPhase : "等待开始"
+    property var magnetMarkers: []
+    property string anomalyMessage: ""
+    property string anomalyType: ""
 
     ListModel { id: stepModel }
     ListModel { id: angleModel }
@@ -244,12 +249,21 @@ Item {
 
         if (typeof viewModel.angleResults !== 'undefined') {
             var angles = viewModel.angleResults
+            var markers = []
             for (var i = 0; i < Math.min(angles.length, angleModel.count); i++) {
                 var a = angles[i]
                 angleModel.setProperty(i, "currentAngle", typeof a.measuredAngleDeg === 'number' ? a.measuredAngleDeg.toFixed(2) + "°" : "--")
                 angleModel.setProperty(i, "deviation", typeof a.deviationDeg === 'number' ? a.deviationDeg.toFixed(2) + "°" : "--")
                 angleModel.setProperty(i, "result", a.passed ? "OK" : "NG")
+
+                if (typeof a.targetAngleDeg === 'number') {
+                    markers.push({
+                        angle: a.targetAngleDeg.toFixed(1),
+                        detected: a.passed
+                    })
+                }
             }
+            magnetMarkers = markers
         }
 
         if (typeof viewModel.loadForwardResult !== 'undefined') {
@@ -277,8 +291,11 @@ Item {
         chartTorque = []
         chartCurrent = []
         chartAngle = []
+        magnetMarkers = []
+        anomalyMessage = ""
+        anomalyType = ""
         initializeModels()
-        
+
         if (viewModel) {
             viewModel.resetTest()
         }
@@ -330,6 +347,47 @@ Item {
             currentChannelOn = !currentChannelOn
         else if (channelName === "angle")
             angleChannelOn = !angleChannelOn
+    }
+
+    function handleMockDelayChanged(delayMs) {
+        console.log("Mock delay changed to:", delayMs, "ms")
+    }
+
+    function handleMockErrorInjected(errorType) {
+        console.log("Mock error injected:", errorType)
+        if (errorType === "timeout") {
+            anomalyMessage = "通信超时"
+            anomalyType = "timeout"
+        } else if (errorType === "disconnect") {
+            anomalyMessage = "设备断线"
+            anomalyType = "disconnect"
+        } else if (errorType === "data_error") {
+            anomalyMessage = "数据异常"
+            anomalyType = "data_error"
+        }
+
+        anomalyTimer.restart()
+    }
+
+    Timer {
+        id: anomalyTimer
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            root.anomalyMessage = ""
+            root.anomalyType = ""
+        }
+    }
+
+    function handleMockScenarioChanged(scenario) {
+        console.log("Mock scenario changed to:", scenario)
+        if (scenario === "magnet") {
+            magnetMarkers = [
+                { angle: "3.0", detected: true },
+                { angle: "49.0", detected: true },
+                { angle: "113.5", detected: false }
+            ]
+        }
     }
 
     Component.onCompleted: {
@@ -396,7 +454,14 @@ Item {
                 metricColorProvider: root.metricColor
                 metricValueProvider: root.metricValue
                 metricUnitProvider: root.metricUnit
+                magnetMarkers: root.magnetMarkers
+                anomalyMessage: root.anomalyMessage
+                anomalyType: root.anomalyType
+                runtimeManager: root.runtimeManager
                 onToggleChannel: root.toggleChannel
+                onMockDelayChanged: root.handleMockDelayChanged
+                onMockErrorInjected: root.handleMockErrorInjected
+                onMockScenarioChanged: root.handleMockScenarioChanged
                 onCopyReport: function() {
                     root.infoText = "报告已生成，可在后续版本接入系统剪贴板"
                     root.infoType = "warning"

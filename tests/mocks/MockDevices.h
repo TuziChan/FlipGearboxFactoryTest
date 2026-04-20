@@ -31,8 +31,24 @@ public:
     double lastDutyCycle = 0.0;
     bool initialized = false;
 
+    // Magnet detection configuration
+    QVector<double> magnetPositionsDeg = {3.0, 49.0, 113.0};  // Default magnet positions
+    double magnetDetectionWindowDeg = 0.5;  // Detection window around magnet position
+    bool enableMagnetDetection = false;
+    double* linkedEncoderAngle = nullptr;  // Pointer to encoder angle for automatic detection
+
+    // Magnet detection state tracking
+    struct MagnetState {
+        bool detected = false;
+        double detectionAngle = 0.0;
+        int passCount = 0;  // How many times this magnet has been passed
+    };
+    QVector<MagnetState> magnetStates;
+
     explicit MockMotorDevice(QObject* parent = nullptr)
-        : IMotorDriveDevice(parent) {}
+        : IMotorDriveDevice(parent) {
+        resetMagnetStates();
+    }
 
     bool initialize() override { initialized = true; return true; }
 
@@ -59,14 +75,93 @@ public:
 
     bool readAI1Level(bool& level) override {
         if (mockFailReadAI1) { m_lastError = "Mock: readAI1Level failed"; return false; }
+
+        // Auto-update AI1 based on encoder angle if magnet detection is enabled
+        if (enableMagnetDetection && linkedEncoderAngle != nullptr) {
+            updateMagnetDetection(*linkedEncoderAngle);
+        }
+
         level = mockAi1Level;
         return true;
     }
 
     QString lastError() const override { return m_lastError; }
 
+    // Magnet detection control methods
+    void setMagnetPositions(const QVector<double>& positions) {
+        magnetPositionsDeg = positions;
+        resetMagnetStates();
+    }
+
+    void linkEncoderAngle(double* anglePtr) {
+        linkedEncoderAngle = anglePtr;
+    }
+
+    void resetMagnetStates() {
+        magnetStates.clear();
+        for (int i = 0; i < magnetPositionsDeg.size(); ++i) {
+            magnetStates.append(MagnetState());
+        }
+    }
+
+    void setMagnetDetectionEnabled(bool enabled) {
+        enableMagnetDetection = enabled;
+        if (enabled) {
+            resetMagnetStates();
+            mockAi1Level = true;  // Start with high level
+        }
+    }
+
+    // Get magnet detection statistics
+    int getMagnetPassCount(int magnetIndex) const {
+        if (magnetIndex >= 0 && magnetIndex < magnetStates.size()) {
+            return magnetStates[magnetIndex].passCount;
+        }
+        return 0;
+    }
+
 private:
     QString m_lastError;
+    double m_lastCheckedAngle = -999.0;
+
+    void updateMagnetDetection(double currentAngle) {
+        // Check each magnet position
+        for (int i = 0; i < magnetPositionsDeg.size(); ++i) {
+            double magnetPos = magnetPositionsDeg[i];
+            double angleDiff = qAbs(currentAngle - magnetPos);
+
+            // Handle wrap-around at 0/360 boundary
+            if (angleDiff > 180.0) {
+                angleDiff = 360.0 - angleDiff;
+            }
+
+            // Check if we're within detection window
+            if (angleDiff <= magnetDetectionWindowDeg) {
+                // We're at a magnet position
+                if (!magnetStates[i].detected) {
+                    // First time detecting this magnet in this pass
+                    magnetStates[i].detected = true;
+                    magnetStates[i].detectionAngle = currentAngle;
+                    magnetStates[i].passCount++;
+
+                    // Generate falling edge (high -> low)
+                    mockAi1Level = false;
+
+                    qDebug() << QString("MockMotor: Magnet %1 detected at angle %2° (pass #%3)")
+                                .arg(i).arg(currentAngle, 0, 'f', 2).arg(magnetStates[i].passCount);
+                }
+            } else {
+                // We've moved away from this magnet
+                if (magnetStates[i].detected) {
+                    magnetStates[i].detected = false;
+                    // Return to high level after leaving magnet
+                    mockAi1Level = true;
+                }
+            }
+        }
+
+        m_lastCheckedAngle = currentAngle;
+    }
 };
 
 class MockTorqueDevice : public Infrastructure::Devices::ITorqueSensorDevice {
@@ -112,6 +207,13 @@ public:
     bool mockFailReadAngularVelocity = false;
     bool initialized = false;
 
+    // Angle simulation control
+    bool enableAngleSimulation = false;
+    double simulationStartAngle = 0.0;
+    double simulationTargetAngle = 0.0;
+    double simulationSpeedDegPerTick = 0.5;  // Default: 0.5 deg per 33ms tick
+    bool simulationForward = true;
+
     explicit MockEncoderDevice(QObject* parent = nullptr)
         : IEncoderDevice(parent) {}
 
@@ -119,6 +221,12 @@ public:
 
     bool readAngle(double& angleDeg) override {
         if (mockFailReadAngle) { m_lastError = "Mock: readAngle failed"; return false; }
+
+        // Auto-update angle if simulation is enabled
+        if (enableAngleSimulation) {
+            updateSimulatedAngle();
+        }
+
         angleDeg = mockAngleDeg;
         return true;
     }
@@ -139,8 +247,46 @@ public:
 
     QString lastError() const override { return m_lastError; }
 
+    // Simulation control methods
+    void startAngleSimulation(double startAngle, double targetAngle, double speedDegPerTick, bool forward) {
+        simulationStartAngle = startAngle;
+        simulationTargetAngle = targetAngle;
+        simulationSpeedDegPerTick = speedDegPerTick;
+        simulationForward = forward;
+        mockAngleDeg = startAngle;
+        enableAngleSimulation = true;
+    }
+
+    void stopAngleSimulation() {
+        enableAngleSimulation = false;
+    }
+
+    void setAngle(double angleDeg) {
+        mockAngleDeg = angleDeg;
+    }
+
 private:
     QString m_lastError;
+
+    void updateSimulatedAngle() {
+        if (simulationForward) {
+            mockAngleDeg += simulationSpeedDegPerTick;
+            if (mockAngleDeg >= simulationTargetAngle) {
+                mockAngleDeg = simulationTargetAngle;
+                enableAngleSimulation = false;
+            }
+        } else {
+            mockAngleDeg -= simulationSpeedDegPerTick;
+            if (mockAngleDeg <= simulationTargetAngle) {
+                mockAngleDeg = simulationTargetAngle;
+                enableAngleSimulation = false;
+            }
+        }
+
+        // Wrap angle to 0-360 range
+        while (mockAngleDeg >= 360.0) mockAngleDeg -= 360.0;
+        while (mockAngleDeg < 0.0) mockAngleDeg += 360.0;
+    }
 };
 
 class MockBrakeDevice : public Infrastructure::Devices::IBrakePowerDevice {

@@ -37,6 +37,13 @@ Item {
     required property var onToggleChannel
     required property var onCopyReport
     required property var onResetRequested
+    property var magnetMarkers: []
+    property string anomalyMessage: ""
+    property string anomalyType: ""
+    property var runtimeManager: null
+    property var onMockDelayChanged: null
+    property var onMockErrorInjected: null
+    property var onMockScenarioChanged: null
 
     function statusColor(active) {
         return active ? root.theme.okColor : root.theme.textMuted
@@ -218,7 +225,25 @@ Item {
                         torqueChannelOn: root.torqueChannelOn
                         currentChannelOn: root.currentChannelOn
                         angleChannelOn: root.angleChannelOn
+                        magnetMarkers: root.magnetMarkers
+                        anomalyMessage: root.anomalyMessage
+                        anomalyType: root.anomalyType
                         onToggleChannel: root.onToggleChannel
+                    }
+
+                    MockControlPanel {
+                        Layout.fillWidth: true
+                        theme: root.theme
+                        runtimeManager: root.runtimeManager
+                        onDelayChanged: function(delayMs) {
+                            if (root.onMockDelayChanged) root.onMockDelayChanged(delayMs)
+                        }
+                        onErrorInjected: function(errorType) {
+                            if (root.onMockErrorInjected) root.onMockErrorInjected(errorType)
+                        }
+                        onScenarioChanged: function(scenario) {
+                            if (root.onMockScenarioChanged) root.onMockScenarioChanged(scenario)
+                        }
                     }
 
                     SectionCard {

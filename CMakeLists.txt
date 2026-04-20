@@ -70,6 +70,22 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/simulation/SimulatedEncoderDevice.cpp
     src/infrastructure/simulation/SimulatedBrakeDevice.h
     src/infrastructure/simulation/SimulatedBrakeDevice.cpp
+    src/infrastructure/simulation/MockModbusDevice.h
+    src/infrastructure/simulation/MockModbusDevice.cpp
+    src/infrastructure/simulation/MockMotorDevice.h
+    src/infrastructure/simulation/MockMotorDevice.cpp
+    src/infrastructure/simulation/MockTorqueDevice.h
+    src/infrastructure/simulation/MockTorqueDevice.cpp
+    src/infrastructure/simulation/MockEncoderDevice.h
+    src/infrastructure/simulation/MockEncoderDevice.cpp
+    src/infrastructure/simulation/MockBrakeDevice.h
+    src/infrastructure/simulation/MockBrakeDevice.cpp
+    src/infrastructure/simulation/MockSerialBusController.h
+    src/infrastructure/simulation/MockSerialBusController.cpp
+    src/infrastructure/simulation/MockDeviceManager.h
+    src/infrastructure/simulation/MockDeviceManager.cpp
+    src/infrastructure/simulation/MockDeviceTestExample.h
+    src/infrastructure/simulation/MockDeviceTestExample.cpp
     
     # Infrastructure - Acquisition
     src/infrastructure/acquisition/TelemetryBuffer.h
@@ -454,6 +470,22 @@ qt_add_executable(SimulationRuntimeTests
     src/infrastructure/simulation/SimulatedEncoderDevice.cpp
     src/infrastructure/simulation/SimulatedBrakeDevice.h
     src/infrastructure/simulation/SimulatedBrakeDevice.cpp
+    src/infrastructure/simulation/MockModbusDevice.h
+    src/infrastructure/simulation/MockModbusDevice.cpp
+    src/infrastructure/simulation/MockMotorDevice.h
+    src/infrastructure/simulation/MockMotorDevice.cpp
+    src/infrastructure/simulation/MockTorqueDevice.h
+    src/infrastructure/simulation/MockTorqueDevice.cpp
+    src/infrastructure/simulation/MockEncoderDevice.h
+    src/infrastructure/simulation/MockEncoderDevice.cpp
+    src/infrastructure/simulation/MockBrakeDevice.h
+    src/infrastructure/simulation/MockBrakeDevice.cpp
+    src/infrastructure/simulation/MockSerialBusController.h
+    src/infrastructure/simulation/MockSerialBusController.cpp
+    src/infrastructure/simulation/MockDeviceManager.h
+    src/infrastructure/simulation/MockDeviceManager.cpp
+    src/infrastructure/simulation/MockDeviceTestExample.h
+    src/infrastructure/simulation/MockDeviceTestExample.cpp
     src/infrastructure/bus/IBusController.h
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
@@ -521,6 +553,22 @@ qt_add_executable(GearboxSimulationIntegrationTests
     src/infrastructure/simulation/SimulatedEncoderDevice.cpp
     src/infrastructure/simulation/SimulatedBrakeDevice.h
     src/infrastructure/simulation/SimulatedBrakeDevice.cpp
+    src/infrastructure/simulation/MockModbusDevice.h
+    src/infrastructure/simulation/MockModbusDevice.cpp
+    src/infrastructure/simulation/MockMotorDevice.h
+    src/infrastructure/simulation/MockMotorDevice.cpp
+    src/infrastructure/simulation/MockTorqueDevice.h
+    src/infrastructure/simulation/MockTorqueDevice.cpp
+    src/infrastructure/simulation/MockEncoderDevice.h
+    src/infrastructure/simulation/MockEncoderDevice.cpp
+    src/infrastructure/simulation/MockBrakeDevice.h
+    src/infrastructure/simulation/MockBrakeDevice.cpp
+    src/infrastructure/simulation/MockSerialBusController.h
+    src/infrastructure/simulation/MockSerialBusController.cpp
+    src/infrastructure/simulation/MockDeviceManager.h
+    src/infrastructure/simulation/MockDeviceManager.cpp
+    src/infrastructure/simulation/MockDeviceTestExample.h
+    src/infrastructure/simulation/MockDeviceTestExample.cpp
     src/infrastructure/bus/IBusController.h
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
@@ -701,3 +749,4 @@ install(TARGETS appFlipGearboxFactoryTest
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+

@@ -19,6 +19,9 @@ Rectangle {
     required property bool currentChannelOn
     required property bool angleChannelOn
     required property var onToggleChannel
+    property var magnetMarkers: [] // Array of {angle: number, detected: bool}
+    property string anomalyMessage: ""
+    property string anomalyType: "" // "timeout", "disconnect", "data_error"
 
     radius: root.theme.radiusLarge
     color: root.theme.cardColor
@@ -90,6 +93,28 @@ Rectangle {
 
             Item { Layout.fillWidth: true }
 
+            Rectangle {
+                visible: root.anomalyMessage !== ""
+                radius: 4
+                color: root.anomalyType === "timeout" ? "#FFF4E5" :
+                       root.anomalyType === "disconnect" ? "#FFE5E5" : "#FFF0E5"
+                border.color: root.anomalyType === "timeout" ? "#FF8C00" :
+                              root.anomalyType === "disconnect" ? "#E74856" : "#FFB900"
+                border.width: 1
+                implicitHeight: 24
+                implicitWidth: anomalyText.width + 20
+
+                Text {
+                    id: anomalyText
+                    anchors.centerIn: parent
+                    text: root.anomalyMessage
+                    color: root.anomalyType === "timeout" ? "#FF8C00" :
+                           root.anomalyType === "disconnect" ? "#E74856" : "#FFB900"
+                    font.pixelSize: 10
+                    font.bold: true
+                }
+            }
+
             Text {
                 text: root.running ? "采样中" : "尚未开始"
                 color: root.running ? root.theme.accent : root.theme.textMuted
@@ -120,6 +145,42 @@ Rectangle {
                 angleChannelOn: root.angleChannelOn
                 backgroundColor: root.theme.bgSecondary
                 gridColor: "#E8E8E8"
+            }
+
+            // Magnet detection markers overlay
+            Repeater {
+                model: root.magnetMarkers
+
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+
+                    visible: root.angleChannelOn && root.angleData.length > 0
+                    x: chartPainter.x + 12 + (chartPainter.width - 24) * (index / Math.max(1, root.magnetMarkers.length - 1))
+                    y: chartPainter.y + chartPainter.height - 30
+                    width: 2
+                    height: 20
+                    color: modelData.detected ? "#16C60C" : "#FF8C00"
+
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.top
+                        anchors.bottomMargin: 2
+                        width: markerText.width + 8
+                        height: 16
+                        radius: 3
+                        color: modelData.detected ? "#16C60C" : "#FF8C00"
+
+                        Text {
+                            id: markerText
+                            anchors.centerIn: parent
+                            text: modelData.angle + "°"
+                            color: "white"
+                            font.pixelSize: 9
+                            font.bold: true
+                        }
+                    }
+                }
             }
 
             Column {
