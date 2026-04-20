@@ -10,12 +10,22 @@ Column {
     required property var model
     spacing: 0
 
+    Layout.fillWidth: true
+
     function rowAt(index) {
         if (Array.isArray(root.model))
             return root.model[index]
         if (root.model && typeof root.model.get === "function")
             return root.model.get(index)
         return null
+    }
+
+    function modelCount() {
+        if (Array.isArray(root.model))
+            return root.model.length
+        if (root.model && typeof root.model.count !== "undefined")
+            return root.model.count
+        return 0
     }
 
     Repeater {
@@ -51,11 +61,10 @@ Column {
                 width: parent.width
                 height: 1
                 color: root.theme.dividerColor
-                visible: index < root.model.length - 1
+                visible: index < root.modelCount() - 1
                 anchors.left: parent.left
                 anchors.leftMargin: 12
             }
         }
     }
 }
-

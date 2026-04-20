@@ -56,7 +56,7 @@ Item {
             subtitle: root.running ? root.phaseTitle : "待机中"
 
             FlowList {
-                width: parent.width
+                Layout.fillWidth: true
                 theme: root.theme
                 model: root.stepModel
             }
