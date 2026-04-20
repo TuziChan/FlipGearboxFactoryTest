@@ -151,12 +151,16 @@ void ModbusRtuBusController::setInterFrameDelayMs(int delayMs) {
 }
 
 int ModbusRtuBusController::calculateInterFrameDelay(int baudRate) const {
-    if (baudRate >= 19200) {
-        return 2;
-    }
+if (baudRate >= 19200) {
+return 2;
+}
 
-    int delayMs = (3.5 * 11 * 1000) / baudRate;
-    return qMax(2, delayMs);
+int delayMs = (3.5 * 11 * 1000) / baudRate;
+return qMax(2, delayMs);
+}
+
+QSerialPort* ModbusRtuBusController::underlyingSerialPort() const {
+return m_serialPort;
 }
 
 bool ModbusRtuBusController::waitForResponse(QByteArray& response, int expectedMinBytes) {

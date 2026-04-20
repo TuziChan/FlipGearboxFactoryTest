@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import FlipGearboxFactoryTest.UI 1.0
 
 Rectangle {
     id: root
@@ -24,24 +25,6 @@ Rectangle {
     border.color: root.theme.dividerColor
     border.width: 1
     implicitHeight: 320
-
-    function drawSeries(ctx, values, maxValue, color) {
-        if (!values || values.length < 2)
-            return
-
-        ctx.beginPath()
-        for (let i = 0; i < values.length; ++i) {
-            const x = i / Math.max(1, values.length - 1) * chartCanvas.width
-            const y = chartCanvas.height - 20 - (values[i] / maxValue) * (chartCanvas.height - 40)
-            if (i === 0)
-                ctx.moveTo(x, y)
-            else
-                ctx.lineTo(x, y)
-        }
-        ctx.lineWidth = 2
-        ctx.strokeStyle = color
-        ctx.stroke()
-    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -122,36 +105,21 @@ Rectangle {
             color: root.theme.bgSecondary
             border.color: root.theme.dividerColor
 
-            Canvas {
-                id: chartCanvas
+            ChartPainter {
+                id: chartPainter
                 anchors.fill: parent
                 anchors.margins: 12
 
-                onPaint: {
-                    const ctx = getContext("2d")
-                    ctx.reset()
-                    ctx.fillStyle = root.theme.bgSecondary
-                    ctx.fillRect(0, 0, width, height)
-
-                    ctx.strokeStyle = "#E8E8E8"
-                    ctx.lineWidth = 1
-                    for (let i = 0; i < 5; ++i) {
-                        const y = i / 4 * (height - 20)
-                        ctx.beginPath()
-                        ctx.moveTo(0, y)
-                        ctx.lineTo(width, y)
-                        ctx.stroke()
-                    }
-
-                    if (root.speedChannelOn)
-                        root.drawSeries(ctx, root.speedData, 1600, "#0078D4")
-                    if (root.torqueChannelOn)
-                        root.drawSeries(ctx, root.torqueData, 2.0, "#E74856")
-                    if (root.currentChannelOn)
-                        root.drawSeries(ctx, root.currentData, 4.0, "#FF8C00")
-                    if (root.angleChannelOn)
-                        root.drawSeries(ctx, root.angleData, 180.0, "#16C60C")
-                }
+                speedData: root.speedData
+                torqueData: root.torqueData
+                currentData: root.currentData
+                angleData: root.angleData
+                speedChannelOn: root.speedChannelOn
+                torqueChannelOn: root.torqueChannelOn
+                currentChannelOn: root.currentChannelOn
+                angleChannelOn: root.angleChannelOn
+                backgroundColor: root.theme.bgSecondary
+                gridColor: "#E8E8E8"
             }
 
             Column {

@@ -37,16 +37,21 @@ public:
      * @param stopBits New stop bits (1 or 2)
      * @return true if reconfiguration succeeded
      */
-    bool reconfigure(int baudRate, const QString& parity, int stopBits);
+bool reconfigure(int baudRate, const QString& parity, int stopBits);
 
-    /**
-     * @brief Set inter-frame delay (T3.5 character times)
-     * Default is calculated based on baud rate
-     */
-    void setInterFrameDelayMs(int delayMs);
+/**
+* @brief Set inter-frame delay (T3.5 character times)
+* Default is calculated based on baud rate
+*/
+void setInterFrameDelayMs(int delayMs);
+
+/**
+* @brief Get underlying serial port for advanced operations
+*/
+QSerialPort* underlyingSerialPort() const override;
 
 private:
-    QSerialPort* m_serialPort;
+QSerialPort* m_serialPort;
     int m_timeoutMs;
     int m_interFrameDelayMs;
     QString m_lastError;

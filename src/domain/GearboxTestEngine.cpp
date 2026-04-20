@@ -8,30 +8,30 @@
 namespace Domain {
 
 GearboxTestEngine::GearboxTestEngine(QObject* parent)
-    : QObject(parent)
-    , m_motor(nullptr)
-    , m_torque(nullptr)
-    , m_encoder(nullptr)
-    , m_brake(nullptr)
-    , m_acquisitionScheduler(nullptr)
-    , m_recipe()
-    , m_brakeChannel(1)
-    , m_state()
-    , m_cycleTimer(new QTimer(this))
-    , m_testTimer()
-    , m_phaseTimer()
-    , m_lastAi1Level(true)
-    , m_magnetEventDetected(false)
-    , m_currentSamples()
-    , m_speedSamples()
-    , m_lockConditionTimer()
-    , m_lockStartAngle(0.0)
-    , m_lockConditionMet(false)
-    , m_currentBrakeCurrent(0.0)
+: QObject(parent)
+, m_motor(nullptr)
+, m_torque(nullptr)
+, m_encoder(nullptr)
+, m_brake(nullptr)
+, m_acquisitionScheduler(nullptr)
+, m_recipe()
+, m_brakeChannel(1)
+, m_state()
+, m_cycleTimer(new QTimer(this))
+, m_testTimer()
+, m_phaseTimer()
+, m_lastAi1Level(true)
+, m_magnetEventDetected(false)
+, m_currentSamples()
+, m_speedSamples()
+, m_lockState(LockDetectionState::Idle)
+, m_lockTimer()
+, m_lockReferenceAngle(0.0)
+, m_currentBrakeCurrent(0.0)
 {
-    // 33ms cycle time for 30Hz sampling (per correction document)
-    m_cycleTimer->setInterval(33);
-    connect(m_cycleTimer, &QTimer::timeout, this, &GearboxTestEngine::onCycleTick);
+// 33ms cycle time for 30Hz sampling (per correction document)
+m_cycleTimer->setInterval(33);
+connect(m_cycleTimer, &QTimer::timeout, this, &GearboxTestEngine::onCycleTick);
 }
 
 void GearboxTestEngine::setDevices(Infrastructure::Devices::IMotorDriveDevice* motor,
@@ -108,15 +108,19 @@ void GearboxTestEngine::emergencyStop() {
 }
 
 void GearboxTestEngine::reset() {
-    m_cycleTimer->stop();
-    stopMotor();
-    
-    if (m_brake) {
-        m_brake->setOutputEnable(m_brakeChannel, false);
-    }
+m_cycleTimer->stop();
+stopMotor();
 
-    m_state = TestRunState();
-    emit stateChanged(m_state);
+if (m_brake) {
+m_brake->setOutputEnable(m_brakeChannel, false);
+}
+
+m_state = TestRunState();
+// Reset lock detection state machine
+m_lockState = LockDetectionState::Idle;
+m_lockTimer.invalidate();
+m_lockReferenceAngle = 0.0;
+emit stateChanged(m_state);
 }
 
 void GearboxTestEngine::onCycleTick() {
@@ -1268,53 +1272,75 @@ void GearboxTestEngine::evaluateLoadResult(const QString& direction,
 }
 
 bool GearboxTestEngine::checkLockCondition(const TelemetrySnapshot& snapshot) {
-    // Check speed threshold
-    bool speedLow = qAbs(snapshot.dynSpeedRpm) <= m_recipe.lockSpeedThresholdRpm;
-    
-    if (!speedLow) {
-        // Reset lock detection if speed is too high
-        m_lockConditionMet = false;
-        m_lockConditionTimer.invalidate();
-        return false;
-    }
+// Check speed threshold - if speed is too high, reset to idle
+bool speedLow = qAbs(snapshot.dynSpeedRpm) <= m_recipe.lockSpeedThresholdRpm;
 
-    // Check angle stability
-    if (!m_lockConditionTimer.isValid()) {
-        // Start tracking
-        m_lockConditionTimer.start();
-        m_lockStartAngle = snapshot.encoderAngleDeg;
-        return false;
-    }
+if (!speedLow) {
+// Speed too high - reset to idle state
+if (m_lockState != LockDetectionState::Idle) {
+m_lockState = LockDetectionState::Idle;
+m_lockTimer.invalidate();
+qDebug() << "Lock detection reset: speed too high (" << snapshot.dynSpeedRpm << "RPM)";
+}
+return false;
+}
 
-    // Check if we've been in the window long enough
-    qint64 windowElapsed = m_lockConditionTimer.elapsed();
-    
-    if (windowElapsed >= m_recipe.lockAngleWindowMs) {
-        // Check angle change
-        double angleDelta = qAbs(snapshot.encoderAngleDeg - m_lockStartAngle);
-        
-        if (angleDelta <= m_recipe.lockAngleDeltaDeg) {
-            // Angle is stable, check if we've held this for long enough
-            if (!m_lockConditionMet) {
-                m_lockConditionMet = true;
-                m_lockConditionTimer.restart();
-                return false;
-            }
-            
-            // Check hold time
-            if (m_lockConditionTimer.elapsed() >= m_recipe.lockHoldMs) {
-                qDebug() << "Lock condition achieved";
-                return true;
-            }
-        } else {
-            // Angle changed too much, reset
-            m_lockConditionMet = false;
-            m_lockConditionTimer.restart();
-            m_lockStartAngle = snapshot.encoderAngleDeg;
-        }
-    }
+// Speed is within threshold, proceed with state machine
+switch (m_lockState) {
+case LockDetectionState::Idle:
+// Start window check phase
+m_lockState = LockDetectionState::WindowCheck;
+m_lockTimer.start();
+m_lockReferenceAngle = snapshot.encoderAngleDeg;
+return false;
 
-    return false;
+case LockDetectionState::WindowCheck: {
+// Check if we've completed the window check duration
+if (m_lockTimer.elapsed() >= m_recipe.lockAngleWindowMs) {
+// Check angle stability within window
+double angleDelta = qAbs(snapshot.encoderAngleDeg - m_lockReferenceAngle);
+
+if (angleDelta <= m_recipe.lockAngleDeltaDeg) {
+// Angle stable, transition to hold check
+m_lockState = LockDetectionState::HoldCheck;
+m_lockTimer.restart();
+qDebug() << "Lock window check passed, angle delta:" << angleDelta << "deg";
+} else {
+// Angle changed too much, restart window check with new reference
+m_lockReferenceAngle = snapshot.encoderAngleDeg;
+m_lockTimer.restart();
+qDebug() << "Lock window check failed, angle delta:" << angleDelta << "deg, restarting";
+}
+}
+return false;
+}
+
+case LockDetectionState::HoldCheck: {
+// Check if we've held for required duration
+if (m_lockTimer.elapsed() >= m_recipe.lockHoldMs) {
+// Verify angle is still stable
+double angleDelta = qAbs(snapshot.encoderAngleDeg - m_lockReferenceAngle);
+if (angleDelta <= m_recipe.lockAngleDeltaDeg) {
+m_lockState = LockDetectionState::Locked;
+qDebug() << "Lock condition ACHIEVED - held for" << m_lockTimer.elapsed() << "ms";
+return true;
+} else {
+// Angle drifted during hold, restart
+m_lockState = LockDetectionState::WindowCheck;
+m_lockTimer.restart();
+m_lockReferenceAngle = snapshot.encoderAngleDeg;
+qDebug() << "Lock hold failed, angle drifted:" << angleDelta << "deg";
+}
+}
+return false;
+}
+
+case LockDetectionState::Locked:
+// Already locked, maintain state
+return true;
+}
+
+return false;
 }
 
 void GearboxTestEngine::handleSettlingForwardDelay() {

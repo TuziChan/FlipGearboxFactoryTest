@@ -19,6 +19,7 @@
 #include "src/viewmodels/DiagnosticsViewModel.h"
 #include "src/viewmodels/HistoryViewModel.h"
 #include "src/viewmodels/RecipeViewModel.h"
+#include "src/ui/ChartPainter.h"
 
 int main(int argc, char *argv[])
 {
@@ -82,6 +83,9 @@ int main(int argc, char *argv[])
 
     // Create QML engine
     QQmlApplicationEngine engine;
+
+    // Register custom QML types
+    qmlRegisterType<ChartPainter>("FlipGearboxFactoryTest.UI", 1, 0, "ChartPainter");
 
     // Expose ViewModel to QML
     engine.rootContext()->setContextProperty("stationRuntime", runtimeManager->runtime());

@@ -18,6 +18,7 @@ SingleTurnEncoderDevice::SingleTurnEncoderDevice(Bus::IBusController* busControl
     , m_communicationMode(communicationMode)
     , m_autoReportIntervalMs(autoReportIntervalMs)
     , m_lastError()
+    , m_proactiveListener(nullptr)
 {
 }
 
@@ -74,15 +75,34 @@ bool SingleTurnEncoderDevice::initialize() {
             return false;
         }
         
+        // Get underlying serial port for proactive listener
+        QSerialPort* serialPort = m_busController->underlyingSerialPort();
+        if (!serialPort) {
+            m_lastError = "Bus controller does not provide underlying serial port access";
+            return false;
+        }
+        
+        // Create and start proactive listener
+        m_proactiveListener = new EncoderProactiveListener(serialPort, this);
+        m_proactiveListener->start();
+        
         qDebug() << "Single-turn encoder initialized in" << modeName << "mode, slave ID:" << m_slaveId
                  << "Resolution:" << m_resolution
-                 << "Interval:" << m_autoReportIntervalMs << "ms";
+                 << "Interval:" << m_autoReportIntervalMs << "ms"
+                 << "Proactive listener started";
     }
 
     return true;
 }
 
 bool SingleTurnEncoderDevice::readAngle(double& angleDeg) {
+    // In proactive mode, get data from listener instead of polling
+    if (m_proactiveListener && m_proactiveListener->isValid()) {
+        angleDeg = m_proactiveListener->latestAngle();
+        return true;
+    }
+    
+    // In query mode (mode 0), use Modbus polling
     QVector<uint16_t> values;
     if (!readRegisters(REG_ANGLE, 1, values)) {
         m_lastError = QString("Failed to read angle: %1").arg(m_lastError);
@@ -159,7 +179,29 @@ bool SingleTurnEncoderDevice::setAutoReportMode(uint16_t mode, int intervalMs) {
     
     m_autoReportIntervalMs = intervalMs;
     
-    qDebug() << "Encoder auto-report mode set to" << mode << "with interval" << intervalMs << "ms";
+    // Start or stop proactive listener based on mode
+    if (mode == 0x00) {
+        // Mode 0: Query mode - stop listener
+        if (m_proactiveListener) {
+            m_proactiveListener->stop();
+            m_proactiveListener->deleteLater();
+            m_proactiveListener = nullptr;
+        }
+        qDebug() << "Encoder switched to query mode";
+    } else {
+        // Auto-report mode - start listener if not already running
+        if (!m_proactiveListener) {
+            QSerialPort* serialPort = m_busController->underlyingSerialPort();
+            if (!serialPort) {
+                m_lastError = "Bus controller does not provide underlying serial port access";
+                return false;
+            }
+            m_proactiveListener = new EncoderProactiveListener(serialPort, this);
+            m_proactiveListener->start();
+        }
+        qDebug() << "Encoder auto-report mode set to" << mode << "with interval" << intervalMs << "ms";
+    }
+    
     return true;
 }
 

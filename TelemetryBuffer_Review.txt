@@ -1,0 +1,17 @@
+TelemetryBuffer Cache Line Alignment Analysis
+
+1. Macro Definition: CORRECT
+   - HARDWARE_DELETES_FALSE_SHARING defined as 64 bytes
+
+2. alignas Usage: CORRECT
+   - All 4 telemetry structs use alignas(HARDWARE_DELETES_FALSE_SHARING)
+
+3. _padding Field: PRESENT
+   - All structs declare char _padding[...]
+
+4. Cache Line Alignment: POTENTIALLY INCORRECT
+   - Padding calculation assumes sizeof(atomic<T>) == sizeof(T)
+   - Does not account for struct member alignment padding
+   - May cause compilation error if padding becomes negative
+
+RECOMMENDATION: Add static_assert to verify struct sizes

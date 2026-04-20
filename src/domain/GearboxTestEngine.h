@@ -106,10 +106,16 @@ private:
     QVector<double> m_torqueSamples;
     static constexpr int MAX_SAMPLE_BUFFER_SIZE = 10000; // Max samples (~5 min at 33ms)
 
-    // Lock detection state
-    QElapsedTimer m_lockConditionTimer;
-    double m_lockStartAngle;
-    bool m_lockConditionMet;
+// Lock detection state - improved state machine
+enum class LockDetectionState {
+Idle,        // Waiting for lock condition
+WindowCheck, // Checking if speed is within window
+HoldCheck,   // Holding for required duration
+Locked       // Lock confirmed
+};
+LockDetectionState m_lockState;
+QElapsedTimer m_lockTimer;
+double m_lockReferenceAngle;
 
     // Brake ramp state
     double m_currentBrakeCurrent;

@@ -248,15 +248,8 @@ int32_t Dyn200TorqueSensorDevice::combineToInt32(uint16_t highWord, uint16_t low
 }
 
 QSerialPort* Dyn200TorqueSensorDevice::getSerialPort() const {
-    // Try to cast the bus controller to ModbusRtuBusController to access the serial port
-    Bus::ModbusRtuBusController* rtuController = qobject_cast<Bus::ModbusRtuBusController*>(m_busController);
-    if (!rtuController) {
-        return nullptr;
-    }
-    
-    // Access the serial port through the controller's children
-    QSerialPort* serialPort = rtuController->findChild<QSerialPort*>();
-    return serialPort;
+// Use the abstract interface method to get the serial port
+return m_busController->underlyingSerialPort();
 }
 
 } // namespace Devices

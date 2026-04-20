@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QPointer>
+#include <QMetaObject::Connection>
 #include "../infrastructure/config/StationRuntime.h"
 #include "../infrastructure/config/RuntimeManager.h"
 #include "../domain/TestRecipe.h"
@@ -11,7 +13,7 @@
 namespace ViewModels {
 
 class TestExecutionViewModel : public QObject {
-    Q_OBJECT
+Q_OBJECT
 
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(QString serialNumber READ serialNumber WRITE setSerialNumber NOTIFY serialNumberChanged)
@@ -38,10 +40,10 @@ class TestExecutionViewModel : public QObject {
     Q_PROPERTY(QVariantMap loadReverseResult READ loadReverseResult NOTIFY resultsChanged)
 
 public:
-    explicit TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
-                                     Infrastructure::Config::RuntimeManager* runtimeManager,
-                                     QObject* parent = nullptr);
-    ~TestExecutionViewModel() override = default;
+explicit TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
+Infrastructure::Config::RuntimeManager* runtimeManager,
+QObject* parent = nullptr);
+~TestExecutionViewModel() override;
 
     bool running() const { return m_running; }
     QString serialNumber() const { return m_serialNumber; }
@@ -96,41 +98,47 @@ private slots:
     void onTestFailed(const Domain::FailureReason& reason);
 
 private:
-    Infrastructure::Config::StationRuntime* m_runtime;
-    Infrastructure::Config::RuntimeManager* m_runtimeManager;
-    Domain::TestRecipe m_currentRecipe;
+Infrastructure::Config::StationRuntime* m_runtime;
+Infrastructure::Config::RuntimeManager* m_runtimeManager;
+Domain::TestRecipe m_currentRecipe;
 
-    bool m_running;
-    QString m_serialNumber;
-    QString m_selectedModel;
-    double m_backlashCompensationDeg;
-    QString m_currentPhase;
-    QString m_statusMessage;
-    int m_progressPercent;
-    qint64 m_elapsedMs;
-    double m_motorCurrent;
-    double m_speed;
-    double m_torque;
-    double m_power;
-    double m_angle;
-    double m_brakeCurrent;
-    bool m_ai1Level;
-    QString m_overallVerdict;
-    bool m_testPassed;
-    QVariantMap m_idleForwardResult;
-    QVariantMap m_idleReverseResult;
-    QVariantList m_angleResults;
-    QVariantMap m_loadForwardResult;
-    QVariantMap m_loadReverseResult;
+bool m_running;
+QString m_serialNumber;
+QString m_selectedModel;
+double m_backlashCompensationDeg;
+QString m_currentPhase;
+QString m_statusMessage;
+int m_progressPercent;
+qint64 m_elapsedMs;
+double m_motorCurrent;
+double m_speed;
+double m_torque;
+double m_power;
+double m_angle;
+double m_brakeCurrent;
+bool m_ai1Level;
+QString m_overallVerdict;
+bool m_testPassed;
+QVariantMap m_idleForwardResult;
+QVariantMap m_idleReverseResult;
+QVariantList m_angleResults;
+QVariantMap m_loadForwardResult;
+QVariantMap m_loadReverseResult;
 
-    QString recipeFilePathForModel(const QString& model) const;
-    Domain::TestRecipe buildExecutionRecipe() const;
-    void updateFromState(const Domain::TestRunState& state);
-    QVariantMap toVariantMap(const Domain::IdleRunResult& result) const;
-    QVariantMap toVariantMap(const Domain::LoadTestResult& result) const;
-    QVariantList toVariantList(const QVector<Domain::AngleResult>& results) const;
-    void updateRuntime(Infrastructure::Config::StationRuntime* newRuntime);
-    void onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime);
+// Connection tracking to prevent signal leaks
+QPointer<Domain::GearboxTestEngine> m_connectedEngine;
+QList<QMetaObject::Connection> m_connections;
+
+QString recipeFilePathForModel(const QString& model) const;
+Domain::TestRecipe buildExecutionRecipe() const;
+void updateFromState(const Domain::TestRunState& state);
+QVariantMap toVariantMap(const Domain::IdleRunResult& result) const;
+QVariantMap toVariantMap(const Domain::LoadTestResult& result) const;
+QVariantList toVariantList(const QVector<Domain::AngleResult>& results) const;
+void updateRuntime(Infrastructure::Config::StationRuntime* newRuntime);
+void onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime);
+void connectEngine(Domain::GearboxTestEngine* engine);
+void disconnectEngine();
 };
 
 } // namespace ViewModels

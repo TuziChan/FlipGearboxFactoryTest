@@ -34,6 +34,7 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
     src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/IBusController.cpp
     src/infrastructure/bus/ModbusRtuBusController.h
     src/infrastructure/bus/ModbusRtuBusController.cpp
     
@@ -50,6 +51,8 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/devices/Dyn200ProactiveListener.h
     src/infrastructure/devices/Dyn200ProactiveListener.cpp
     src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
+    src/infrastructure/devices/EncoderProactiveListener.h
+    src/infrastructure/devices/EncoderProactiveListener.cpp
     src/infrastructure/devices/SingleTurnEncoderDevice.h
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
     src/infrastructure/devices/BrakePowerSupplyDevice.h
@@ -58,6 +61,7 @@ qt_add_executable(appFlipGearboxFactoryTest
     # Infrastructure - Simulation
     src/infrastructure/simulation/SimulationContext.h
     src/infrastructure/simulation/SimulatedBusController.h
+    src/infrastructure/simulation/SimulatedBusController.cpp
     src/infrastructure/simulation/SimulatedMotorDevice.h
     src/infrastructure/simulation/SimulatedMotorDevice.cpp
     src/infrastructure/simulation/SimulatedTorqueDevice.h
@@ -104,6 +108,10 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/viewmodels/HistoryViewModel.cpp
     src/viewmodels/RecipeViewModel.h
     src/viewmodels/RecipeViewModel.cpp
+
+    # UI Components (C++)
+    src/ui/ChartPainter.h
+    src/ui/ChartPainter.cpp
 )
 
 # QML module for the application
@@ -461,6 +469,8 @@ qt_add_executable(SimulationRuntimeTests
     src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
     src/infrastructure/devices/Dyn200ProactiveListener.h
     src/infrastructure/devices/Dyn200ProactiveListener.cpp
+    src/infrastructure/devices/EncoderProactiveListener.h
+    src/infrastructure/devices/EncoderProactiveListener.cpp
     src/infrastructure/devices/SingleTurnEncoderDevice.h
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
     src/infrastructure/devices/BrakePowerSupplyDevice.h
@@ -526,6 +536,8 @@ qt_add_executable(GearboxSimulationIntegrationTests
     src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
     src/infrastructure/devices/Dyn200ProactiveListener.h
     src/infrastructure/devices/Dyn200ProactiveListener.cpp
+    src/infrastructure/devices/EncoderProactiveListener.h
+    src/infrastructure/devices/EncoderProactiveListener.cpp
     src/infrastructure/devices/SingleTurnEncoderDevice.h
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
     src/infrastructure/devices/BrakePowerSupplyDevice.h

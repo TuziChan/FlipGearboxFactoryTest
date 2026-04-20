@@ -3,6 +3,7 @@
 
 #include "IEncoderDevice.h"
 #include "../bus/IBusController.h"
+#include "EncoderProactiveListener.h"
 
 namespace Infrastructure {
 namespace Devices {
@@ -60,6 +61,7 @@ private:
     int m_communicationMode;
     int m_autoReportIntervalMs;
     QString m_lastError;
+    EncoderProactiveListener* m_proactiveListener;
 
     // Register addresses (from correction document)
     static constexpr uint16_t REG_ANGLE = 0x0000;                  // Raw count value (single-turn)

@@ -42,15 +42,29 @@ public:
     Q_INVOKABLE bool initialize();
     void shutdown();
 
-    QString lastError() const { return m_lastError; }
+QString lastError() const { return m_lastError; }
+
+// Initialization state tracking for proper rollback
+enum class InitStage {
+Uninitialized = 0,
+BusesOpening = 1,
+BusesOpened = 2,
+DevicesInitializing = 3,
+DevicesInitialized = 4,
+SchedulerStarting = 5,
+SchedulerStarted = 6,
+FullyInitialized = 7
+};
 
 private:
-    friend class StationRuntimeFactory;
+void rollback(); // Properly rollback based on current init stage
 
-    std::unique_ptr<Bus::IBusController> m_aqmdBus;
-    std::unique_ptr<Bus::IBusController> m_dyn200Bus;
-    std::unique_ptr<Bus::IBusController> m_encoderBus;
-    std::unique_ptr<Bus::IBusController> m_brakeBus;
+friend class StationRuntimeFactory;
+
+std::unique_ptr<Bus::IBusController> m_aqmdBus;
+std::unique_ptr<Bus::IBusController> m_dyn200Bus;
+std::unique_ptr<Bus::IBusController> m_encoderBus;
+std::unique_ptr<Bus::IBusController> m_brakeBus;
 
     struct BusConfig {
         QString portName;
@@ -73,14 +87,16 @@ private:
     std::shared_ptr<Simulation::SimulationContext> m_simulationContext;
     std::unique_ptr<Acquisition::AcquisitionScheduler> m_acquisitionScheduler;
 
-    QString m_lastError;
-    int m_brakeChannel = 1;
-    bool m_initialized = false;
-    bool m_isMockMode = false;
-    bool initializeBus(const QString& displayName,
-                       const BusConfig& config,
-                       const std::unique_ptr<Bus::IBusController>& bus,
-                       bool enabled);
+QString m_lastError;
+int m_brakeChannel = 1;
+bool m_initialized = false;
+bool m_isMockMode = false;
+InitStage m_initStage = InitStage::Uninitialized;
+
+bool initializeBus(const QString& displayName,
+const BusConfig& config,
+const std::unique_ptr<Bus::IBusController>& bus,
+bool enabled);
 };
 
 } // namespace Config

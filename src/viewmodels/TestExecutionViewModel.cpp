@@ -9,53 +9,49 @@
 namespace ViewModels {
 
 TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
-                                                 Infrastructure::Config::RuntimeManager* runtimeManager,
-                                                 QObject* parent)
-    : QObject(parent)
-    , m_runtime(runtime)
-    , m_runtimeManager(runtimeManager)
-    , m_currentRecipe(Infrastructure::Config::RecipeConfig::createDefault())
-    , m_running(false)
-    , m_serialNumber()
-    , m_selectedModel("")
-    , m_backlashCompensationDeg(0.0)
-    , m_currentPhase("Idle")
-    , m_statusMessage("Ready")
-    , m_progressPercent(0)
-    , m_elapsedMs(0)
-    , m_motorCurrent(0.0)
-    , m_speed(0.0)
-    , m_torque(0.0)
-    , m_power(0.0)
-    , m_angle(0.0)
-    , m_brakeCurrent(0.0)
-    , m_ai1Level(false)
-    , m_overallVerdict("Pending")
-    , m_testPassed(false)
-    , m_idleForwardResult()
-    , m_idleReverseResult()
-    , m_angleResults()
-    , m_loadForwardResult()
-    , m_loadReverseResult()
+Infrastructure::Config::RuntimeManager* runtimeManager,
+QObject* parent)
+: QObject(parent)
+, m_runtime(runtime)
+, m_runtimeManager(runtimeManager)
+, m_currentRecipe(Infrastructure::Config::RecipeConfig::createDefault())
+, m_running(false)
+, m_serialNumber()
+, m_selectedModel("")
+, m_backlashCompensationDeg(0.0)
+, m_currentPhase("Idle")
+, m_statusMessage("Ready")
+, m_progressPercent(0)
+, m_elapsedMs(0)
+, m_motorCurrent(0.0)
+, m_speed(0.0)
+, m_torque(0.0)
+, m_power(0.0)
+, m_angle(0.0)
+, m_brakeCurrent(0.0)
+, m_ai1Level(false)
+, m_overallVerdict("Pending")
+, m_testPassed(false)
+, m_idleForwardResult()
+, m_idleReverseResult()
+, m_angleResults()
+, m_loadForwardResult()
+, m_loadReverseResult()
 {
-    if (!m_selectedModel.isEmpty()) {
-        loadRecipe(m_selectedModel);
-    }
+if (!m_selectedModel.isEmpty()) {
+loadRecipe(m_selectedModel);
+}
 
-    if (m_runtime && m_runtime->testEngine()) {
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::stateChanged,
-                this, &TestExecutionViewModel::onEngineStateChanged);
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testCompleted,
-                this, &TestExecutionViewModel::onTestCompleted);
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testFailed,
-                this, &TestExecutionViewModel::onTestFailed);
-    }
+// Connect to test engine signals
+if (m_runtime && m_runtime->testEngine()) {
+connectEngine(m_runtime->testEngine());
+}
 
-    // Connect to runtime recreation signal
-    if (m_runtimeManager) {
-        connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::runtimeRecreated,
-                this, &TestExecutionViewModel::onRuntimeRecreated);
-    }
+// Connect to runtime recreation signal
+if (m_runtimeManager) {
+connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::runtimeRecreated,
+this, &TestExecutionViewModel::onRuntimeRecreated);
+}
 }
 
 void TestExecutionViewModel::setSerialNumber(const QString& sn) {
@@ -159,19 +155,42 @@ void TestExecutionViewModel::loadRecipe(const QString& recipeName) {
     qDebug() << "Recipe loaded:" << recipeName << "from" << recipePath;
 }
 
-void TestExecutionViewModel::updateRuntime(Infrastructure::Config::StationRuntime* newRuntime) {
-    qDebug() << "TestExecutionViewModel: Updating runtime reference";
-    m_runtime = newRuntime;
+void TestExecutionViewModel::disconnectEngine() {
+// Disconnect all existing connections
+for (auto& conn : m_connections) {
+if (conn) {
+QObject::disconnect(conn);
+}
+}
+m_connections.clear();
+m_connectedEngine = nullptr;
+}
 
-    // Reconnect signals to new test engine
-    if (m_runtime && m_runtime->testEngine()) {
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::stateChanged,
-                this, &TestExecutionViewModel::onEngineStateChanged);
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testCompleted,
-                this, &TestExecutionViewModel::onTestCompleted);
-        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testFailed,
-                this, &TestExecutionViewModel::onTestFailed);
-    }
+void TestExecutionViewModel::connectEngine(Domain::GearboxTestEngine* engine) {
+if (!engine) return;
+
+// Disconnect old engine first
+disconnectEngine();
+
+// Connect to new engine
+m_connections << connect(engine, &Domain::GearboxTestEngine::stateChanged,
+this, &TestExecutionViewModel::onEngineStateChanged);
+m_connections << connect(engine, &Domain::GearboxTestEngine::testCompleted,
+this, &TestExecutionViewModel::onTestCompleted);
+m_connections << connect(engine, &Domain::GearboxTestEngine::testFailed,
+this, &TestExecutionViewModel::onTestFailed);
+
+m_connectedEngine = engine;
+}
+
+void TestExecutionViewModel::updateRuntime(Infrastructure::Config::StationRuntime* newRuntime) {
+qDebug() << "TestExecutionViewModel: Updating runtime reference";
+m_runtime = newRuntime;
+
+// Reconnect signals to new test engine (automatically disconnects old)
+if (m_runtime && m_runtime->testEngine()) {
+connectEngine(m_runtime->testEngine());
+}
 }
 
 void TestExecutionViewModel::onEngineStateChanged(const Domain::TestRunState& state) {
@@ -334,7 +353,11 @@ QVariantMap TestExecutionViewModel::toVariantMap(const Domain::LoadTestResult& r
 }
 
 void TestExecutionViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
-    updateRuntime(newRuntime);
+updateRuntime(newRuntime);
+}
+
+TestExecutionViewModel::~TestExecutionViewModel() {
+disconnectEngine();
 }
 
 QVariantList TestExecutionViewModel::toVariantList(const QVector<Domain::AngleResult>& results) const {
