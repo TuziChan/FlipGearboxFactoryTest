@@ -103,6 +103,8 @@ private:
     // Sampling buffers
     QVector<double> m_currentSamples;
     QVector<double> m_speedSamples;
+    QVector<double> m_torqueSamples;
+    static constexpr int MAX_SAMPLE_BUFFER_SIZE = 10000; // Max samples (~5 min at 33ms)
 
     // Lock detection state
     QElapsedTimer m_lockConditionTimer;

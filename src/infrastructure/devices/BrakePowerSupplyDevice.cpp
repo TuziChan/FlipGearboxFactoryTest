@@ -1,6 +1,7 @@
 #include "BrakePowerSupplyDevice.h"
 #include "../bus/ModbusFrame.h"
 #include <QDebug>
+#include <QThread>
 
 namespace Infrastructure {
 namespace Devices {
@@ -55,7 +56,15 @@ bool BrakePowerSupplyDevice::setCurrent(int channel, double currentA) {
 
     uint16_t registerAddr = getSetCurrentRegister(channel);
     
-    uint16_t value = static_cast<uint16_t>(currentA * 100.0);
+    // Check for uint16_t overflow before conversion
+    double rawValue = currentA * 100.0;
+    if (rawValue > 65535.0) {
+        m_lastError = QString("Current value %1 exceeds uint16_t range after scaling").arg(rawValue);
+        qWarning() << m_lastError;
+        return false;
+    }
+    
+    uint16_t value = static_cast<uint16_t>(rawValue);
 
     if (!writeRegister(registerAddr, value)) {
         m_lastError = QString("Failed to set current on channel %1: %2").arg(channel).arg(m_lastError);
@@ -67,19 +76,48 @@ bool BrakePowerSupplyDevice::setCurrent(int channel, double currentA) {
 
 bool BrakePowerSupplyDevice::writeCoil(uint16_t address, bool value) {
     QByteArray request = Bus::ModbusFrame::buildWriteSingleCoil(m_slaveId, address, value);
-    QByteArray response;
 
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Write coil failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Write coil failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        if (!Bus::ModbusFrame::parseWriteSingleCoilResponse(response, address, value)) {
+            m_lastError = "Invalid coil write response or CRC error";
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Parse write coil response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Parse write coil response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("Write coil succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    if (!Bus::ModbusFrame::parseWriteSingleCoilResponse(response, address, value)) {
-        m_lastError = "Invalid coil write response or CRC error";
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 bool BrakePowerSupplyDevice::setOutputEnable(int channel, bool enable) {
@@ -121,53 +159,140 @@ QString BrakePowerSupplyDevice::lastError() const {
 
 bool BrakePowerSupplyDevice::readHoldingRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values) {
     QByteArray request = Bus::ModbusFrame::buildReadHoldingRegisters(m_slaveId, address, count);
-    QByteArray response;
     
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+        
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Read holding registers failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Read holding registers failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
+            m_lastError = "Invalid read response or CRC error";
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Parse holding registers response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Parse holding registers response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("Read holding registers succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
-        m_lastError = "Invalid read response or CRC error";
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 bool BrakePowerSupplyDevice::readInputRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values) {
     QByteArray request = Bus::ModbusFrame::buildReadInputRegisters(m_slaveId, address, count);
-    QByteArray response;
 
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Read input registers failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Read input registers failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        if (!Bus::ModbusFrame::parseReadInputRegistersResponse(response, count, values)) {
+            m_lastError = "Invalid input register response or CRC error";
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Parse input registers response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Parse input registers response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("Read input registers succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    if (!Bus::ModbusFrame::parseReadInputRegistersResponse(response, count, values)) {
-        m_lastError = "Invalid input register response or CRC error";
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 bool BrakePowerSupplyDevice::writeRegister(uint16_t address, uint16_t value) {
     QByteArray request = Bus::ModbusFrame::buildWriteSingleRegister(m_slaveId, address, value);
-    QByteArray response;
     
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+        
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Write register failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Write register failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
+            m_lastError = "Invalid write response or CRC error";
+            
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("Parse write register response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+            
+            qCritical() << QString("Parse write register response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("Write register succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
-        m_lastError = "Invalid write response or CRC error";
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 uint16_t BrakePowerSupplyDevice::getSetCurrentRegister(int channel) const {
@@ -198,7 +323,16 @@ bool BrakePowerSupplyDevice::setVoltage(int channel, double voltageV) {
     }
 
     uint16_t registerAddr = getSetVoltageRegister(channel);
-    uint16_t value = static_cast<uint16_t>(voltageV * 100.0);
+    
+    // Check for uint16_t overflow before conversion
+    double rawValue = voltageV * 100.0;
+    if (rawValue > 65535.0) {
+        m_lastError = QString("Voltage value %1 exceeds uint16_t range after scaling").arg(rawValue);
+        qWarning() << m_lastError;
+        return false;
+    }
+    
+    uint16_t value = static_cast<uint16_t>(rawValue);
 
     if (!writeRegister(registerAddr, value)) {
         m_lastError = QString("Failed to set voltage on channel %1: %2").arg(channel).arg(m_lastError);

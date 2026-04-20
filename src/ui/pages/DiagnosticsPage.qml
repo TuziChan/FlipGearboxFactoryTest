@@ -62,6 +62,25 @@ Item {
                         theme: root.theme
                     }
 
+                    Components.AppBadge {
+                        text: root.viewModel && root.viewModel.isMockMode ? "模拟模式" : "真实硬件"
+                        variant: root.viewModel && root.viewModel.isMockMode ? "secondary" : "default"
+                        theme: root.theme
+                    }
+
+                    Components.AppButton {
+                        text: root.viewModel && root.viewModel.isMockMode ? "切换到真实硬件" : "切换到模拟模式"
+                        variant: "outline"
+                        size: "sm"
+                        theme: root.theme
+                        onClicked: {
+                            if (root.viewModel) {
+                                var newMode = !root.viewModel.isMockMode
+                                root.viewModel.switchMockMode(newMode)
+                            }
+                        }
+                    }
+
                     Item { Layout.fillWidth: true }
 
                     Components.AppLabel {

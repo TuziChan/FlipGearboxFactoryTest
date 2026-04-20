@@ -9,9 +9,11 @@
 namespace ViewModels {
 
 TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
+                                                 Infrastructure::Config::RuntimeManager* runtimeManager,
                                                  QObject* parent)
     : QObject(parent)
     , m_runtime(runtime)
+    , m_runtimeManager(runtimeManager)
     , m_currentRecipe(Infrastructure::Config::RecipeConfig::createDefault())
     , m_running(false)
     , m_serialNumber()
@@ -47,6 +49,12 @@ TestExecutionViewModel::TestExecutionViewModel(Infrastructure::Config::StationRu
                 this, &TestExecutionViewModel::onTestCompleted);
         connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testFailed,
                 this, &TestExecutionViewModel::onTestFailed);
+    }
+
+    // Connect to runtime recreation signal
+    if (m_runtimeManager) {
+        connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::runtimeRecreated,
+                this, &TestExecutionViewModel::onRuntimeRecreated);
     }
 }
 
@@ -149,6 +157,21 @@ void TestExecutionViewModel::loadRecipe(const QString& recipeName) {
 
     emit recipeNameChanged();
     qDebug() << "Recipe loaded:" << recipeName << "from" << recipePath;
+}
+
+void TestExecutionViewModel::updateRuntime(Infrastructure::Config::StationRuntime* newRuntime) {
+    qDebug() << "TestExecutionViewModel: Updating runtime reference";
+    m_runtime = newRuntime;
+
+    // Reconnect signals to new test engine
+    if (m_runtime && m_runtime->testEngine()) {
+        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::stateChanged,
+                this, &TestExecutionViewModel::onEngineStateChanged);
+        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testCompleted,
+                this, &TestExecutionViewModel::onTestCompleted);
+        connect(m_runtime->testEngine(), &Domain::GearboxTestEngine::testFailed,
+                this, &TestExecutionViewModel::onTestFailed);
+    }
 }
 
 void TestExecutionViewModel::onEngineStateChanged(const Domain::TestRunState& state) {
@@ -308,6 +331,10 @@ QVariantMap TestExecutionViewModel::toVariantMap(const Domain::LoadTestResult& r
         {"overallPassed", result.overallPassed},
         {"lockAchieved", result.lockAchieved}
     };
+}
+
+void TestExecutionViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
+    updateRuntime(newRuntime);
 }
 
 QVariantList TestExecutionViewModel::toVariantList(const QVector<Domain::AngleResult>& results) const {

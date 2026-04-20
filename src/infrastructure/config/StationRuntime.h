@@ -37,6 +37,7 @@ public:
     Acquisition::AcquisitionScheduler* acquisitionScheduler() const { return m_acquisitionScheduler.get(); }
     int brakeChannel() const { return m_brakeChannel; }
     Q_INVOKABLE bool isInitialized() const { return m_initialized; }
+    Q_INVOKABLE bool isMockMode() const { return m_isMockMode; }
 
     Q_INVOKABLE bool initialize();
     void shutdown();
@@ -75,6 +76,7 @@ private:
     QString m_lastError;
     int m_brakeChannel = 1;
     bool m_initialized = false;
+    bool m_isMockMode = false;
     bool initializeBus(const QString& displayName,
                        const BusConfig& config,
                        const std::unique_ptr<Bus::IBusController>& bus,

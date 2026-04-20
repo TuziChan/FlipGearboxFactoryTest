@@ -45,14 +45,29 @@ bool AqmdMotorDriveDevice::setMotor(Direction direction, double dutyCyclePercent
     dutyCyclePercent = qBound(0.0, dutyCyclePercent, 100.0);
     
     // Convert to register value: -1000 to +1000 (×0.1%)
+    // Check for overflow before conversion
+    double rawValue = dutyCyclePercent * 10.0;
+    
     int16_t registerValue = 0;
     
     switch (direction) {
         case Direction::Forward:
-            registerValue = static_cast<int16_t>(dutyCyclePercent * 10.0);
+            // Check for int16_t overflow
+            if (rawValue > 1000.0) {
+                qWarning() << "Duty cycle value" << rawValue << "exceeds max 1000, clamping";
+                registerValue = 1000;
+            } else {
+                registerValue = static_cast<int16_t>(rawValue);
+            }
             break;
         case Direction::Reverse:
-            registerValue = -static_cast<int16_t>(dutyCyclePercent * 10.0);
+            // Check for int16_t underflow
+            if (rawValue > 1000.0) {
+                qWarning() << "Duty cycle value" << rawValue << "exceeds max 1000, clamping";
+                registerValue = -1000;
+            } else {
+                registerValue = -static_cast<int16_t>(rawValue);
+            }
             break;
         case Direction::Brake:
             registerValue = 0;

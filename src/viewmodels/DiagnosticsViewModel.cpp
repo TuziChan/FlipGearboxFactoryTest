@@ -38,9 +38,12 @@ QString busOfflineReason(Infrastructure::Bus::IBusController* bus) {
 
 } // namespace
 
-DiagnosticsViewModel::DiagnosticsViewModel(Infrastructure::Config::StationRuntime* runtime, QObject* parent)
+DiagnosticsViewModel::DiagnosticsViewModel(Infrastructure::Config::StationRuntime* runtime,
+                                           Infrastructure::Config::RuntimeManager* runtimeManager,
+                                           QObject* parent)
     : QObject(parent)
     , m_runtime(runtime)
+    , m_runtimeManager(runtimeManager)
     , m_deviceStatuses()
     , m_communicationLogs()
     , m_statusMessage()
@@ -52,10 +55,22 @@ DiagnosticsViewModel::DiagnosticsViewModel(Infrastructure::Config::StationRuntim
 {
     initializeStatuses();
     refresh();
+
+    // Connect to runtime recreation signal
+    if (m_runtimeManager) {
+        connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::runtimeRecreated,
+                this, &DiagnosticsViewModel::onRuntimeRecreated);
+        connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::mockModeChanged,
+                this, &DiagnosticsViewModel::isMockModeChanged);
+    }
 }
 
 bool DiagnosticsViewModel::runtimeInitialized() const {
     return m_runtime && m_runtime->isInitialized();
+}
+
+bool DiagnosticsViewModel::isMockMode() const {
+    return m_runtime && m_runtime->isMockMode();
 }
 
 void DiagnosticsViewModel::refresh() {
@@ -175,6 +190,30 @@ void DiagnosticsViewModel::clearLog() {
     m_communicationLogs.clear();
     emit communicationLogsChanged();
     setStatusMessage(QStringLiteral("通信日志已清空"));
+}
+
+void DiagnosticsViewModel::switchMockMode(bool mockMode) {
+    if (!m_runtimeManager) {
+        qWarning() << "RuntimeManager not available, cannot switch mode";
+        return;
+    }
+
+    m_runtimeManager->switchMode(mockMode);
+    setStatusMessage(mockMode ? QStringLiteral("已切换到模拟模式") : QStringLiteral("已切换到真实硬件模式"));
+}
+
+void DiagnosticsViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
+    qDebug() << "DiagnosticsViewModel: Runtime recreated, updating reference";
+    m_runtime = newRuntime;
+
+    // Clear logs and reinitialize
+    m_communicationLogs.clear();
+    emit communicationLogsChanged();
+
+    initializeStatuses();
+    refresh();
+
+    emit deviceStatusesChanged();
 }
 
 void DiagnosticsViewModel::initializeStatuses() {

@@ -113,6 +113,14 @@ bool AcquisitionScheduler::isRunning() const {
 Domain::TelemetrySnapshot AcquisitionScheduler::snapshot() const {
     Domain::TelemetrySnapshot snap;
 
+    // Check data validity to avoid reading uninitialized values
+    if (!m_buffer.motor.valid.load() ||
+        !m_buffer.torque.valid.load() ||
+        !m_buffer.encoder.valid.load() ||
+        !m_buffer.brake.valid.load()) {
+        qWarning() << "Telemetry buffer not fully initialized, some data may be invalid";
+    }
+
     snap.motorCurrentA = m_buffer.motor.currentA.load();
     snap.aqmdAi1Level = m_buffer.motor.ai1Level.load();
 

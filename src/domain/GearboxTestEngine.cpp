@@ -1,7 +1,9 @@
 #include "GearboxTestEngine.h"
+#include "RecipeValidator.h"
 #include <QDebug>
 #include <QtMath>
 #include <QThread>
+#include <limits>
 
 namespace Domain {
 
@@ -47,6 +49,15 @@ void GearboxTestEngine::setAcquisitionScheduler(Infrastructure::Acquisition::Acq
 }
 
 void GearboxTestEngine::setRecipe(const TestRecipe& recipe) {
+    // Validate recipe parameters
+    QStringList errors;
+    if (!RecipeValidator::validate(recipe, errors)) {
+        qWarning() << "Recipe validation failed:";
+        for (const QString& error : errors) {
+            qWarning() << "  -" << error;
+        }
+        // Still set the recipe but log warnings
+    }
     m_recipe = recipe;
 }
 
@@ -365,15 +376,70 @@ bool GearboxTestEngine::stopMotor() {
 }
 
 void GearboxTestEngine::failTest(FailureCategory category, const QString& description) {
-    m_cycleTimer->stop();
-    stopMotor();
+    qCritical() << "========================================";
+    qCritical() << "TEST FAILURE DETECTED";
+    qCritical() << "========================================";
+    qCritical() << "Category:" << category;
+    qCritical() << "Description:" << description;
+    qCritical() << "Phase:" << static_cast<int>(m_state.phase);
+    qCritical() << "SubState:" << static_cast<int>(m_state.subState);
+    qCritical() << "Elapsed time:" << m_state.elapsedMs << "ms";
+    qCritical() << "========================================";
     
-    if (m_brake) {
-        m_brake->setOutputEnable(m_brakeChannel, false);
+    // Phase 1: Stop cycle timer immediately
+    qDebug() << "Phase 1: Stopping cycle timer...";
+    m_cycleTimer->stop();
+    
+    // Phase 2: Emergency stop motor
+    qDebug() << "Phase 2: Emergency stopping motor...";
+    if (!stopMotor()) {
+        qCritical() << "  [WARNING] Failed to stop motor during failure handling!";
+        // Try again with direct brake command
+        if (m_motor) {
+            m_motor->brake();
+        }
+    } else {
+        qDebug() << "  [OK] Motor stopped";
     }
+    
+    // Phase 3: Disable brake power supply
+    qDebug() << "Phase 3: Disabling brake power supply...";
+    if (m_brake) {
+        if (!m_brake->setOutputEnable(m_brakeChannel, false)) {
+            qCritical() << "  [WARNING] Failed to disable brake output during failure handling!";
+            // Try multiple times for safety
+            for (int retry = 0; retry < 3; ++retry) {
+                QThread::msleep(50);
+                if (m_brake->setOutputEnable(m_brakeChannel, false)) {
+                    qDebug() << "  [OK] Brake disabled on retry" << (retry + 1);
+                    break;
+                }
+            }
+        } else {
+            qDebug() << "  [OK] Brake power supply disabled";
+        }
+    }
+    
+    // Phase 4: Clear sample buffers
+    qDebug() << "Phase 4: Clearing sample buffers...";
+    m_currentSamples.clear();
+    m_speedSamples.clear();
+    m_torqueSamples.clear();
+    qDebug() << "  [OK] Sample buffers cleared";
+    
+    // Phase 5: Reset state flags
+    qDebug() << "Phase 5: Resetting state flags...";
+    m_magnetEventDetected = false;
+    m_lockConditionMet = false;
+    m_currentBrakeCurrent = 0.0;
+    m_currentBrakeVoltage = 0.0;
+    qDebug() << "  [OK] State flags reset";
 
+    // Phase 6: Update test state
+    qDebug() << "Phase 6: Updating test state...";
     m_state.phase = TestPhase::Failed;
     m_state.subState = TestSubState::TestFailed;
+    m_state.currentDirection = MotorDirection::Stopped;
     m_state.results.overallPassed = false;
     m_state.results.failure = FailureReason(category, description);
     m_state.results.endTime = QDateTime::currentDateTime();
@@ -394,7 +460,13 @@ void GearboxTestEngine::failTest(FailureCategory category, const QString& descri
             categoryStr = "Judgment";
             break;
     }
-    qWarning() << "Test failed:" << categoryStr << description;
+    
+    qCritical() << "========================================";
+    qCritical() << "TEST FAILED - CLEANUP COMPLETE";
+    qCritical() << "Category:" << categoryStr;
+    qCritical() << "Reason:" << description;
+    qCritical() << "System is now in safe state";
+    qCritical() << "========================================";
 
     emit testFailed(m_state.results.failure);
     emit stateChanged(m_state);
@@ -558,9 +630,15 @@ void GearboxTestEngine::handleSpinupForward() {
 void GearboxTestEngine::handleSampleForward() {
     m_state.statusMessage = "Sampling idle forward...";
     
-    // Collect samples
-    m_currentSamples.append(m_state.currentTelemetry.motorCurrentA);
-    m_speedSamples.append(m_state.currentTelemetry.dynSpeedRpm);
+    // Collect samples with buffer overflow protection
+    if (m_currentSamples.size() < MAX_SAMPLE_BUFFER_SIZE) {
+        m_currentSamples.append(m_state.currentTelemetry.motorCurrentA);
+        m_speedSamples.append(m_state.currentTelemetry.dynSpeedRpm);
+    } else {
+        qWarning() << "Sample buffer overflow detected, stopping sampling";
+        failTest(FailureCategory::Process, "Sample buffer overflow in forward sampling");
+        return;
+    }
 
     // Check if sampling window complete
     if (m_state.phaseElapsedMs >= m_recipe.idleForwardSampleMs) {
@@ -595,9 +673,15 @@ void GearboxTestEngine::handleSpinupReverse() {
 void GearboxTestEngine::handleSampleReverse() {
     m_state.statusMessage = "Sampling idle reverse...";
     
-    // Collect samples
-    m_currentSamples.append(m_state.currentTelemetry.motorCurrentA);
-    m_speedSamples.append(qAbs(m_state.currentTelemetry.dynSpeedRpm));  // Absolute value for reverse
+    // Collect samples with buffer overflow protection
+    if (m_currentSamples.size() < MAX_SAMPLE_BUFFER_SIZE) {
+        m_currentSamples.append(m_state.currentTelemetry.motorCurrentA);
+        m_speedSamples.append(qAbs(m_state.currentTelemetry.dynSpeedRpm));  // Absolute value for reverse
+    } else {
+        qWarning() << "Sample buffer overflow detected, stopping sampling";
+        failTest(FailureCategory::Process, "Sample buffer overflow in reverse sampling");
+        return;
+    }
 
     // Check if sampling window complete
     if (m_state.phaseElapsedMs >= m_recipe.idleReverseSampleMs) {

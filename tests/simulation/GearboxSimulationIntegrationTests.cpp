@@ -48,7 +48,7 @@ private:
         config.dyn200Config.timeout = 1000;
         config.dyn200Config.parity = "None";
         config.dyn200Config.stopBits = 1;
-        config.dyn200Config.communicationMode = "Polling";
+        config.dyn200Config.communicationMode = 0;
         config.dyn200Config.pollIntervalUs = 10000;
         
         config.encoderConfig.enabled = true;
@@ -59,7 +59,7 @@ private:
         config.encoderConfig.parity = "None";
         config.encoderConfig.stopBits = 1;
         config.encoderConfig.encoderResolution = 4096;
-        config.encoderConfig.communicationMode = "Polling";
+        config.encoderConfig.communicationMode = 0;
         config.encoderConfig.pollIntervalUs = 10000;
         
         config.brakeConfig.enabled = true;
@@ -134,8 +134,9 @@ private slots:
         runtime->initialize();
         
         auto engine = runtime->testEngine();
-        QCOMPARE(engine->currentState(), TestRunState::Idle);
-        QVERIFY(!engine->isRunning());
+        QCOMPARE(engine->currentState().phase, TestPhase::Idle);
+        auto phase = engine->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
         runtime->shutdown();
     }
@@ -151,7 +152,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Recipe should be set (no direct getter, but start should work)
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -166,7 +167,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Engine should handle gracefully
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -181,7 +182,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Engine should clamp or handle
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -198,13 +199,14 @@ private slots:
         
         QSignalSpy stateSpy(runtime->testEngine(), &GearboxTestEngine::stateChanged);
         
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         
         // Should transition from Idle
         QVERIFY(stateSpy.count() > 0);
-        QVERIFY(runtime->testEngine()->isRunning());
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase != TestPhase::Idle && phase != TestPhase::Completed && phase != TestPhase::Failed);
         
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -215,16 +217,17 @@ private slots:
         
         TestRecipe recipe = makeTestRecipe();
         runtime->testEngine()->setRecipe(recipe);
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         
         // Let it run briefly
         QTest::qWait(100);
         
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         
         // Should return to idle
         QTest::qWait(100);
-        QVERIFY(!runtime->testEngine()->isRunning());
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
         runtime->shutdown();
     }
@@ -239,8 +242,9 @@ private slots:
         
         runtime->testEngine()->reset();
         
-        QCOMPARE(runtime->testEngine()->currentState(), TestRunState::Idle);
-        QVERIFY(!runtime->testEngine()->isRunning());
+        QCOMPARE(runtime->testEngine()->currentState().phase, TestPhase::Idle);
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
         runtime->shutdown();
     }
@@ -259,16 +263,16 @@ private slots:
         recipe.loadTimeoutMs = 10;
         
         runtime->testEngine()->setRecipe(recipe);
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         
         // Should timeout quickly
         QTest::qWait(500);
+
+        // Engine should handle timeout gracefully (should be stopped or failed)
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
-        // Engine should handle timeout gracefully
-        QVERIFY(!runtime->testEngine()->isRunning() || 
-                runtime->testEngine()->currentState() != TestRunState::Idle);
-        
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -283,7 +287,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should accept long timeouts without error
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -301,7 +305,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle zero tolerance (very strict)
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -317,7 +321,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle negative angles
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -333,7 +337,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle angles over 360
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -353,7 +357,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should accept CC mode
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -371,7 +375,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should accept CV mode
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -387,7 +391,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle invalid mode gracefully
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -405,7 +409,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle zero brake current (no load test)
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -423,7 +427,7 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Should handle excessive current (may clamp)
-        QVERIFY(runtime->testEngine()->currentState() == TestRunState::Idle);
+        QVERIFY(runtime->testEngine()->currentState().phase == TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -440,13 +444,13 @@ private slots:
         
         QSignalSpy stateSpy(runtime->testEngine(), &GearboxTestEngine::stateChanged);
         
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         
         // Should emit state changed
         QVERIFY(stateSpy.wait(1000));
         QVERIFY(stateSpy.count() > 0);
         
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -457,16 +461,16 @@ private slots:
         
         TestRecipe recipe = makeTestRecipe();
         runtime->testEngine()->setRecipe(recipe);
+
+        QSignalSpy stateSpy(runtime->testEngine(), &GearboxTestEngine::stateChanged);
+
+        runtime->testEngine()->startTest("TEST-001");
+
+        // Should emit state updates
+        QVERIFY(stateSpy.wait(2000));
+        QVERIFY(stateSpy.count() > 0);
         
-        QSignalSpy telemetrySpy(runtime->testEngine(), &GearboxTestEngine::telemetryUpdated);
-        
-        runtime->testEngine()->start();
-        
-        // Should emit telemetry updates
-        QVERIFY(telemetrySpy.wait(2000));
-        QVERIFY(telemetrySpy.count() > 0);
-        
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -481,20 +485,21 @@ private slots:
         runtime->testEngine()->setRecipe(recipe);
         
         // Run 1
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         QTest::qWait(200);
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         QTest::qWait(100);
         
         // Run 2
         runtime->testEngine()->reset();
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         QTest::qWait(200);
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         QTest::qWait(100);
         
         // Should handle multiple runs
-        QVERIFY(!runtime->testEngine()->isRunning());
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
         runtime->shutdown();
     }
@@ -507,14 +512,15 @@ private slots:
         TestRecipe recipe = makeTestRecipe();
         runtime->testEngine()->setRecipe(recipe);
         
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         QTest::qWait(200);
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         
         runtime->testEngine()->reset();
         
-        QCOMPARE(runtime->testEngine()->currentState(), TestRunState::Idle);
-        QVERIFY(!runtime->testEngine()->isRunning());
+        QCOMPARE(runtime->testEngine()->currentState().phase, TestPhase::Idle);
+        auto phase = runtime->testEngine()->currentState().phase;
+        QVERIFY(phase == TestPhase::Idle || phase == TestPhase::Completed || phase == TestPhase::Failed);
         
         runtime->shutdown();
     }
@@ -527,12 +533,12 @@ private slots:
         runtime->initialize();
         
         // Don't set recipe
-        runtime->testEngine()->start();
+        runtime->testEngine()->startTest("TEST-001");
         
         // Should handle gracefully (may not start or fail quickly)
         QTest::qWait(100);
         
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -544,13 +550,13 @@ private slots:
         TestRecipe recipe = makeTestRecipe();
         runtime->testEngine()->setRecipe(recipe);
         
-        runtime->testEngine()->start();
-        runtime->testEngine()->start(); // Second start
+        runtime->testEngine()->startTest("TEST-001");
+        runtime->testEngine()->startTest("TEST-001"); // Second start
         
         // Should handle double start gracefully
         QTest::qWait(100);
         
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         runtime->shutdown();
     }
     
@@ -560,10 +566,10 @@ private slots:
         runtime->initialize();
         
         // Abort without starting
-        runtime->testEngine()->abort();
+        runtime->testEngine()->emergencyStop();
         
         // Should handle gracefully
-        QCOMPARE(runtime->testEngine()->currentState(), TestRunState::Idle);
+        QCOMPARE(runtime->testEngine()->currentState().phase, TestPhase::Idle);
         
         runtime->shutdown();
     }
@@ -581,10 +587,10 @@ private slots:
         runtime1->testEngine()->setRecipe(recipe);
         
         QSignalSpy stateSpy1(runtime1->testEngine(), &GearboxTestEngine::stateChanged);
-        runtime1->testEngine()->start();
+        runtime1->testEngine()->startTest("TEST-001");
         QTest::qWait(500);
         int stateChanges1 = stateSpy1.count();
-        runtime1->testEngine()->abort();
+        runtime1->testEngine()->emergencyStop();
         runtime1->shutdown();
         
         // Run 2
@@ -593,10 +599,10 @@ private slots:
         runtime2->testEngine()->setRecipe(recipe);
         
         QSignalSpy stateSpy2(runtime2->testEngine(), &GearboxTestEngine::stateChanged);
-        runtime2->testEngine()->start();
+        runtime2->testEngine()->startTest("TEST-001");
         QTest::qWait(500);
         int stateChanges2 = stateSpy2.count();
-        runtime2->testEngine()->abort();
+        runtime2->testEngine()->emergencyStop();
         runtime2->shutdown();
         
         // Should have similar behavior (within tolerance)

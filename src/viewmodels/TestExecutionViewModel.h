@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include "../infrastructure/config/StationRuntime.h"
+#include "../infrastructure/config/RuntimeManager.h"
 #include "../domain/TestRecipe.h"
 #include "../domain/TestRunState.h"
 
@@ -38,6 +39,7 @@ class TestExecutionViewModel : public QObject {
 
 public:
     explicit TestExecutionViewModel(Infrastructure::Config::StationRuntime* runtime,
+                                     Infrastructure::Config::RuntimeManager* runtimeManager,
                                      QObject* parent = nullptr);
     ~TestExecutionViewModel() override = default;
 
@@ -95,6 +97,7 @@ private slots:
 
 private:
     Infrastructure::Config::StationRuntime* m_runtime;
+    Infrastructure::Config::RuntimeManager* m_runtimeManager;
     Domain::TestRecipe m_currentRecipe;
 
     bool m_running;
@@ -126,6 +129,8 @@ private:
     QVariantMap toVariantMap(const Domain::IdleRunResult& result) const;
     QVariantMap toVariantMap(const Domain::LoadTestResult& result) const;
     QVariantList toVariantList(const QVector<Domain::AngleResult>& results) const;
+    void updateRuntime(Infrastructure::Config::StationRuntime* newRuntime);
+    void onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime);
 };
 
 } // namespace ViewModels

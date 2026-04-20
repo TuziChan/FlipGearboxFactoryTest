@@ -11,6 +11,7 @@
 #include "src/infrastructure/config/ConfigLoader.h"
 #include "src/infrastructure/config/DeviceConfigService.h"
 #include "src/infrastructure/config/StationRuntimeFactory.h"
+#include "src/infrastructure/config/RuntimeManager.h"
 #include "src/infrastructure/config/RecipeConfig.h"
 #include "src/infrastructure/services/RecipeService.h"
 #include "src/infrastructure/services/HistoryService.h"
@@ -40,20 +41,36 @@ int main(int argc, char *argv[])
     const QString stationConfigPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../../config/station.json");
     Infrastructure::Config::ConfigLoader configLoader;
     if (!configLoader.loadStationConfig(stationConfigPath, stationConfig)) {
-        qWarning() << "Failed to load station config from" << stationConfigPath << ":" << configLoader.lastError();
-        qWarning() << "Using built-in defaults. Please verify config/station.json exists and is valid.";
+        qCritical() << "========================================";
+        qCritical() << "CONFIGURATION LOAD FAILURE";
+        qCritical() << "========================================";
+        qCritical() << "Failed to load station config from:" << stationConfigPath;
+        qCritical() << "Error:" << configLoader.lastError();
+        qCritical() << "";
+        qCritical() << "Fallback Strategy: Using built-in default configuration";
+        qCritical() << "WARNING: Default configuration may not match your hardware setup!";
+        qCritical() << "Please verify config/station.json exists and is valid before production use.";
+        qCritical() << "========================================";
+        
+        // Check if config file exists at all
+        if (!QFile::exists(stationConfigPath)) {
+            qCritical() << "Config file does not exist. Creating default config is recommended.";
+        }
+        
+        // In production mode (no --mock flag), config failure should be more严格
+        // For now, we continue with defaults but log prominently
     }
 
     // Detect mock mode from command line
     const QStringList args = app.arguments();
     bool mockMode = args.contains("--mock");
 
-    // Create station runtime
-    auto runtime = Infrastructure::Config::StationRuntimeFactory::create(stationConfig, mockMode);
+    // Create runtime manager
+    auto runtimeManager = new Infrastructure::Config::RuntimeManager(stationConfig, mockMode, &app);
 
     // Create ViewModel
-    auto viewModel = new ViewModels::TestExecutionViewModel(runtime.get(), &app);
-    auto diagnosticsViewModel = new ViewModels::DiagnosticsViewModel(runtime.get(), &app);
+    auto viewModel = new ViewModels::TestExecutionViewModel(runtimeManager->runtime(), runtimeManager, &app);
+    auto diagnosticsViewModel = new ViewModels::DiagnosticsViewModel(runtimeManager->runtime(), runtimeManager, &app);
     auto deviceConfigService = new Infrastructure::Config::DeviceConfigService(stationConfigPath, stationConfig, &app);
 
     // Create services (must be before ViewModels that depend on them)
@@ -67,7 +84,8 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
 
     // Expose ViewModel to QML
-    engine.rootContext()->setContextProperty("stationRuntime", runtime.get());
+    engine.rootContext()->setContextProperty("stationRuntime", runtimeManager->runtime());
+    engine.rootContext()->setContextProperty("runtimeManager", runtimeManager);
     engine.rootContext()->setContextProperty("testViewModel", viewModel);
     engine.rootContext()->setContextProperty("diagnosticsViewModel", diagnosticsViewModel);
     engine.rootContext()->setContextProperty("historyViewModel", historyViewModel);
@@ -86,9 +104,9 @@ int main(int argc, char *argv[])
     engine.loadFromModule("FlipGearboxFactoryTest", "Main");
 
     int result = QCoreApplication::exec();
-    
+
     // Cleanup
-    runtime->shutdown();
-    
+    runtimeManager->runtime()->shutdown();
+
     return result;
 }

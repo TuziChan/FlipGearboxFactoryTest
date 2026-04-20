@@ -42,6 +42,10 @@ private:
     uint8_t m_slaveId;
     QString m_lastError;
 
+    // Retry configuration
+    static constexpr int MAX_RETRIES = 3;
+    static constexpr int RETRY_DELAY_MS = 50;
+
     // Register addresses (from correction document)
     // Holding registers for setpoints
     static constexpr uint16_t REG_CH1_SET_CURRENT = 0x0001;  // ×0.01A

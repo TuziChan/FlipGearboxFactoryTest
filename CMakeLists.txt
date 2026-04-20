@@ -25,6 +25,8 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/domain/TestRecipe.h
     src/domain/TestResults.h
     src/domain/TestRunState.h
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
     src/domain/GearboxTestEngine.h
     src/domain/GearboxTestEngine.cpp
     
@@ -84,7 +86,9 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/config/StationRuntime.cpp
     src/infrastructure/config/StationRuntimeFactory.h
     src/infrastructure/config/StationRuntimeFactory.cpp
-    
+    src/infrastructure/config/RuntimeManager.h
+    src/infrastructure/config/RuntimeManager.cpp
+
     # Infrastructure - Services
     src/infrastructure/services/HistoryService.h
     src/infrastructure/services/HistoryService.cpp
@@ -282,6 +286,8 @@ qt_add_executable(TestExecutionVerification
     tests/mocks/MockDevices.h
     src/domain/GearboxTestEngine.h
     src/domain/GearboxTestEngine.cpp
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
     src/domain/TelemetrySnapshot.h
     src/domain/TestRunState.h
     src/domain/TestRecipe.h
@@ -422,8 +428,6 @@ target_link_libraries(RecipeViewModelTests
 # CTest Configuration
 # ============================================================================
 
-qt_add_executable(DomainEngineTests
-
 # Simulation Runtime Tests
 qt_add_executable(SimulationRuntimeTests
     tests/simulation/SimulationRuntimeTests.cpp
@@ -434,7 +438,6 @@ qt_add_executable(SimulationRuntimeTests
     src/infrastructure/config/StationConfig.h
     src/infrastructure/simulation/SimulationContext.h
     src/infrastructure/simulation/SimulatedBusController.h
-    src/infrastructure/simulation/SimulatedBusController.cpp
     src/infrastructure/simulation/SimulatedMotorDevice.h
     src/infrastructure/simulation/SimulatedMotorDevice.cpp
     src/infrastructure/simulation/SimulatedTorqueDevice.h
@@ -446,12 +449,26 @@ qt_add_executable(SimulationRuntimeTests
     src/infrastructure/bus/IBusController.h
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
+    src/infrastructure/bus/ModbusRtuBusController.h
+    src/infrastructure/bus/ModbusRtuBusController.cpp
     src/infrastructure/devices/IMotorDriveDevice.h
     src/infrastructure/devices/ITorqueSensorDevice.h
     src/infrastructure/devices/IEncoderDevice.h
     src/infrastructure/devices/IBrakePowerDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.cpp
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.h
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
+    src/infrastructure/devices/Dyn200ProactiveListener.h
+    src/infrastructure/devices/Dyn200ProactiveListener.cpp
+    src/infrastructure/devices/SingleTurnEncoderDevice.h
+    src/infrastructure/devices/SingleTurnEncoderDevice.cpp
+    src/infrastructure/devices/BrakePowerSupplyDevice.h
+    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
     src/domain/GearboxTestEngine.h
     src/domain/GearboxTestEngine.cpp
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
     src/domain/TestRecipe.h
     src/domain/TestResults.h
     src/domain/TestRunState.h
@@ -472,6 +489,7 @@ target_include_directories(SimulationRuntimeTests PRIVATE ${CMAKE_CURRENT_SOURCE
 target_link_libraries(SimulationRuntimeTests
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
 
@@ -485,7 +503,6 @@ qt_add_executable(GearboxSimulationIntegrationTests
     src/infrastructure/config/StationConfig.h
     src/infrastructure/simulation/SimulationContext.h
     src/infrastructure/simulation/SimulatedBusController.h
-    src/infrastructure/simulation/SimulatedBusController.cpp
     src/infrastructure/simulation/SimulatedMotorDevice.h
     src/infrastructure/simulation/SimulatedMotorDevice.cpp
     src/infrastructure/simulation/SimulatedTorqueDevice.h
@@ -497,12 +514,26 @@ qt_add_executable(GearboxSimulationIntegrationTests
     src/infrastructure/bus/IBusController.h
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
+    src/infrastructure/bus/ModbusRtuBusController.h
+    src/infrastructure/bus/ModbusRtuBusController.cpp
     src/infrastructure/devices/IMotorDriveDevice.h
     src/infrastructure/devices/ITorqueSensorDevice.h
     src/infrastructure/devices/IEncoderDevice.h
     src/infrastructure/devices/IBrakePowerDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.h
+    src/infrastructure/devices/AqmdMotorDriveDevice.cpp
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.h
+    src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
+    src/infrastructure/devices/Dyn200ProactiveListener.h
+    src/infrastructure/devices/Dyn200ProactiveListener.cpp
+    src/infrastructure/devices/SingleTurnEncoderDevice.h
+    src/infrastructure/devices/SingleTurnEncoderDevice.cpp
+    src/infrastructure/devices/BrakePowerSupplyDevice.h
+    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
     src/domain/GearboxTestEngine.h
     src/domain/GearboxTestEngine.cpp
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
     src/domain/TestRecipe.h
     src/domain/TestResults.h
     src/domain/TestRunState.h
@@ -523,12 +554,18 @@ target_include_directories(GearboxSimulationIntegrationTests PRIVATE ${CMAKE_CUR
 target_link_libraries(GearboxSimulationIntegrationTests
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
+
+# Domain Engine Tests
+qt_add_executable(DomainEngineTests
     tests/DomainEngineTests.cpp
     tests/mocks/MockDevices.h
     src/domain/GearboxTestEngine.h
     src/domain/GearboxTestEngine.cpp
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
     src/domain/TelemetrySnapshot.h
     src/domain/TestRunState.h
     src/domain/TestRecipe.h

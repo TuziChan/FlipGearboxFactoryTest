@@ -17,6 +17,7 @@ namespace Config {
 
 std::unique_ptr<StationRuntime> StationRuntimeFactory::create(const StationConfig& config, bool mockMode) {
     auto runtime = std::make_unique<StationRuntime>();
+    runtime->m_isMockMode = mockMode;
 
     qDebug() << "Creating station runtime for:" << config.stationName
              << (mockMode ? "(mock mode)" : "(real hardware)");

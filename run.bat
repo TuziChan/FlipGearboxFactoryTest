@@ -29,7 +29,8 @@ exit /b 1
 
 set "QT_BIN=%QT_ROOT%\%QT_VERSION%\%QT_COMPILER%\bin"
 set "MINGW_BIN=%QT_ROOT%\Tools\llvm-mingw1706_64\bin"
-set "PATH=%QT_BIN%;%MINGW_BIN%;%PATH%"
+set "CMAKE_BIN=%QT_ROOT%\Tools\CMake_64\bin"
+set "PATH=%QT_BIN%;%MINGW_BIN%;%CMAKE_BIN%;%PATH%"
 
 set "PROJECT_ROOT=%~dp0"
 set "BUILD_DIR=%PROJECT_ROOT%build\Desktop_Qt_6_11_0_llvm_mingw_64_bit-Debug"

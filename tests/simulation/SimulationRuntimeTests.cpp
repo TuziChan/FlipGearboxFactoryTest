@@ -52,7 +52,7 @@ private:
         config.dyn200Config.timeout = 1000;
         config.dyn200Config.parity = "None";
         config.dyn200Config.stopBits = 1;
-        config.dyn200Config.communicationMode = "Polling";
+        config.dyn200Config.communicationMode = 0;
         config.dyn200Config.pollIntervalUs = 10000;
         
         config.encoderConfig.enabled = true;
@@ -63,7 +63,7 @@ private:
         config.encoderConfig.parity = "None";
         config.encoderConfig.stopBits = 1;
         config.encoderConfig.encoderResolution = 4096;
-        config.encoderConfig.communicationMode = "Polling";
+        config.encoderConfig.communicationMode = 0;
         config.encoderConfig.pollIntervalUs = 10000;
         
         config.brakeConfig.enabled = true;
@@ -510,7 +510,7 @@ private slots:
         QVERIFY(angleBeforeZero > 0.0);
         
         // Set zero
-        QVERIFY(encoder.setZero());
+        QVERIFY(encoder.setZeroPoint());
         
         double angleAfterZero = 0.0;
         encoder.readAngle(angleAfterZero);
@@ -521,16 +521,16 @@ private slots:
         SimulationContext ctx;
         SimulatedEncoderDevice encoder(&ctx);
         encoder.initialize();
-        
+
         // Start motor and let it stabilize
         ctx.setMotorDirection(SimulationContext::MotorDirection::Forward);
         ctx.setMotorDutyCycle(50.0);
         for (int i = 0; i < 200; i++) {
             ctx.advanceTick();
         }
-        
+
         double speedRpm = 0.0;
-        QVERIFY(encoder.readSpeed(speedRpm));
+        QVERIFY(encoder.readAngularVelocity(speedRpm));
         QVERIFY(speedRpm > 0.0);
         QVERIFY(speedRpm <= 750.0); // 50% * 15 = 750 RPM max
     }
@@ -549,8 +549,10 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
-        QVERIFY(brake.setConstantCurrent(1, 2.5));
+
+        QVERIFY(brake.setBrakeMode(1, "CC"));
+        QVERIFY(brake.setCurrent(1, 2.5));
+        QVERIFY(brake.setOutputEnable(1, true));
         QCOMPARE(ctx.brakeCurrent(), 2.5);
         QVERIFY(ctx.brakeOutputEnabled());
     }
@@ -559,8 +561,10 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
-        QVERIFY(brake.setConstantVoltage(1, 12.0));
+
+        QVERIFY(brake.setBrakeMode(1, "CV"));
+        QVERIFY(brake.setVoltage(1, 12.0));
+        QVERIFY(brake.setOutputEnable(1, true));
         QCOMPARE(ctx.brakeVoltage(), 12.0);
         QVERIFY(ctx.brakeOutputEnabled());
     }
@@ -569,11 +573,13 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
-        brake.setConstantCurrent(1, 2.0);
+
+        brake.setBrakeMode(1, "CC");
+        brake.setCurrent(1, 2.0);
+        brake.setOutputEnable(1, true);
         QVERIFY(ctx.brakeOutputEnabled());
-        
-        QVERIFY(brake.disableOutput(1));
+
+        QVERIFY(brake.setOutputEnable(1, false));
         QVERIFY(!ctx.brakeOutputEnabled());
     }
     
@@ -581,9 +587,11 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
-        brake.setConstantCurrent(1, 2.5);
-        
+
+        brake.setBrakeMode(1, "CC");
+        brake.setCurrent(1, 2.5);
+        brake.setOutputEnable(1, true);
+
         double current = 0.0;
         QVERIFY(brake.readCurrent(1, current));
         QCOMPARE(current, 2.5);
@@ -593,9 +601,11 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
-        brake.setConstantVoltage(1, 12.0);
-        
+
+        brake.setBrakeMode(1, "CV");
+        brake.setVoltage(1, 12.0);
+        brake.setOutputEnable(1, true);
+
         double voltage = 0.0;
         QVERIFY(brake.readVoltage(1, voltage));
         QCOMPARE(voltage, 12.0);
@@ -605,10 +615,10 @@ private slots:
         SimulationContext ctx;
         SimulatedBrakeDevice brake(&ctx);
         brake.initialize();
-        
+
         // Channel 0 or > 4 should fail
-        QVERIFY(!brake.setConstantCurrent(0, 2.0));
-        QVERIFY(!brake.setConstantCurrent(5, 2.0));
+        QVERIFY(!brake.setCurrent(0, 2.0));
+        QVERIFY(!brake.setCurrent(5, 2.0));
     }
     
     // ========== Integration Tests ==========
@@ -623,7 +633,9 @@ private slots:
         QVERIFY(runtime->motor()->setMotor(Devices::IMotorDriveDevice::Direction::Forward, 50.0));
         
         // Apply brake
-        QVERIFY(runtime->brake()->setConstantCurrent(1, 1.5));
+        QVERIFY(runtime->brake()->setBrakeMode(1, "CC"));
+        QVERIFY(runtime->brake()->setCurrent(1, 1.5));
+        QVERIFY(runtime->brake()->setOutputEnable(1, true));
         
         // Read encoder angle
         double angle = 0.0;

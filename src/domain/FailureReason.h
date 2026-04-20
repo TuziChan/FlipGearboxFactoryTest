@@ -2,12 +2,13 @@
 #define FAILUREREASON_H
 
 #include <QString>
+#include <QDebug>
 
 namespace Domain {
 
 /**
  * @brief Failure classification for test results
- * 
+ *
  * Distinguishes between communication, process, and judgment failures.
  */
 enum class FailureCategory {
@@ -16,6 +17,19 @@ enum class FailureCategory {
     Process,        // Flow didn't reach judgment state (e.g., lock not achieved)
     Judgment        // Data valid but out of spec
 };
+
+// QDebug operator for FailureCategory
+inline QDebug operator<<(QDebug debug, FailureCategory category) {
+    QDebugStateSaver saver(debug);
+    switch (category) {
+        case FailureCategory::None: debug.nospace() << "None"; break;
+        case FailureCategory::Communication: debug.nospace() << "Communication"; break;
+        case FailureCategory::Process: debug.nospace() << "Process"; break;
+        case FailureCategory::Judgment: debug.nospace() << "Judgment"; break;
+        default: debug.nospace() << "Unknown"; break;
+    }
+    return debug;
+}
 
 struct FailureReason {
     FailureCategory category;
