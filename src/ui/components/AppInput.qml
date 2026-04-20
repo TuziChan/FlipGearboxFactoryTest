@@ -51,7 +51,6 @@ Column {
 
             // shadcn/ui 风格的输入体验
             selectByMouse: true
-            cursorVisible: true
 
             // 焦点状态动画
             Behavior on opacity {
@@ -88,6 +87,7 @@ Column {
             HoverHandler {
                 id: inputHover
                 enabled: root.enabled && !root.readOnly
+                cursorShape: Qt.IBeamCursor
             }
         }
 

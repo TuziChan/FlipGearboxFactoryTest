@@ -423,6 +423,108 @@ target_link_libraries(RecipeViewModelTests
 # ============================================================================
 
 qt_add_executable(DomainEngineTests
+
+# Simulation Runtime Tests
+qt_add_executable(SimulationRuntimeTests
+    tests/simulation/SimulationRuntimeTests.cpp
+    src/infrastructure/config/StationRuntimeFactory.h
+    src/infrastructure/config/StationRuntimeFactory.cpp
+    src/infrastructure/config/StationRuntime.h
+    src/infrastructure/config/StationRuntime.cpp
+    src/infrastructure/config/StationConfig.h
+    src/infrastructure/simulation/SimulationContext.h
+    src/infrastructure/simulation/SimulatedBusController.h
+    src/infrastructure/simulation/SimulatedBusController.cpp
+    src/infrastructure/simulation/SimulatedMotorDevice.h
+    src/infrastructure/simulation/SimulatedMotorDevice.cpp
+    src/infrastructure/simulation/SimulatedTorqueDevice.h
+    src/infrastructure/simulation/SimulatedTorqueDevice.cpp
+    src/infrastructure/simulation/SimulatedEncoderDevice.h
+    src/infrastructure/simulation/SimulatedEncoderDevice.cpp
+    src/infrastructure/simulation/SimulatedBrakeDevice.h
+    src/infrastructure/simulation/SimulatedBrakeDevice.cpp
+    src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/ModbusFrame.h
+    src/infrastructure/bus/ModbusFrame.cpp
+    src/infrastructure/devices/IMotorDriveDevice.h
+    src/infrastructure/devices/ITorqueSensorDevice.h
+    src/infrastructure/devices/IEncoderDevice.h
+    src/infrastructure/devices/IBrakePowerDevice.h
+    src/domain/GearboxTestEngine.h
+    src/domain/GearboxTestEngine.cpp
+    src/domain/TestRecipe.h
+    src/domain/TestResults.h
+    src/domain/TestRunState.h
+    src/domain/TelemetrySnapshot.h
+    src/domain/FailureReason.h
+    src/infrastructure/acquisition/TelemetryBuffer.h
+    src/infrastructure/acquisition/DevicePoller.h
+    src/infrastructure/acquisition/AcquisitionScheduler.h
+    src/infrastructure/acquisition/AcquisitionScheduler.cpp
+)
+
+set_target_properties(SimulationRuntimeTests PROPERTIES
+    WIN32_EXECUTABLE FALSE
+)
+
+target_include_directories(SimulationRuntimeTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(SimulationRuntimeTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+# Gearbox Simulation Integration Tests
+qt_add_executable(GearboxSimulationIntegrationTests
+    tests/simulation/GearboxSimulationIntegrationTests.cpp
+    src/infrastructure/config/StationRuntimeFactory.h
+    src/infrastructure/config/StationRuntimeFactory.cpp
+    src/infrastructure/config/StationRuntime.h
+    src/infrastructure/config/StationRuntime.cpp
+    src/infrastructure/config/StationConfig.h
+    src/infrastructure/simulation/SimulationContext.h
+    src/infrastructure/simulation/SimulatedBusController.h
+    src/infrastructure/simulation/SimulatedBusController.cpp
+    src/infrastructure/simulation/SimulatedMotorDevice.h
+    src/infrastructure/simulation/SimulatedMotorDevice.cpp
+    src/infrastructure/simulation/SimulatedTorqueDevice.h
+    src/infrastructure/simulation/SimulatedTorqueDevice.cpp
+    src/infrastructure/simulation/SimulatedEncoderDevice.h
+    src/infrastructure/simulation/SimulatedEncoderDevice.cpp
+    src/infrastructure/simulation/SimulatedBrakeDevice.h
+    src/infrastructure/simulation/SimulatedBrakeDevice.cpp
+    src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/ModbusFrame.h
+    src/infrastructure/bus/ModbusFrame.cpp
+    src/infrastructure/devices/IMotorDriveDevice.h
+    src/infrastructure/devices/ITorqueSensorDevice.h
+    src/infrastructure/devices/IEncoderDevice.h
+    src/infrastructure/devices/IBrakePowerDevice.h
+    src/domain/GearboxTestEngine.h
+    src/domain/GearboxTestEngine.cpp
+    src/domain/TestRecipe.h
+    src/domain/TestResults.h
+    src/domain/TestRunState.h
+    src/domain/TelemetrySnapshot.h
+    src/domain/FailureReason.h
+    src/infrastructure/acquisition/TelemetryBuffer.h
+    src/infrastructure/acquisition/DevicePoller.h
+    src/infrastructure/acquisition/AcquisitionScheduler.h
+    src/infrastructure/acquisition/AcquisitionScheduler.cpp
+)
+
+set_target_properties(GearboxSimulationIntegrationTests PROPERTIES
+    WIN32_EXECUTABLE FALSE
+)
+
+target_include_directories(GearboxSimulationIntegrationTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(GearboxSimulationIntegrationTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
     tests/DomainEngineTests.cpp
     tests/mocks/MockDevices.h
     src/domain/GearboxTestEngine.h
@@ -432,6 +534,9 @@ qt_add_executable(DomainEngineTests
     src/domain/TestRecipe.h
     src/domain/TestResults.h
     src/domain/FailureReason.h
+    src/infrastructure/bus/IBusController.h
+    src/infrastructure/bus/ModbusFrame.h
+    src/infrastructure/bus/ModbusFrame.cpp
     src/infrastructure/devices/IMotorDriveDevice.h
     src/infrastructure/devices/ITorqueSensorDevice.h
     src/infrastructure/devices/IEncoderDevice.h
@@ -511,6 +616,24 @@ add_test(
         $<TARGET_FILE:RecipeViewModelTests> -o - -txt
 )
 
+
+add_test(
+    NAME SimulationRuntimeTests
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+        "QT_QPA_PLATFORM=offscreen"
+        "PATH=${QT_TEST_PATH}"
+        $<TARGET_FILE:SimulationRuntimeTests> -o - -txt
+)
+
+add_test(
+    NAME GearboxSimulationIntegrationTests
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+        "QT_QPA_PLATFORM=offscreen"
+        "PATH=${QT_TEST_PATH}"
+        $<TARGET_FILE:GearboxSimulationIntegrationTests> -o - -txt
+)
 add_test(
     NAME DomainEngineTests
     COMMAND

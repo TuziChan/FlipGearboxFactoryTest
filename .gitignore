@@ -89,3 +89,6 @@ desktop.ini
 # Local reference snapshots
 /Docs/references/shadcn-ui/
 /Docs/drafts/**/.vite/
+
+# SpectrAI worktree isolation
+.spectrai-worktrees/
