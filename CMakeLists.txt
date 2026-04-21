@@ -221,6 +221,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/DataTableCard.qml
         src/ui/components/VerdictPanel.qml
         src/ui/components/PlaceholderPage.qml
+        src/ui/components/MockControlPanel.qml
         src/ui/components/TestExecutionWorkspace.qml
         
         # UI Pages
@@ -346,6 +347,7 @@ target_include_directories(TestExecutionVerification PRIVATE ${CMAKE_CURRENT_SOU
 target_link_libraries(TestExecutionVerification
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
 
@@ -371,6 +373,7 @@ target_include_directories(ProtocolLayerTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(ProtocolLayerTests
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
 
@@ -401,6 +404,7 @@ target_include_directories(BrakePowerConstantVoltageTest PRIVATE ${CMAKE_CURRENT
 target_link_libraries(BrakePowerConstantVoltageTest
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
 
@@ -653,6 +657,7 @@ target_include_directories(DomainEngineTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 target_link_libraries(DomainEngineTests
     PRIVATE
         Qt6::Core
+        Qt6::SerialPort
         Qt6::Test
 )
 

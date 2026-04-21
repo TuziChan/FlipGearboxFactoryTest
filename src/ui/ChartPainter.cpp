@@ -53,7 +53,7 @@ void ChartPainter::drawSeries(QPainter *painter, const QVariantList &values, dou
         if (!ok)
             continue;
 
-        const qreal x = i / static_cast<qreal>(std::max(1, values.size() - 1)) * w;
+        const qreal x = i / static_cast<qreal>(std::max<qsizetype>(1, values.size() - 1)) * w;
         const qreal y = h - 20 - (val / maxValue) * (h - 40);
 
         if (firstPoint) {

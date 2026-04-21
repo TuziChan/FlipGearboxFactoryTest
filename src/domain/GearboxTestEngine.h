@@ -116,6 +116,7 @@ Locked       // Lock confirmed
 LockDetectionState m_lockState;
 QElapsedTimer m_lockTimer;
 double m_lockReferenceAngle;
+bool m_lockConditionMet = false;
 
     // Brake ramp state
     double m_currentBrakeCurrent;

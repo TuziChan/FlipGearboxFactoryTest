@@ -324,7 +324,7 @@ Item {
         resetRun()
         viewModel.loadRecipe(commandBar.modelText)
         viewModel.selectedModel = commandBar.modelText
-        viewModel.setSerialNumber(commandBar.serialNumber)
+        viewModel.serialNumber = commandBar.serialNumber
         viewModel.backlashCompensationDeg = Number.isNaN(backlashDeg) ? 0 : backlashDeg
         viewModel.startTest()
     }

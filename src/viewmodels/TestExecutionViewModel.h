@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QTimer>
 #include <QPointer>
-#include <QMetaObject::Connection>
 #include "../infrastructure/config/StationRuntime.h"
 #include "../infrastructure/config/RuntimeManager.h"
 #include "../domain/TestRecipe.h"
