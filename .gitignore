@@ -87,7 +87,7 @@ desktop.ini
 .playwright-mcp/
 
 # Local reference snapshots
-/Docs/references/shadcn-ui/
+Docs/references/
 /Docs/drafts/**/.vite/
 
 # SpectrAI worktree isolation
@@ -107,3 +107,9 @@ Docs/superpowers/
 
 # Build test outputs
 build-test/
+build-verify/
+build-test-auto/
+
+# Temporary review / implementation reports
+review_report_*.md
+IMPLEMENTATION_REPORT.md
