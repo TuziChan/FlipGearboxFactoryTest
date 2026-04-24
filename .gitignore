@@ -92,3 +92,18 @@ desktop.ini
 
 # SpectrAI worktree isolation
 .spectrai-worktrees/
+
+# Trae IDE configuration
+.trae/
+
+# Editor history backups
+.history/
+
+# Draft documents
+Docs/drafts/
+
+# Outdated superpowers plans and specs
+Docs/superpowers/
+
+# Build test outputs
+build-test/
