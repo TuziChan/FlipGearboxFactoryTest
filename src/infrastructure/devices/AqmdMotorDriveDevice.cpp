@@ -1,6 +1,7 @@
 #include "AqmdMotorDriveDevice.h"
 #include "../bus/ModbusFrame.h"
 #include <QDebug>
+#include <QThread>
 
 namespace Infrastructure {
 namespace Devices {
@@ -180,75 +181,168 @@ QString AqmdMotorDriveDevice::lastError() const {
 
 bool AqmdMotorDriveDevice::writeRegister(uint16_t address, uint16_t value) {
     QByteArray request = Bus::ModbusFrame::buildWriteSingleRegister(m_slaveId, address, value);
-    QByteArray response;
-    
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
-    }
 
-    if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
-        // Check if it's an exception response
-        uint8_t functionCode = static_cast<uint8_t>(response[1]);
-        if (functionCode & 0x80) {
-            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
-            m_lastError = QString("Modbus exception: %1").arg(exception.second);
-        } else {
-            m_lastError = "Invalid write response or CRC error";
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD write register failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD write register failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
         }
-        return false;
+
+        if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
+            // Check if it's an exception response
+            uint8_t functionCode = static_cast<uint8_t>(response[1]);
+            if (functionCode & 0x80) {
+                QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+                m_lastError = QString("Modbus exception: %1").arg(exception.second);
+            } else {
+                m_lastError = "Invalid write response or CRC error";
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD parse write response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD parse write response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("AQMD write register succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool AqmdMotorDriveDevice::writeRegisterSigned(uint16_t address, int16_t value) {
     QByteArray request = Bus::ModbusFrame::buildWriteSingleRegisterSigned(m_slaveId, address, value);
-    QByteArray response;
-    
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
-    }
 
-    uint16_t unsignedValue = static_cast<uint16_t>(value);
-    if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, unsignedValue)) {
-        // Check if it's an exception response
-        uint8_t functionCode = static_cast<uint8_t>(response[1]);
-        if (functionCode & 0x80) {
-            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
-            m_lastError = QString("Modbus exception: %1").arg(exception.second);
-        } else {
-            m_lastError = "Invalid write response or CRC error";
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD write signed register failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD write signed register failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
         }
-        return false;
+
+        uint16_t unsignedValue = static_cast<uint16_t>(value);
+        if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, unsignedValue)) {
+            // Check if it's an exception response
+            uint8_t functionCode = static_cast<uint8_t>(response[1]);
+            if (functionCode & 0x80) {
+                QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+                m_lastError = QString("Modbus exception: %1").arg(exception.second);
+            } else {
+                m_lastError = "Invalid write response or CRC error";
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD parse signed write response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD parse signed write response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("AQMD write signed register succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool AqmdMotorDriveDevice::readRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values) {
     QByteArray request = Bus::ModbusFrame::buildReadHoldingRegisters(m_slaveId, address, count);
-    QByteArray response;
-    
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
-    }
 
-    if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
-        // Check if it's an exception response
-        uint8_t functionCode = static_cast<uint8_t>(response[1]);
-        if (functionCode & 0x80) {
-            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
-            m_lastError = QString("Modbus exception: %1").arg(exception.second);
-        } else {
-            m_lastError = "Invalid read response or CRC error";
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD read registers failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD read registers failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
         }
-        return false;
+
+        if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
+            // Check if it's an exception response
+            uint8_t functionCode = static_cast<uint8_t>(response[1]);
+            if (functionCode & 0x80) {
+                QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+                m_lastError = QString("Modbus exception: %1").arg(exception.second);
+            } else {
+                m_lastError = "Invalid read response or CRC error";
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("AQMD parse read response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("AQMD parse read response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("AQMD read registers succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 } // namespace Devices

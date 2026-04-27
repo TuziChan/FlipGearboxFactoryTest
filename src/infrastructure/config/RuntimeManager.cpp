@@ -1,6 +1,7 @@
 #include "RuntimeManager.h"
 #include "StationRuntimeFactory.h"
 #include <QDebug>
+#include <QMutexLocker>
 
 namespace Infrastructure {
 namespace Config {
@@ -30,25 +31,32 @@ void RuntimeManager::switchMode(bool mockMode) {
 }
 
 void RuntimeManager::recreateRuntime(bool mockMode) {
-    // Shutdown old runtime if exists
-    if (m_runtime) {
-        qDebug() << "Shutting down old runtime...";
-        m_runtime->shutdown();
-        m_runtime.reset();
-    }
-
-    // Create new runtime
+    // Create new runtime first
     qDebug() << "Creating new runtime in" << (mockMode ? "mock" : "real") << "mode...";
-    m_runtime = StationRuntimeFactory::create(m_config, mockMode);
+    auto newRuntime = StationRuntimeFactory::create(m_config, mockMode);
 
     // Initialize the new runtime
-    if (m_runtime) {
+    if (newRuntime) {
         qDebug() << "Initializing new runtime...";
-        if (!m_runtime->initialize()) {
-            qWarning() << "Failed to initialize runtime:" << m_runtime->lastError();
+        if (!newRuntime->initialize()) {
+            qWarning() << "Failed to initialize runtime:" << newRuntime->lastError();
         } else {
             qDebug() << "Runtime initialized successfully";
         }
+    }
+
+    // Critical section: shutdown old runtime and swap atomically
+    {
+        QMutexLocker locker(&m_mutex);
+
+        // Shutdown old runtime if exists (after new one is ready)
+        if (m_runtime) {
+            qDebug() << "Shutting down old runtime...";
+            m_runtime->shutdown();
+        }
+
+        // Atomic swap: replace old runtime with new one
+        m_runtime = std::move(newRuntime);
     }
 }
 

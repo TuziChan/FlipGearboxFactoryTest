@@ -28,8 +28,17 @@ public:
 
 private:
     SimulationContext* m_context;
-    uint64_t m_ai1TransitionTick;
-    static constexpr uint64_t AI1_TRANSITION_DELAY = 75; // Ticks before magnet detected
+
+    // Magnet detection configuration
+    static constexpr double MAGNET_POSITIONS[3] = {3.0, 49.0, 113.5}; // Degrees (absolute)
+    static constexpr double DETECTION_WINDOW = 2.0; // ±2 degrees
+    bool m_magnetLastState[3] = {false, false, false};
+    int m_magnetPassCounts[3] = {0, 0, 0};
+
+    // Helper method for angle-based magnet detection
+    bool isAngleInWindow(double angle, double targetAngle, double window) const;
+    bool isMagnetCrossed(double fromAngle, double toAngle, double magnetPos) const;
+    double normalizeAngle(double angle) const;
 };
 
 } // namespace Simulation

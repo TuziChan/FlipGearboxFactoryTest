@@ -59,12 +59,12 @@ private:
     static constexpr uint16_t COIL_CH1_OUTPUT_ENABLE = 0x0000;
     static constexpr uint16_t COIL_CH2_OUTPUT_ENABLE = 0x0001;
 
-    static constexpr uint16_t REG_CH1_SET_VOLTAGE = 0x0000;
-    static constexpr uint16_t REG_CH2_SET_VOLTAGE = 0x0002;
-    static constexpr uint16_t REG_CH1_READ_VOLTAGE = 0x0000;
-    static constexpr uint16_t REG_CH2_READ_VOLTAGE = 0x0003;
-    static constexpr uint16_t REG_CH1_READ_POWER = 0x0002;
-    static constexpr uint16_t REG_CH2_READ_POWER = 0x0006;
+    static constexpr uint16_t REG_CH1_SET_VOLTAGE = 0x0000;  // ×0.01V
+    static constexpr uint16_t REG_CH2_SET_VOLTAGE = 0x0002;  // ×0.01V
+    static constexpr uint16_t REG_CH1_READ_VOLTAGE = 0x0000; // ×0.01V
+    static constexpr uint16_t REG_CH2_READ_VOLTAGE = 0x0004; // ×0.01V (Fixed: was 0x0003)
+    static constexpr uint16_t REG_CH1_READ_POWER = 0x0002;   // ×0.01W
+    static constexpr uint16_t REG_CH2_READ_POWER = 0x0006;   // ×0.01W
     static constexpr uint16_t REG_MODE = 0x0009;
 
     bool readHoldingRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values);

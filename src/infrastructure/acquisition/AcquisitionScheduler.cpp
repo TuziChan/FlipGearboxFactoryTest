@@ -123,14 +123,22 @@ Domain::TelemetrySnapshot AcquisitionScheduler::snapshot() const {
 
     snap.motorCurrentA = m_buffer.motor.currentA.load();
     snap.aqmdAi1Level = m_buffer.motor.ai1Level.load();
+    snap.motorOnline = m_buffer.motor.valid.load();
 
     snap.dynTorqueNm = m_buffer.torque.torqueNm.load();
     snap.dynSpeedRpm = m_buffer.torque.speedRpm.load();
     snap.dynPowerW = m_buffer.torque.powerW.load();
+    snap.torqueOnline = m_buffer.torque.valid.load();
 
     snap.encoderAngleDeg = m_buffer.encoder.angleDeg.load();
+    snap.encoderTotalAngleDeg = m_buffer.encoder.totalAngleDeg.load();
+    snap.encoderVelocityRpm = m_buffer.encoder.velocityRpm.load();
+    snap.encoderOnline = m_buffer.encoder.valid.load();
 
     snap.brakeCurrentA = m_buffer.brake.currentA.load();
+    snap.brakeVoltageV = m_buffer.brake.voltageV.load();
+    snap.brakePowerW = m_buffer.brake.powerW.load();
+    snap.brakeOnline = m_buffer.brake.valid.load();
 
     return snap;
 }

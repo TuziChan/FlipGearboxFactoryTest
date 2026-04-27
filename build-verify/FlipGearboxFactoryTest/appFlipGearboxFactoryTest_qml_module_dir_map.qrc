@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/">
-    <file alias="/qt/qml/FlipGearboxFactoryTest">E:/Work/FlipGearboxFactoryTest/build-verify/FlipGearboxFactoryTest</file>
-
-  </qresource>
-</RCC>

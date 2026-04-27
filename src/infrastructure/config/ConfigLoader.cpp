@@ -42,46 +42,53 @@ bool ConfigLoader::loadStationConfig(const QString& filePath, StationConfig& con
     config.brakeChannel = json["brakeChannel"].toInt(1);
     config.defaultRecipe = json["defaultRecipe"].toString();
 
+    // Use config object values as fallback (already initialized by StationConfig constructor)
+    // to ensure consistency with device manual specifications.
+
     QJsonObject aqmd = json["aqmd"].toObject();
-    config.aqmdConfig.portName = aqmd["portName"].toString();
-    config.aqmdConfig.slaveId = static_cast<uint8_t>(aqmd["slaveId"].toInt(1));
-    config.aqmdConfig.baudRate = aqmd["baudRate"].toInt(9600);
-    config.aqmdConfig.timeout = aqmd["timeout"].toInt(500);
-    config.aqmdConfig.parity = aqmd["parity"].toString("None");
-    config.aqmdConfig.stopBits = aqmd["stopBits"].toInt(1);
-    config.aqmdConfig.enabled = aqmd["enabled"].toBool(true);
-    config.aqmdConfig.pollIntervalUs = aqmd["pollIntervalUs"].toInt(5000);
+    config.aqmdConfig.portName = aqmd["portName"].toString(config.aqmdConfig.portName);
+    config.aqmdConfig.slaveId = static_cast<uint8_t>(aqmd["slaveId"].toInt(config.aqmdConfig.slaveId));
+    config.aqmdConfig.baudRate = aqmd["baudRate"].toInt(config.aqmdConfig.baudRate);
+    config.aqmdConfig.timeout = aqmd["timeout"].toInt(config.aqmdConfig.timeout);
+    config.aqmdConfig.parity = aqmd["parity"].toString(config.aqmdConfig.parity);
+    config.aqmdConfig.stopBits = aqmd["stopBits"].toInt(config.aqmdConfig.stopBits);
+    config.aqmdConfig.enabled = aqmd["enabled"].toBool(config.aqmdConfig.enabled);
+    config.aqmdConfig.pollIntervalUs = aqmd["pollIntervalUs"].toInt(config.aqmdConfig.pollIntervalUs);
+    config.aqmdConfig.communicationMode = aqmd["communicationMode"].toInt(config.aqmdConfig.communicationMode);
 
     QJsonObject dyn200 = json["dyn200"].toObject();
-    config.dyn200Config.portName = dyn200["portName"].toString();
-    config.dyn200Config.slaveId = static_cast<uint8_t>(dyn200["slaveId"].toInt(2));
-    config.dyn200Config.baudRate = dyn200["baudRate"].toInt(9600);
-    config.dyn200Config.timeout = dyn200["timeout"].toInt(300);
-    config.dyn200Config.parity = dyn200["parity"].toString("None");
-    config.dyn200Config.stopBits = dyn200["stopBits"].toInt(1);
-    config.dyn200Config.enabled = dyn200["enabled"].toBool(true);
-    config.dyn200Config.pollIntervalUs = dyn200["pollIntervalUs"].toInt(5000);
+    config.dyn200Config.portName = dyn200["portName"].toString(config.dyn200Config.portName);
+    config.dyn200Config.slaveId = static_cast<uint8_t>(dyn200["slaveId"].toInt(config.dyn200Config.slaveId));
+    config.dyn200Config.baudRate = dyn200["baudRate"].toInt(config.dyn200Config.baudRate);
+    config.dyn200Config.timeout = dyn200["timeout"].toInt(config.dyn200Config.timeout);
+    config.dyn200Config.parity = dyn200["parity"].toString(config.dyn200Config.parity);
+    config.dyn200Config.stopBits = dyn200["stopBits"].toInt(config.dyn200Config.stopBits);
+    config.dyn200Config.enabled = dyn200["enabled"].toBool(config.dyn200Config.enabled);
+    config.dyn200Config.pollIntervalUs = dyn200["pollIntervalUs"].toInt(config.dyn200Config.pollIntervalUs);
+    config.dyn200Config.communicationMode = dyn200["communicationMode"].toInt(config.dyn200Config.communicationMode);
 
     QJsonObject encoder = json["encoder"].toObject();
-    config.encoderConfig.portName = encoder["portName"].toString();
-    config.encoderConfig.slaveId = static_cast<uint8_t>(encoder["slaveId"].toInt(3));
-    config.encoderConfig.baudRate = encoder["baudRate"].toInt(9600);
-    config.encoderConfig.timeout = encoder["timeout"].toInt(200);
-    config.encoderConfig.parity = encoder["parity"].toString("None");
-    config.encoderConfig.stopBits = encoder["stopBits"].toInt(1);
-    config.encoderConfig.encoderResolution = static_cast<uint16_t>(encoder["resolution"].toInt(4096));
-    config.encoderConfig.enabled = encoder["enabled"].toBool(true);
-    config.encoderConfig.pollIntervalUs = encoder["pollIntervalUs"].toInt(5000);
+    config.encoderConfig.portName = encoder["portName"].toString(config.encoderConfig.portName);
+    config.encoderConfig.slaveId = static_cast<uint8_t>(encoder["slaveId"].toInt(config.encoderConfig.slaveId));
+    config.encoderConfig.baudRate = encoder["baudRate"].toInt(config.encoderConfig.baudRate);
+    config.encoderConfig.timeout = encoder["timeout"].toInt(config.encoderConfig.timeout);
+    config.encoderConfig.parity = encoder["parity"].toString(config.encoderConfig.parity);
+    config.encoderConfig.stopBits = encoder["stopBits"].toInt(config.encoderConfig.stopBits);
+    config.encoderConfig.encoderResolution = static_cast<uint16_t>(encoder["resolution"].toInt(config.encoderConfig.encoderResolution));
+    config.encoderConfig.enabled = encoder["enabled"].toBool(config.encoderConfig.enabled);
+    config.encoderConfig.pollIntervalUs = encoder["pollIntervalUs"].toInt(config.encoderConfig.pollIntervalUs);
+    config.encoderConfig.communicationMode = encoder["communicationMode"].toInt(config.encoderConfig.communicationMode);
 
     QJsonObject brake = json["brake"].toObject();
-    config.brakeConfig.portName = brake["portName"].toString();
-    config.brakeConfig.slaveId = static_cast<uint8_t>(brake["slaveId"].toInt(4));
-    config.brakeConfig.baudRate = brake["baudRate"].toInt(9600);
-    config.brakeConfig.timeout = brake["timeout"].toInt(500);
-    config.brakeConfig.parity = brake["parity"].toString("None");
-    config.brakeConfig.stopBits = brake["stopBits"].toInt(1);
-    config.brakeConfig.enabled = brake["enabled"].toBool(true);
-    config.brakeConfig.pollIntervalUs = brake["pollIntervalUs"].toInt(5000);
+    config.brakeConfig.portName = brake["portName"].toString(config.brakeConfig.portName);
+    config.brakeConfig.slaveId = static_cast<uint8_t>(brake["slaveId"].toInt(config.brakeConfig.slaveId));
+    config.brakeConfig.baudRate = brake["baudRate"].toInt(config.brakeConfig.baudRate);
+    config.brakeConfig.timeout = brake["timeout"].toInt(config.brakeConfig.timeout);
+    config.brakeConfig.parity = brake["parity"].toString(config.brakeConfig.parity);
+    config.brakeConfig.stopBits = brake["stopBits"].toInt(config.brakeConfig.stopBits);
+    config.brakeConfig.enabled = brake["enabled"].toBool(config.brakeConfig.enabled);
+    config.brakeConfig.pollIntervalUs = brake["pollIntervalUs"].toInt(config.brakeConfig.pollIntervalUs);
+    config.brakeConfig.communicationMode = brake["communicationMode"].toInt(config.brakeConfig.communicationMode);
     config.brakeChannel = brake["channel"].toInt(config.brakeChannel);
 
     return true;

@@ -2,6 +2,7 @@
 #define RUNTIMEMANAGER_H
 
 #include <QObject>
+#include <QMutex>
 #include <memory>
 #include "StationRuntime.h"
 #include "StationConfig.h"
@@ -20,7 +21,10 @@ public:
     explicit RuntimeManager(const StationConfig& config, bool initialMockMode, QObject* parent = nullptr);
     ~RuntimeManager() override = default;
 
-    StationRuntime* runtime() const { return m_runtime.get(); }
+    StationRuntime* runtime() const {
+        QMutexLocker locker(&m_mutex);
+        return m_runtime.get();
+    }
     bool isMockMode() const { return m_isMockMode; }
 
     Q_INVOKABLE void switchMode(bool mockMode);
@@ -33,6 +37,7 @@ private:
     StationConfig m_config;
     std::unique_ptr<StationRuntime> m_runtime;
     bool m_isMockMode;
+    mutable QMutex m_mutex;  // Protects m_runtime access
 
     void recreateRuntime(bool mockMode);
 };

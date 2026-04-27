@@ -183,7 +183,7 @@ Rectangle {
                 model: [
                     { angle: "3°", label: "磁铁①", active: false },
                     { angle: "49°", label: "磁铁②", active: false },
-                    { angle: "113°", label: "磁铁③", active: false }
+                    { angle: "113.5°", label: "磁铁③", active: false }
                 ]
 
                 delegate: Rectangle {

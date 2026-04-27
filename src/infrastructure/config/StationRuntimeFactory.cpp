@@ -134,6 +134,11 @@ std::unique_ptr<StationRuntime> StationRuntimeFactory::create(const StationConfi
     }
     runtime->m_testEngine->setAcquisitionScheduler(runtime->m_acquisitionScheduler.get());
 
+    // In mock mode, inject simulation context so the engine advances physics once per tick
+    if (mockMode && runtime->m_simulationContext) {
+        runtime->m_testEngine->setSimulationContext(runtime->m_simulationContext.get());
+    }
+
     qDebug() << "Station runtime created successfully";
     return runtime;
 }

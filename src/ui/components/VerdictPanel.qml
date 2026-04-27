@@ -21,6 +21,8 @@ Item {
 
     objectName: "verdictPanel"
 
+    Component.onCompleted: console.log("[StartupTrace] VerdictPanel completed")
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 16
@@ -68,10 +70,9 @@ Item {
                         font.bold: true
                     }
 
-                    Text {
-                        text: root.running ? "测试进行中" : root.phaseTitle
-                        color: root.theme.textSecondary
-                        font.pixelSize: 11
+                    Item {
+                        width: 1
+                        height: 0
                     }
                 }
             }

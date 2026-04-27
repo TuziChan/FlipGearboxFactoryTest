@@ -1,196 +1,266 @@
-<p align="center">
-  <img src="docs/assets/banner.jpg" alt="Multica — humans and agents, side by side" width="100%">
-</p>
+# FlipGearboxFactoryTest
 
-<div align="center">
+**Gearbox Factory Test System** - Industrial automation testing platform based on Qt6
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg">
-  <img alt="Multica" src="docs/assets/logo-light.svg" width="50">
-</picture>
+## Overview
 
-# Multica
+FlipGearboxFactoryTest is an automated quality inspection system for gearbox manufacturing, providing:
 
-**Your next 10 hires won't be human.**
+- **Multi-device coordination**: Motor drive, torque sensor, encoder, brake power supply
+- **Modbus RTU protocol**: RS485 industrial communication
+- **Complete test workflow**: Homing, idle, angle positioning, load testing
+- **Real-time data acquisition**: High-frequency telemetry and visualization
+- **Mock mode simulation**: Hardware-free development and testing
 
-The open-source managed agents platform.<br/>
-Turn coding agents into real teammates — assign tasks, track progress, compound skills.
+## Technology Stack
 
-[![CI](https://github.com/multica-ai/multica/actions/workflows/ci.yml/badge.svg)](https://github.com/multica-ai/multica/actions/workflows/ci.yml)
-[![GitHub stars](https://img.shields.io/github/stars/multica-ai/multica?style=flat)](https://github.com/multica-ai/multica/stargazers)
+- **UI Framework**: Qt 6.11 (QML + Qt Quick)
+- **Language**: C++20
+- **Build System**: CMake 3.16+
+- **Communication**: Modbus RTU (RS485)
+- **Architecture**: MVVM (Model-View-ViewModel)
 
-[Website](https://multica.ai) · [Cloud](https://multica.ai/app) · [X](https://x.com/MulticaAI) · [Self-Hosting](SELF_HOSTING.md) · [Contributing](CONTRIBUTING.md)
+## Quick Start
 
-**English | [简体中文](README.zh-CN.md)**
+### Prerequisites
 
-</div>
+- Qt 6.11+ with Qt Quick and Qt SerialPort
+- CMake 3.16+
+- MinGW 13.1.0+ (Windows) or GCC/Clang (Linux)
+- C++20 compatible compiler
 
-## What is Multica?
-
-Multica turns coding agents into real teammates. Assign issues to an agent like you'd assign to a colleague — they'll pick up the work, write code, report blockers, and update statuses autonomously.
-
-No more copy-pasting prompts. No more babysitting runs. Your agents show up on the board, participate in conversations, and compound reusable skills over time. Think of it as open-source infrastructure for managed agents — vendor-neutral, self-hosted, and designed for human + AI teams. Works with **Claude Code**, **Codex**, **OpenClaw**, **OpenCode**, **Hermes**, **Gemini**, **Pi**, and **Cursor Agent**.
-
-<p align="center">
-  <img src="docs/assets/hero-screenshot.png" alt="Multica board view" width="800">
-</p>
-
-## Features
-
-Multica manages the full agent lifecycle: from task assignment to execution monitoring to skill reuse.
-
-- **Agents as Teammates** — assign to an agent like you'd assign to a colleague. They have profiles, show up on the board, post comments, create issues, and report blockers proactively.
-- **Autonomous Execution** — set it and forget it. Full task lifecycle management (enqueue, claim, start, complete/fail) with real-time progress streaming via WebSocket.
-- **Reusable Skills** — every solution becomes a reusable skill for the whole team. Deployments, migrations, code reviews — skills compound your team's capabilities over time.
-- **Unified Runtimes** — one dashboard for all your compute. Local daemons and cloud runtimes, auto-detection of available CLIs, real-time monitoring.
-- **Multi-Workspace** — organize work across teams with workspace-level isolation. Each workspace has its own agents, issues, and settings.
-
----
-
-## Quick Install
-
-### macOS / Linux (Homebrew - recommended)
+### Build
 
 ```bash
-brew install multica-ai/tap/multica
+# Configure
+cmake -S . -B build -G "MinGW Makefiles"
+
+# Build
+cmake --build build
+
+# Run
+.\build\appFlipGearboxFactoryTest.exe
 ```
 
-Use `brew upgrade multica-ai/tap/multica` to keep the CLI current.
-
-### macOS / Linux (install script)
+### Run Tests
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash
+# Run all tests
+ctest --test-dir build --output-on-failure
+
+# Run specific test
+.\build\DomainEngineTests.exe
 ```
-
-Use this if Homebrew is not available. The script installs the Multica CLI on macOS and Linux by using Homebrew when it is on `PATH`, otherwise it downloads the binary directly.
-
-### Windows (PowerShell)
-
-```powershell
-irm https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.ps1 | iex
-```
-
-Then configure, authenticate, and start the daemon in one command:
-
-```bash
-multica setup          # Connect to Multica Cloud, log in, start daemon
-```
-
-> **Self-hosting?** Add `--with-server` to deploy a full Multica server on your machine:
->
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server
-> multica setup self-host
-> ```
->
-> Requires Docker. See the [Self-Hosting Guide](SELF_HOSTING.md) for details.
-
----
-
-## Getting Started
-
-### 1. Set up and start the daemon
-
-```bash
-multica setup           # Configure, authenticate, and start the daemon
-```
-
-The daemon runs in the background and auto-detects agent CLIs (`claude`, `codex`, `openclaw`, `opencode`, `hermes`, `gemini`, `pi`, `cursor-agent`) on your PATH.
-
-### 2. Verify your runtime
-
-Open your workspace in the Multica web app. Navigate to **Settings → Runtimes** — you should see your machine listed as an active **Runtime**.
-
-> **What is a Runtime?** A Runtime is a compute environment that can execute agent tasks. It can be your local machine (via the daemon) or a cloud instance. Each runtime reports which agent CLIs are available, so Multica knows where to route work.
-
-### 3. Create an agent
-
-Go to **Settings → Agents** and click **New Agent**. Pick the runtime you just connected and choose a provider (Claude Code, Codex, OpenClaw, OpenCode, Hermes, Gemini, Pi, or Cursor Agent). Give your agent a name — this is how it will appear on the board, in comments, and in assignments.
-
-### 4. Assign your first task
-
-Create an issue from the board (or via `multica issue create`), then assign it to your new agent. The agent will automatically pick up the task, execute it on your runtime, and report progress — just like a human teammate.
-
----
-
-## Multica vs Paperclip
-
-| | Multica | Paperclip |
-|---|---------|-----------|
-| **Focus** | Team AI agent collaboration platform | Solo AI agent company simulator |
-| **User model** | Multi-user teams with roles & permissions | Single board operator |
-| **Agent interaction** | Issues + Chat conversations | Issues + Heartbeat |
-| **Deployment** | Cloud-first | Local-first |
-| **Management depth** | Lightweight (Issues / Projects / Labels) | Heavy governance (Org chart / Approvals / Budgets) |
-| **Extensibility** | Skills system | Skills + Plugin system |
-
-**TL;DR — Multica is built for teams that want to collaborate with AI agents on real projects together.**
-
----
-
-## CLI
-
-The `multica` CLI connects your local machine to Multica — authenticate, manage workspaces, and run the agent daemon.
-
-| Command | Description |
-|---------|-------------|
-| `multica login` | Authenticate (opens browser) |
-| `multica daemon start` | Start the local agent runtime |
-| `multica daemon status` | Check daemon status |
-| `multica setup` | One-command setup for Multica Cloud (configure + login + start daemon) |
-| `multica setup self-host` | Same, but for self-hosted deployments |
-| `multica issue list` | List issues in your workspace |
-| `multica issue create` | Create a new issue |
-| `multica update` | Update to the latest version |
-
-See the [CLI and Daemon Guide](CLI_AND_DAEMON.md) for the full command reference.
-
----
 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────────┐
-│   Next.js    │────>│  Go Backend  │────>│   PostgreSQL     │
-│   Frontend   │<────│  (Chi + WS)  │<────│   (pgvector)     │
-└──────────────┘     └──────┬───────┘     └──────────────────┘
-                            │
-                     ┌──────┴───────┐
-                     │ Agent Daemon │  runs on your machine
-                     └──────────────┘  (Claude Code, Codex, OpenCode,
-                                        OpenClaw, Hermes, Gemini,
-                                        Pi, Cursor Agent)
+┌─────────────────────────────────────────────────────────┐
+│                      UI Layer (QML)                     │
+│  TestExecutionPage │ RecipePage │ DiagnosticsPage      │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│                  ViewModel Layer (C++)                  │
+│  TestExecutionViewModel │ RecipeViewModel │ ...         │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│                   Domain Layer (C++)                    │
+│  GearboxTestEngine (33ms cycle, state machine)          │
+│  TestRecipe │ TestResults │ TelemetrySnapshot           │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│              Infrastructure Layer (C++)                 │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Device Implementations                           │  │
+│  │  AqmdMotorDriveDevice │ Dyn200TorqueSensorDevice │  │
+│  │  SingleTurnEncoderDevice │ BrakePowerSupplyDevice│  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Bus Communication                                │  │
+│  │  ModbusRtuBusController │ ModbusFrame            │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Configuration & Services                         │  │
+│  │  StationRuntime │ ConfigLoader │ RecipeService   │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-| Layer | Stack |
-|-------|-------|
-| Frontend | Next.js 16 (App Router) |
-| Backend | Go (Chi router, sqlc, gorilla/websocket) |
-| Database | PostgreSQL 17 with pgvector |
-| Agent Runtime | Local daemon executing Claude Code, Codex, OpenClaw, OpenCode, Hermes, Gemini, Pi, or Cursor Agent |
+## Supported Devices
+
+| Device | Model | Protocol | Function |
+|--------|-------|----------|----------|
+| Motor Drive | AQMD3610NS-A2 | Modbus RTU | Speed control, magnet detection |
+| Torque Sensor | DYN200 | Modbus RTU | Torque, speed, power measurement |
+| Encoder | Single-turn absolute | Modbus RTU | Angle positioning |
+| Brake Power | Dual-channel DC supply | Modbus RTU | Load simulation |
+
+## Test Workflow
+
+1. **Homing Phase**: Detect magnet position and set encoder zero
+2. **Idle Phase**: Stabilize at low speed, verify baseline torque
+3. **Angle Phase**: Position to target angle, verify accuracy
+4. **Load Phase**: Apply brake load, measure torque and lock detection
+5. **Return Phase**: Return to home position
+
+## Project Status
+
+**Current Progress**: ~70% Complete
+
+✅ **Completed**:
+- Infrastructure layer (bus, devices, config)
+- Domain layer (test engine, state machine)
+- ViewModel layer (MVVM binding)
+- Mock/simulation framework
+- Comprehensive test suite
+
+🚧 **In Progress**:
+- Hardware validation
+- Report generation
+- Logging system
+
+See [IMPLEMENTATION_PROGRESS.md](IMPLEMENTATION_PROGRESS.md) for detailed status.
+
+## Documentation
+
+- **[User Manual](Docs/USER_MANUAL.md)** - Operation guide
+- **[Deployment Guide](Docs/DEPLOYMENT_GUIDE.md)** - Installation and setup
+- **[Troubleshooting](Docs/TROUBLESHOOTING.md)** - Common issues
+- **[Mock Mode Guide](Docs/MOCK_MODE_GUIDE.md)** - Simulation usage
+- **[Device Register Reference](Docs/Device_Register_Reference_Guide.md)** - Hardware specs
+
+## Configuration
+
+### Station Configuration
+
+Edit `config/station.json`:
+
+```json
+{
+  "stationId": "STATION-001",
+  "devices": {
+    "motor": {
+      "type": "AQMD3610NS-A2",
+      "slaveId": 1,
+      "serialPort": "COM3"
+    },
+    "torqueSensor": {
+      "type": "DYN200",
+      "slaveId": 2,
+      "serialPort": "COM4"
+    }
+  }
+}
+```
+
+### Recipe Configuration
+
+Edit `config/recipes/GBX-42A.json`:
+
+```json
+{
+  "recipeId": "GBX-42A",
+  "homingSpeed": 50,
+  "idleSpeed": 100,
+  "targetAngle": 180.0,
+  "loadTorque": 5.0,
+  "lockThreshold": 0.5
+}
+```
 
 ## Development
 
-For contributors working on the Multica codebase, see the [Contributing Guide](CONTRIBUTING.md).
+### Code Structure
 
-**Prerequisites:** [Node.js](https://nodejs.org/) v20+, [pnpm](https://pnpm.io/) v10.28+, [Go](https://go.dev/) v1.26+, [Docker](https://www.docker.com/)
-
-```bash
-make dev
+```
+src/
+├── domain/              # Business logic (test engine, recipes)
+├── infrastructure/      # Technical implementation
+│   ├── bus/            # Modbus RTU communication
+│   ├── devices/        # Device drivers
+│   ├── config/         # Configuration system
+│   ├── simulation/     # Mock devices
+│   └── services/       # Application services
+├── viewmodels/         # MVVM view models
+└── ui/                 # QML components and pages
 ```
 
-`make dev` auto-detects your environment (main checkout or worktree), creates the env file, installs dependencies, sets up the database, runs migrations, and starts all services.
+### Running in Mock Mode
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development workflow, worktree support, testing, and troubleshooting.
+The application automatically uses mock devices when real hardware is unavailable:
 
-## Star History
+```cpp
+// In main.cpp
+auto runtime = StationRuntimeFactory::create(config);
+// Falls back to simulation if serial ports unavailable
+```
 
-<a href="https://www.star-history.com/?repos=multica-ai%2Fmultica&type=date&legend=bottom-right">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-  </picture>
-</a>
+### Adding a New Device
+
+1. Define interface in `src/infrastructure/devices/IYourDevice.h`
+2. Implement driver in `src/infrastructure/devices/YourDevice.cpp`
+3. Add mock in `src/infrastructure/simulation/MockYourDevice.cpp`
+4. Register in `StationRuntimeFactory`
+
+## Testing
+
+### Test Categories
+
+- **Unit Tests**: Domain logic, protocol parsing
+- **Integration Tests**: Device communication, state machine
+- **UI Tests**: QML component rendering
+- **Simulation Tests**: Mock device behavior
+
+### Test Coverage
+
+```bash
+# Run all tests with coverage
+cmake --build build --target run-all-tests
+
+# Run specific test suite
+.\build\DomainEngineTests.exe
+.\build\ProtocolLayerTests.exe
+.\build\SimulationRuntimeTests.exe
+```
+
+## Troubleshooting
+
+### Serial Port Access
+
+**Windows**: Ensure COM ports are not in use by other applications
+
+**Linux**: Add user to `dialout` group:
+```bash
+sudo usermod -a -G dialout $USER
+```
+
+### Build Issues
+
+**Qt not found**: Set `CMAKE_PREFIX_PATH`:
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH=F:/Qt/6.11.0/mingw_64
+```
+
+**MinGW linker errors**: Ensure MinGW bin directory is in PATH
+
+See [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) for more solutions.
+
+## License
+
+[To be determined]
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- Code follows C++20 standards
+- All tests pass before submitting PR
+- QML components follow AppTheme conventions
+- Device implementations include mock counterparts
+
+---
+
+**Project Version**: 0.1  
+**Last Updated**: 2026-04-24

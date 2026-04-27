@@ -111,15 +111,15 @@ void MockBrakeDevice::updateChannelOutput(int channel) {
         }
     }
 
-    // Update input registers (×100 for voltage/current, ×10 for power)
+    // Update input registers (×100 for voltage/current/power)
     if (channel == 1) {
         setInputRegister(REG_CH1_READ_VOLTAGE, static_cast<uint16_t>(actualVoltageV * 100.0));
         setInputRegister(REG_CH1_READ_CURRENT, static_cast<uint16_t>(actualCurrentA * 100.0));
-        setInputRegister(REG_CH1_READ_POWER, static_cast<uint16_t>(actualPowerW * 10.0));
+        setInputRegister(REG_CH1_READ_POWER, static_cast<uint16_t>(actualPowerW * 100.0));
     } else {
         setInputRegister(REG_CH2_READ_VOLTAGE, static_cast<uint16_t>(actualVoltageV * 100.0));
         setInputRegister(REG_CH2_READ_CURRENT, static_cast<uint16_t>(actualCurrentA * 100.0));
-        setInputRegister(REG_CH2_READ_POWER, static_cast<uint16_t>(actualPowerW * 10.0));
+        setInputRegister(REG_CH2_READ_POWER, static_cast<uint16_t>(actualPowerW * 100.0));
     }
 }
 

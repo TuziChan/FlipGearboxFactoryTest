@@ -28,8 +28,8 @@ Enhanced MockMotorDevice and MockEncoderDevice now support realistic magnet dete
 MockMotorDevice* motor = new MockMotorDevice();
 MockEncoderDevice* encoder = new MockEncoderDevice();
 
-// Configure magnet positions (3°, 49°, 113°)
-motor->setMagnetPositions({3.0, 49.0, 113.0});
+// Configure magnet positions (3°, 49°, 113.5°)
+motor->setMagnetPositions({3.0, 49.0, 113.5});
 
 // Link encoder angle to motor for automatic detection
 motor->linkEncoderAngle(&encoder->mockAngleDeg);
@@ -114,12 +114,12 @@ motor->setMagnetDetectionEnabled(true);
 MockMotorDevice* motor = new MockMotorDevice();
 MockEncoderDevice* encoder = new MockEncoderDevice();
 
-motor->setMagnetPositions({3.0, 49.0, 113.0});
+motor->setMagnetPositions({3.0, 49.0, 113.5});
 motor->linkEncoderAngle(&encoder->mockAngleDeg);
 motor->setMagnetDetectionEnabled(true);
 
 // Simulate angle test sequence
-QVector<double> targetAngles = {3.0, 49.0, 3.0, 113.0, 0.0};
+QVector<double> targetAngles = {3.0, 49.0, 3.0, 113.5, 0.0};
 bool lastLevel = true;
 
 for (double targetAngle : targetAngles) {
@@ -145,7 +145,7 @@ for (double targetAngle : targetAngles) {
 // Verify results
 QCOMPARE(motor->getMagnetPassCount(0), 2);  // 3° passed twice
 QCOMPARE(motor->getMagnetPassCount(1), 1);  // 49° passed once
-QCOMPARE(motor->getMagnetPassCount(2), 1);  // 113° passed once
+QCOMPARE(motor->getMagnetPassCount(2), 1);  // 113.5° passed once
 ```
 
 ## Edge Cases Handled
@@ -190,7 +190,7 @@ MockMotorDevice* motor = new MockMotorDevice();
 MockEncoderDevice* encoder = new MockEncoderDevice();
 
 // Setup magnet detection
-motor->setMagnetPositions({3.0, 49.0, 113.0});
+motor->setMagnetPositions({3.0, 49.0, 113.5});
 motor->linkEncoderAngle(&encoder->mockAngleDeg);
 motor->setMagnetDetectionEnabled(true);
 
@@ -230,7 +230,7 @@ bool wasDetected = (motor->getMagnetPassCount(0) > 0);
 ## Configuration Reference
 
 ### MockMotorDevice Properties
-- `magnetPositionsDeg` - QVector of magnet angles (default: {3.0, 49.0, 113.0})
+- `magnetPositionsDeg` - QVector of magnet angles (default: {3.0, 49.0, 113.5})
 - `magnetDetectionWindowDeg` - Detection tolerance (default: 0.5°)
 - `enableMagnetDetection` - Enable/disable detection (default: false)
 - `linkedEncoderAngle` - Pointer to encoder angle for auto-detection

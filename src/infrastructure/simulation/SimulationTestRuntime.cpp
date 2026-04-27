@@ -30,6 +30,7 @@ SimulationTestRuntime::SimulationTestRuntime(QObject* parent)
         m_encoder.get(),
         m_brake.get()
     );
+    m_testEngine->setSimulationContext(m_context.get());
     
     qDebug() << "SimulationTestRuntime created";
 }

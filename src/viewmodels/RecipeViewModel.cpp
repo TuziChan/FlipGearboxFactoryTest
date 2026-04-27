@@ -70,7 +70,6 @@ bool RecipeViewModel::saveEdit() {
     m_editingDirty = false;
     emit editingDirtyChanged();
 
-    loadAll();
     return true;
 }
 
@@ -169,8 +168,18 @@ bool RecipeViewModel::validateEditingRecipe() {
     if (!checkRange("idleDutyCycle", 0.0, 100.0)) return false;
     if (!checkRange("angleTestDutyCycle", 0.0, 100.0)) return false;
     if (!checkRange("loadDutyCycle", 0.0, 100.0)) return false;
+    if (!checkRange("impactDutyCycle", 0.0, 100.0)) return false;
     if (!checkPositive("homeTimeoutMs")) return false;
     if (!checkPositive("angleTimeoutMs")) return false;
+
+    // Impact test validation (only when enabled)
+    if (m_editingRecipe.value("impactTestEnabled").toBool()) {
+        if (!checkPositive("impactSpinupMs")) return false;
+        if (!checkRange("impactCycles", 1.0, 100.0)) return false;
+        if (!checkPositive("impactBrakeCurrentA")) return false;
+        if (!checkPositive("impactBrakeOnMs")) return false;
+        if (!checkPositive("impactBrakeOffMs")) return false;
+    }
 
     return true;
 }

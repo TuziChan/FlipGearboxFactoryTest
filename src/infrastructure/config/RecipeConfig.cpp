@@ -77,7 +77,26 @@ Domain::TestRecipe RecipeConfig::fromJson(const QJsonObject& json) {
     recipe.loadReverseTorqueMin = readDouble(json, "loadReverseTorqueMin", recipe.loadReverseTorqueMin);
     recipe.loadReverseTorqueMax = readDouble(json, "loadReverseTorqueMax", recipe.loadReverseTorqueMax);
     recipe.returnZeroTimeoutMs = readInt(json, "returnZeroTimeoutMs", recipe.returnZeroTimeoutMs);
+    recipe.settlingAngleMoveMs = readInt(json, "settlingAngleMoveMs", recipe.settlingAngleMoveMs);
+    recipe.settlingPhaseChangeMs = readInt(json, "settlingPhaseChangeMs", recipe.settlingPhaseChangeMs);
     recipe.gearBacklashCompensationDeg = readDouble(json, "gearBacklashCompensationDeg", recipe.gearBacklashCompensationDeg);
+    recipe.serialNumberRule = json.value("serialNumberRule").isString() ? json.value("serialNumberRule").toString() : recipe.serialNumberRule;
+    recipe.impactTestEnabled = json.value("impactTestEnabled").isBool() ? json.value("impactTestEnabled").toBool() : recipe.impactTestEnabled;
+    recipe.impactDutyCycle = readDouble(json, "impactDutyCycle", recipe.impactDutyCycle);
+    recipe.impactSpinupMs = readInt(json, "impactSpinupMs", recipe.impactSpinupMs);
+    recipe.impactCycles = readInt(json, "impactCycles", recipe.impactCycles);
+    recipe.impactBrakeCurrentA = readDouble(json, "impactBrakeCurrentA", recipe.impactBrakeCurrentA);
+    recipe.impactBrakeOnMs = readInt(json, "impactBrakeOnMs", recipe.impactBrakeOnMs);
+    recipe.impactBrakeOffMs = readInt(json, "impactBrakeOffMs", recipe.impactBrakeOffMs);
+    recipe.impactTimeoutMs = readInt(json, "impactTimeoutMs", recipe.impactTimeoutMs);
+    recipe.impactForwardCurrentMin = readDouble(json, "impactForwardCurrentMin", recipe.impactForwardCurrentMin);
+    recipe.impactForwardCurrentMax = readDouble(json, "impactForwardCurrentMax", recipe.impactForwardCurrentMax);
+    recipe.impactForwardTorqueMin = readDouble(json, "impactForwardTorqueMin", recipe.impactForwardTorqueMin);
+    recipe.impactForwardTorqueMax = readDouble(json, "impactForwardTorqueMax", recipe.impactForwardTorqueMax);
+    recipe.impactReverseCurrentMin = readDouble(json, "impactReverseCurrentMin", recipe.impactReverseCurrentMin);
+    recipe.impactReverseCurrentMax = readDouble(json, "impactReverseCurrentMax", recipe.impactReverseCurrentMax);
+    recipe.impactReverseTorqueMin = readDouble(json, "impactReverseTorqueMin", recipe.impactReverseTorqueMin);
+    recipe.impactReverseTorqueMax = readDouble(json, "impactReverseTorqueMax", recipe.impactReverseTorqueMax);
     return recipe;
 }
 
@@ -142,7 +161,26 @@ QJsonObject RecipeConfig::toJson(const Domain::TestRecipe& recipe) {
     json["loadReverseTorqueMin"] = recipe.loadReverseTorqueMin;
     json["loadReverseTorqueMax"] = recipe.loadReverseTorqueMax;
     json["returnZeroTimeoutMs"] = recipe.returnZeroTimeoutMs;
+    json["settlingAngleMoveMs"] = recipe.settlingAngleMoveMs;
+    json["settlingPhaseChangeMs"] = recipe.settlingPhaseChangeMs;
     json["gearBacklashCompensationDeg"] = recipe.gearBacklashCompensationDeg;
+    json["serialNumberRule"] = recipe.serialNumberRule;
+    json["impactTestEnabled"] = recipe.impactTestEnabled;
+    json["impactDutyCycle"] = recipe.impactDutyCycle;
+    json["impactSpinupMs"] = recipe.impactSpinupMs;
+    json["impactCycles"] = recipe.impactCycles;
+    json["impactBrakeCurrentA"] = recipe.impactBrakeCurrentA;
+    json["impactBrakeOnMs"] = recipe.impactBrakeOnMs;
+    json["impactBrakeOffMs"] = recipe.impactBrakeOffMs;
+    json["impactTimeoutMs"] = recipe.impactTimeoutMs;
+    json["impactForwardCurrentMin"] = recipe.impactForwardCurrentMin;
+    json["impactForwardCurrentMax"] = recipe.impactForwardCurrentMax;
+    json["impactForwardTorqueMin"] = recipe.impactForwardTorqueMin;
+    json["impactForwardTorqueMax"] = recipe.impactForwardTorqueMax;
+    json["impactReverseCurrentMin"] = recipe.impactReverseCurrentMin;
+    json["impactReverseCurrentMax"] = recipe.impactReverseCurrentMax;
+    json["impactReverseTorqueMin"] = recipe.impactReverseTorqueMin;
+    json["impactReverseTorqueMax"] = recipe.impactReverseTorqueMax;
     return json;
 }
 

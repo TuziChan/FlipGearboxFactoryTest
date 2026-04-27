@@ -13,6 +13,13 @@ Item {
 
     property bool isModified: false
     property string connectionStatus: "disconnected"
+
+    // DYN200 mode switch confirmation state
+    property bool dyn200ModeConfirmVisible: false
+    property string dyn200PendingModeValue: ""
+    property string dyn200PendingModeLabel: ""
+    property int dyn200SavedCurrentIndex: -1
+    property bool dyn200ConfirmAccepted: false
     readonly property real pagePadding: 16
     readonly property real cardMinWidth: 360
     readonly property int gridColumns: Math.max(1, Math.floor((width - pagePadding * 2 + 16) / (cardMinWidth + 16)))
@@ -24,19 +31,19 @@ Item {
             portName: "COM3",
             baudRate: 9600,
             slaveId: 1,
-            timeout: 1000,
-            parity: "None",
+            timeout: 500,
+            parity: "Even",
             stopBits: 1,
             communicationMode: 0,
             enabled: true
         },
         dyn200: {
             portName: "COM4",
-            baudRate: 9600,
+            baudRate: 19200,
             slaveId: 2,
-            timeout: 1000,
+            timeout: 500,
             parity: "None",
-            stopBits: 1,
+            stopBits: 2,
             communicationMode: 0,
             enabled: true
         },
@@ -44,7 +51,7 @@ Item {
             portName: "COM5",
             baudRate: 9600,
             slaveId: 3,
-            timeout: 1000,
+            timeout: 500,
             parity: "None",
             stopBits: 1,
             communicationMode: 0,
@@ -55,7 +62,7 @@ Item {
             portName: "COM6",
             baudRate: 9600,
             slaveId: 4,
-            timeout: 1000,
+            timeout: 500,
             parity: "None",
             stopBits: 1,
             communicationMode: 0,
@@ -246,6 +253,7 @@ Item {
                                 hasChannel: false,
                                 protocolOptions: [
                                     {value: 0, label: "查询模式"},
+                                    {value: 1, label: "预留模式 1"},
                                     {value: 2, label: "自动回传单圈"},
                                     {value: 3, label: "自动回传虚拟多圈"},
                                     {value: 4, label: "自动回传角速度"}
@@ -400,14 +408,65 @@ Item {
                                         theme: root.theme
                                     }
                                     Components.AppSelect {
+                                        id: dyn200CommModeSelect
                                         Layout.fillWidth: true
                                         currentValue: root.deviceConfig[modelData.key].communicationMode
                                         model: modelData.protocolOptions
                                         enabled: modelData.protocolOptions.length > 1
                                         theme: root.theme
                                         onCurrentValueChanged: {
+                                            // DYN200 P0 safety: warn when switching from proactive mode back to Modbus RTU
+                                            if (modelData.key === "dyn200") {
+                                                var oldMode = root.deviceConfig[modelData.key].communicationMode
+                                                var newMode = currentValue
+                                                if (oldMode !== 0 && newMode === 0) {
+                                                    // Save the old currentIndex so we can restore on cancel
+                                                    var oldIdx = 0
+                                                    for (var j = 0; j < modelData.protocolOptions.length; j++) {
+                                                        if (modelData.protocolOptions[j].value === oldMode) {
+                                                            oldIdx = j
+                                                            break
+                                                        }
+                                                    }
+                                                    root.dyn200SavedCurrentIndex = oldIdx
+                                                    root.dyn200ConfirmAccepted = false
+
+                                                    // User is switching from proactive mode to Modbus RTU - show confirmation
+                                                    root.dyn200PendingModeValue = newMode
+                                                    var label = "Modbus RTU"
+                                                    for (var i = 0; i < modelData.protocolOptions.length; i++) {
+                                                        if (modelData.protocolOptions[i].value === newMode) {
+                                                            label = modelData.protocolOptions[i].label
+                                                            break
+                                                        }
+                                                    }
+                                                    root.dyn200PendingModeLabel = label
+                                                    root.dyn200ModeConfirmVisible = true
+                                                    return  // Don't apply yet, wait for confirmation
+                                                }
+                                            }
                                             root.deviceConfig[modelData.key].communicationMode = currentValue
                                             root.isModified = true
+                                        }
+                                    }
+                                    Connections {
+                                        target: root
+                                        function onDyn200ModeConfirmVisibleChanged() {
+                                            if (modelData.key === "dyn200" && !root.dyn200ModeConfirmVisible) {
+                                                if (root.dyn200ConfirmAccepted) {
+                                                    // Confirmed: sync currentIndex to the newly applied mode
+                                                    for (var i = 0; i < modelData.protocolOptions.length; i++) {
+                                                        if (modelData.protocolOptions[i].value === root.deviceConfig.dyn200.communicationMode) {
+                                                            dyn200CommModeSelect.currentIndex = i
+                                                            break
+                                                        }
+                                                    }
+                                                } else if (root.dyn200SavedCurrentIndex >= 0) {
+                                                    // Cancelled: restore the original currentIndex
+                                                    dyn200CommModeSelect.currentIndex = root.dyn200SavedCurrentIndex
+                                                }
+                                                root.dyn200SavedCurrentIndex = -1
+                                            }
                                         }
                                     }
 
@@ -476,6 +535,35 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    // DYN200 mode switch confirmation dialog (P0 safety)
+    Components.AppAlertDialog {
+        id: dyn200ModeConfirmDialog
+        anchors.fill: parent
+        theme: root.theme
+        open: root.dyn200ModeConfirmVisible
+        title: "⚠️ 危险操作确认"
+        description: "您正在将 DYN200 扭矩传感器从主动上传模式切回 Modbus RTU 模式。\n\n" +
+                     "⚠️ 此操作可能导致设备通信完全中断！\n\n" +
+                     "如果通信中断，需要通过传感器物理按键恢复出厂设置才能恢复。\n\n" +
+                     "目标模式：" + root.dyn200PendingModeLabel + "\n\n" +
+                     "确认继续吗？"
+        confirmText: "确认切换"
+        cancelText: "取消"
+        onConfirmed: {
+            root.dyn200ConfirmAccepted = true
+            root.deviceConfig.dyn200.communicationMode = parseInt(root.dyn200PendingModeValue)
+            root.isModified = true
+            root.dyn200ModeConfirmVisible = false
+            root.dyn200PendingModeValue = ""
+            root.dyn200PendingModeLabel = ""
+        }
+        onCancelled: {
+            root.dyn200ModeConfirmVisible = false
+            root.dyn200PendingModeValue = ""
+            root.dyn200PendingModeLabel = ""
         }
     }
 }

@@ -54,6 +54,10 @@ private:
     QString m_lastError;
     Dyn200ProactiveListener* m_proactiveListener;
 
+    // Retry configuration
+    static constexpr int MAX_RETRIES = 3;
+    static constexpr int RETRY_DELAY_MS = 50;
+
     // Register addresses (from correction document)
     static constexpr uint16_t REG_TORQUE = 0x0000;  // 2 registers, ×0.01 N·m
     static constexpr uint16_t REG_SPEED = 0x0002;   // 2 registers, ×1 RPM

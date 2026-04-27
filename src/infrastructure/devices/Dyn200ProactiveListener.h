@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QSerialPort>
 #include <QByteArray>
+#include <QMutex>
+#include <atomic>
 
 namespace Infrastructure {
 namespace Devices {
@@ -41,19 +43,19 @@ public:
     void stop();
 
     /**
-     * @brief Get the latest torque value
+     * @brief Get the latest torque value (thread-safe)
      */
-    double latestTorque() const { return m_latestTorque; }
+    double latestTorque() const { return m_latestTorque.load(); }
 
     /**
-     * @brief Get the latest speed value
+     * @brief Get the latest speed value (thread-safe)
      */
-    double latestSpeed() const { return m_latestSpeed; }
+    double latestSpeed() const { return m_latestSpeed.load(); }
 
     /**
-     * @brief Check if speed is valid (ASCII mode doesn't provide speed)
+     * @brief Check if speed is valid (ASCII mode doesn't provide speed, thread-safe)
      */
-    bool isSpeedValid() const { return m_speedValid; }
+    bool isSpeedValid() const { return m_speedValid.load(); }
 
 signals:
     /**
@@ -80,11 +82,14 @@ private:
 
     QSerialPort* m_serialPort;
     ProtocolMode m_mode;
+    mutable QMutex m_mutex;  // Protects m_buffer and m_serialPort
     QByteArray m_buffer;
-    
-    double m_latestTorque;
-    double m_latestSpeed;
-    bool m_speedValid;
+    std::atomic<bool> m_running{false};
+
+    // Cached values (atomic for thread safety - accessed from serial port thread and poller thread)
+    std::atomic<double> m_latestTorque;
+    std::atomic<double> m_latestSpeed;
+    std::atomic<bool> m_speedValid;
 };
 
 } // namespace Devices

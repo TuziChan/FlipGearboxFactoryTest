@@ -18,7 +18,7 @@ bool SimulatedTorqueDevice::initialize() {
 bool SimulatedTorqueDevice::readTorque(double& torqueNm) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Calculate realistic torque based on motor state and brake load
     double torque = calculateTorque();
@@ -35,24 +35,25 @@ bool SimulatedTorqueDevice::readTorque(double& torqueNm) {
 bool SimulatedTorqueDevice::readSpeed(double& speedRpm) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
-    // Get speed from encoder calculation
-    speedRpm = std::abs(m_context->encoderAngularVelocityRpm());
+    // Get speed from encoder calculation (preserve sign for direction)
+    speedRpm = m_context->encoderAngularVelocityRpm();
     return true;
 }
 
 bool SimulatedTorqueDevice::readPower(double& powerW) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     double torque = calculateTorque();
-    double speed = std::abs(m_context->encoderAngularVelocityRpm());
+    double speed = m_context->encoderAngularVelocityRpm();
 
     // Power = Torque * AngularVelocity
     // P(W) = T(N·m) * ω(rad/s) = T(N·m) * (RPM * 2π/60)
-    powerW = torque * speed * 2.0 * M_PI / 60.0;
+    // Use absolute value for power calculation (power is always positive)
+    powerW = torque * std::abs(speed) * 2.0 * M_PI / 60.0;
 
     return true;
 }
@@ -60,22 +61,22 @@ bool SimulatedTorqueDevice::readPower(double& powerW) {
 bool SimulatedTorqueDevice::readAll(double& torqueNm, double& speedRpm, double& powerW) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Calculate torque
     torqueNm = calculateTorque();
-    
+
     // Add small noise
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::normal_distribution<> noise(0.0, 0.05);
     torqueNm += noise(gen);
 
-    // Get speed
-    speedRpm = std::abs(m_context->encoderAngularVelocityRpm());
+    // Get speed (preserve sign for direction)
+    speedRpm = m_context->encoderAngularVelocityRpm();
 
-    // Calculate power
-    powerW = torqueNm * speedRpm * 2.0 * M_PI / 60.0;
+    // Calculate power (use absolute value for power calculation)
+    powerW = torqueNm * std::abs(speedRpm) * 2.0 * M_PI / 60.0;
 
     return true;
 }

@@ -1,6 +1,7 @@
 #include "TestExecutionViewModel.h"
 #include "../infrastructure/config/RecipeConfig.h"
 #include "../infrastructure/config/ConfigLoader.h"
+#include "../infrastructure/validation/PhysicsValidator.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QDebug>
@@ -24,11 +25,19 @@ QObject* parent)
 , m_progressPercent(0)
 , m_elapsedMs(0)
 , m_motorCurrent(0.0)
+, m_motorOnline(false)
 , m_speed(0.0)
 , m_torque(0.0)
 , m_power(0.0)
+, m_torqueOnline(false)
 , m_angle(0.0)
+, m_encoderTotalAngle(0.0)
+, m_encoderVelocity(0.0)
+, m_encoderOnline(false)
 , m_brakeCurrent(0.0)
+, m_brakeVoltage(0.0)
+, m_brakePower(0.0)
+, m_brakeOnline(false)
 , m_ai1Level(false)
 , m_overallVerdict("Pending")
 , m_testPassed(false)
@@ -37,6 +46,9 @@ QObject* parent)
 , m_angleResults()
 , m_loadForwardResult()
 , m_loadReverseResult()
+, m_physicsViolations()
+, m_physicsViolationStats()
+, m_lastTelemetry()
 {
 if (!m_selectedModel.isEmpty()) {
 loadRecipe(m_selectedModel);
@@ -121,6 +133,24 @@ void TestExecutionViewModel::resetTest() {
         m_angleResults.clear();
         m_loadForwardResult.clear();
         m_loadReverseResult.clear();
+        clearPhysicsValidation();
+
+        // Reset all telemetry fields
+        m_motorCurrent = 0.0;
+        m_motorOnline = false;
+        m_speed = 0.0;
+        m_torque = 0.0;
+        m_power = 0.0;
+        m_torqueOnline = false;
+        m_angle = 0.0;
+        m_encoderTotalAngle = 0.0;
+        m_encoderVelocity = 0.0;
+        m_encoderOnline = false;
+        m_brakeCurrent = 0.0;
+        m_brakeVoltage = 0.0;
+        m_brakePower = 0.0;
+        m_brakeOnline = false;
+        m_ai1Level = false;
 
         emit runningChanged();
         emit currentPhaseChanged();
@@ -128,6 +158,11 @@ void TestExecutionViewModel::resetTest() {
         emit progressPercentChanged();
         emit elapsedMsChanged();
         emit resultsChanged();
+        emit motorTelemetryChanged();
+        emit torqueTelemetryChanged();
+        emit encoderTelemetryChanged();
+        emit brakeTelemetryChanged();
+        emit physicsValidationChanged();
 
         qDebug() << "Test reset";
     }
@@ -201,6 +236,8 @@ void TestExecutionViewModel::onTestCompleted(const Domain::TestResults& results)
     m_running = false;
     m_testPassed = results.overallPassed;
     m_overallVerdict = results.overallPassed ? "PASSED" : "FAILED";
+    m_impactForwardResult = toVariantMap(results.impactForward);
+    m_impactReverseResult = toVariantMap(results.impactReverse);
     m_idleForwardResult = toVariantMap(results.idleForward);
     m_idleReverseResult = toVariantMap(results.idleReverse);
     m_angleResults = toVariantList(results.angleResults);
@@ -266,51 +303,110 @@ void TestExecutionViewModel::updateFromState(const Domain::TestRunState& state) 
         emit elapsedMsChanged();
     }
 
-    bool telemetryUpdated = false;
+    // Update physics validation with current telemetry
+    updatePhysicsValidation(state.currentTelemetry);
+
+    bool motorTelemetryUpdated = false;
+    bool torqueTelemetryUpdated = false;
+    bool encoderTelemetryUpdated = false;
+    bool brakeTelemetryUpdated = false;
 
     if (m_motorCurrent != state.currentTelemetry.motorCurrentA) {
         m_motorCurrent = state.currentTelemetry.motorCurrentA;
-        telemetryUpdated = true;
+        motorTelemetryUpdated = true;
+    }
+
+    if (m_motorOnline != state.currentTelemetry.motorOnline) {
+        m_motorOnline = state.currentTelemetry.motorOnline;
+        motorTelemetryUpdated = true;
     }
 
     if (m_speed != state.currentTelemetry.dynSpeedRpm) {
         m_speed = state.currentTelemetry.dynSpeedRpm;
-        telemetryUpdated = true;
+        torqueTelemetryUpdated = true;
     }
 
     if (m_torque != state.currentTelemetry.dynTorqueNm) {
         m_torque = state.currentTelemetry.dynTorqueNm;
-        telemetryUpdated = true;
+        torqueTelemetryUpdated = true;
     }
 
     if (m_power != state.currentTelemetry.dynPowerW) {
         m_power = state.currentTelemetry.dynPowerW;
-        telemetryUpdated = true;
+        torqueTelemetryUpdated = true;
+    }
+
+    if (m_torqueOnline != state.currentTelemetry.torqueOnline) {
+        m_torqueOnline = state.currentTelemetry.torqueOnline;
+        torqueTelemetryUpdated = true;
     }
 
     if (m_angle != state.currentTelemetry.encoderAngleDeg) {
         m_angle = state.currentTelemetry.encoderAngleDeg;
-        telemetryUpdated = true;
+        encoderTelemetryUpdated = true;
+    }
+
+    if (m_encoderTotalAngle != state.currentTelemetry.encoderTotalAngleDeg) {
+        m_encoderTotalAngle = state.currentTelemetry.encoderTotalAngleDeg;
+        encoderTelemetryUpdated = true;
+    }
+
+    if (m_encoderVelocity != state.currentTelemetry.encoderVelocityRpm) {
+        m_encoderVelocity = state.currentTelemetry.encoderVelocityRpm;
+        encoderTelemetryUpdated = true;
+    }
+
+    if (m_encoderOnline != state.currentTelemetry.encoderOnline) {
+        m_encoderOnline = state.currentTelemetry.encoderOnline;
+        encoderTelemetryUpdated = true;
     }
 
     if (m_brakeCurrent != state.currentTelemetry.brakeCurrentA) {
         m_brakeCurrent = state.currentTelemetry.brakeCurrentA;
-        telemetryUpdated = true;
+        brakeTelemetryUpdated = true;
+    }
+
+    if (m_brakeVoltage != state.currentTelemetry.brakeVoltageV) {
+        m_brakeVoltage = state.currentTelemetry.brakeVoltageV;
+        brakeTelemetryUpdated = true;
+    }
+
+    if (m_brakePower != state.currentTelemetry.brakePowerW) {
+        m_brakePower = state.currentTelemetry.brakePowerW;
+        brakeTelemetryUpdated = true;
+    }
+
+    if (m_brakeOnline != state.currentTelemetry.brakeOnline) {
+        m_brakeOnline = state.currentTelemetry.brakeOnline;
+        brakeTelemetryUpdated = true;
     }
 
     if (m_ai1Level != state.currentTelemetry.aqmdAi1Level) {
         m_ai1Level = state.currentTelemetry.aqmdAi1Level;
-        telemetryUpdated = true;
+        motorTelemetryUpdated = true;
     }
 
-    if (telemetryUpdated) {
-        emit telemetryChanged();
+    if (motorTelemetryUpdated) {
+        emit motorTelemetryChanged();
+    }
+    if (torqueTelemetryUpdated) {
+        emit torqueTelemetryChanged();
+    }
+    if (encoderTelemetryUpdated) {
+        emit encoderTelemetryChanged();
+    }
+    if (brakeTelemetryUpdated) {
+        emit brakeTelemetryChanged();
     }
 }
 
 QString TestExecutionViewModel::recipeFilePathForModel(const QString& model) const {
     const QString recipeDir = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../../config/recipes");
-    return QDir(recipeDir).absoluteFilePath(model + ".json");
+    QString recipeFileName = model.trimmed();
+    if (!recipeFileName.endsWith(".json", Qt::CaseInsensitive)) {
+        recipeFileName += ".json";
+    }
+    return QDir(recipeDir).absoluteFilePath(recipeFileName);
 }
 
 Domain::TestRecipe TestExecutionViewModel::buildExecutionRecipe() const {
@@ -373,6 +469,116 @@ QVariantList TestExecutionViewModel::toVariantList(const QVector<Domain::AngleRe
         });
     }
     return list;
+}
+
+void TestExecutionViewModel::updatePhysicsValidation(const Domain::TelemetrySnapshot& current) {
+    using namespace Infrastructure::Validation;
+
+    // Skip validation if this is the first telemetry snapshot
+    if (!m_lastTelemetry.timestamp.isValid()) {
+        m_lastTelemetry = current;
+        return;
+    }
+
+    // Run physics validation
+    PhysicsValidator::ValidationConfig config;
+    auto results = PhysicsValidator::validateAll(current, m_lastTelemetry, config);
+
+    // Convert to QVariantList for QML
+    QVariantList violations;
+    int warningCount = 0;
+    int criticalCount = 0;
+
+    for (const auto& result : results) {
+        if (!result.passed) {
+            QVariantMap violation = toVariantMap(result);
+            violations.append(violation);
+
+            // Classify severity based on error percentage
+            if (result.errorPercent > 0.20) {
+                criticalCount++;
+            } else {
+                warningCount++;
+            }
+        }
+    }
+
+    // Update member variables
+    bool changed = false;
+    if (m_physicsViolations != violations) {
+        m_physicsViolations = violations;
+        changed = true;
+    }
+
+    // Update statistics
+    QVariantMap stats;
+    stats["totalViolations"] = violations.size();
+    stats["warningCount"] = warningCount;
+    stats["criticalCount"] = criticalCount;
+    stats["lastCheckTime"] = current.timestamp;
+
+    if (m_physicsViolationStats != stats) {
+        m_physicsViolationStats = stats;
+        changed = true;
+    }
+
+    // Emit signal if changed
+    if (changed) {
+        emit physicsValidationChanged();
+    }
+
+    // Store current telemetry for next validation
+    m_lastTelemetry = current;
+}
+
+void TestExecutionViewModel::clearPhysicsValidation() {
+    m_physicsViolations.clear();
+    m_physicsViolationStats.clear();
+    m_lastTelemetry = Domain::TelemetrySnapshot();
+    emit physicsValidationChanged();
+}
+
+QVariantMap TestExecutionViewModel::toVariantMap(
+    const Infrastructure::Validation::PhysicsValidator::ValidationResult& result) const
+{
+    return {
+        {"passed", result.passed},
+        {"ruleName", result.ruleName},
+        {"message", result.message},
+        {"actualValue", result.actualValue},
+        {"expectedValue", result.expectedValue},
+        {"threshold", result.threshold},
+        {"errorPercent", result.errorPercent}
+    };
+}
+
+QVariantMap TestExecutionViewModel::toVariantMap(const Domain::ImpactCycleResult& result) const {
+    return {
+        {"cycleNumber", result.cycleNumber},
+        {"peakCurrentA", result.peakCurrentA},
+        {"peakTorqueNm", result.peakTorqueNm},
+        {"avgCurrentA", result.avgCurrentA},
+        {"avgTorqueNm", result.avgTorqueNm}
+    };
+}
+
+QVariantMap TestExecutionViewModel::toVariantMap(const Domain::ImpactDirectionResult& result) const {
+    QVariantList cyclesList;
+    for (const auto& cycle : result.cycles) {
+        cyclesList.append(toVariantMap(cycle));
+    }
+
+    return {
+        {"direction", result.direction},
+        {"cycles", cyclesList},
+        {"maxCurrentA", result.maxCurrentA},
+        {"maxTorqueNm", result.maxTorqueNm},
+        {"avgCurrentA", result.avgCurrentA},
+        {"avgTorqueNm", result.avgTorqueNm},
+        {"currentPassed", result.currentPassed},
+        {"torquePassed", result.torquePassed},
+        {"overallPassed", result.overallPassed}
+    };
 }
 
 } // namespace ViewModels

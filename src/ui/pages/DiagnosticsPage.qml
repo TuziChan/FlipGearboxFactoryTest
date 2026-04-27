@@ -11,6 +11,7 @@ Item {
 
     required property Components.AppTheme theme
     property var viewModel: typeof diagnosticsViewModel !== "undefined" ? diagnosticsViewModel : null
+    property var mockControlWindowController: null
 
     property bool autoRefresh: true
     property int refreshInterval: 2000
@@ -22,7 +23,7 @@ Item {
 
     property var motorTel: viewModel ? viewModel.motorTelemetry : ({"currentA": 0, "ai1Level": false, "online": false})
     property var torqueTel: viewModel ? viewModel.torqueTelemetry : ({"torqueNm": 0, "speedRpm": 0, "powerW": 0, "online": false})
-    property var encoderTel: viewModel ? viewModel.encoderTelemetry : ({"angleDeg": 0, "online": false})
+    property var encoderTel: viewModel ? viewModel.encoderTelemetry : ({"angleDeg": 0, "totalAngleDeg": 0, "velocityRpm": 0, "online": false})
     property var brakeTel: viewModel ? viewModel.brakeTelemetry : ({"currentA": 0, "voltageV": 0, "powerW": 0, "mode": "CC", "channel": 0, "online": false})
 
     Timer {
@@ -78,6 +79,20 @@ Item {
                                 var newMode = !root.viewModel.isMockMode
                                 root.viewModel.switchMockMode(newMode)
                             }
+                        }
+                    }
+
+                    Components.AppButton {
+                        visible: root.viewModel && root.viewModel.isMockMode && root.mockControlWindowController !== null
+                        text: root.mockControlWindowController && root.mockControlWindowController.visible
+                              ? "激活 Mock 控制窗口"
+                              : "显示 Mock 控制窗口"
+                        variant: "outline"
+                        size: "sm"
+                        theme: root.theme
+                        onClicked: {
+                            if (root.mockControlWindowController)
+                                root.mockControlWindowController.openWindow()
                         }
                     }
 
@@ -296,132 +311,132 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-                spacing: 16
+            spacing: 16
 
-                // Device info card
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            // Device info card
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppLabel {
-                                text: "AQMD 电机驱动器"
-                                fontSize: 15
-                                fontWeight: 600
-                                theme: root.theme
-                            }
-
-                            Components.AppBadge {
-                                text: root.motorTel.online ? "在线" : "离线"
-                                variant: root.motorTel.online ? "success" : "destructive"
-                                theme: root.theme
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Components.AppLabel {
-                                visible: root.viewModel && root.viewModel.deviceStatuses.length > 0
-                                text: root.viewModel ? root.viewModel.deviceStatuses[0].lastUpdate : ""
-                                fontSize: 11
-                                color: root.theme.textSecondary
-                                theme: root.theme
-                            }
-                        }
+                    RowLayout {
+                        spacing: 10
 
                         Components.AppLabel {
-                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 0 && root.viewModel.deviceStatuses[0].errorCount > 0
-                            text: "通信错误: " + (root.viewModel ? root.viewModel.deviceStatuses[0].errorCount : 0) + " 次"
-                            fontSize: 11
-                            color: root.theme.ngColor
-                            theme: root.theme
-                        }
-                    }
-                }
-
-                // Telemetry cards
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "电机电流"
-                        value: root.motorTel.currentA ? root.motorTel.currentA.toFixed(2) : "0.00"
-                        unit: "A"
-                        subtext: root.motorTel.online ? "实时" : "离线"
-                        accentColor: root.motorTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "AI1 电平"
-                        value: root.motorTel.ai1Level ? "高" : "低"
-                        unit: ""
-                        subtext: "数字输入"
-                        accentColor: root.motorTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-                }
-
-                // Motor controls
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
-
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
-
-                        Components.AppLabel {
-                            text: "电机控制"
-                            fontSize: 13
+                            text: "AQMD 电机驱动器"
+                            fontSize: 15
                             fontWeight: 600
                             theme: root.theme
                         }
 
-                        RowLayout {
-                            spacing: 10
+                        Components.AppBadge {
+                            text: root.motorTel.online ? "在线" : "离线"
+                            variant: root.motorTel.online ? "success" : "destructive"
+                            theme: root.theme
+                        }
 
-                            Components.AppButton {
-                                text: "正转"
-                                variant: "default"
-                                theme: root.theme
-                                onClicked: {
-                                    root.pendingMotorAction = "forward"
-                                    root.motorConfirmVisible = true
-                                }
-                            }
+                        Item { Layout.fillWidth: true }
 
-                            Components.AppButton {
-                                text: "反转"
-                                variant: "default"
-                                theme: root.theme
-                                onClicked: {
-                                    root.pendingMotorAction = "reverse"
-                                    root.motorConfirmVisible = true
-                                }
-                            }
+                        Components.AppLabel {
+                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 0
+                            text: root.viewModel ? root.viewModel.deviceStatuses[0].lastUpdate : ""
+                            fontSize: 11
+                            color: root.theme.textSecondary
+                            theme: root.theme
+                        }
+                    }
 
-                            Components.AppButton {
-                                text: "停止"
-                                variant: "destructive"
-                                theme: root.theme
-                                onClicked: if (root.viewModel) root.viewModel.stopMotor()
+                    Components.AppLabel {
+                        visible: root.viewModel && root.viewModel.deviceStatuses.length > 0 && root.viewModel.deviceStatuses[0].errorCount > 0
+                        text: "通信错误: " + (root.viewModel ? root.viewModel.deviceStatuses[0].errorCount : 0) + " 次"
+                        fontSize: 11
+                        color: root.theme.ngColor
+                        theme: root.theme
+                    }
+                }
+            }
+
+            // Telemetry cards
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "电机电流"
+                    value: root.motorTel.currentA ? root.motorTel.currentA.toFixed(2) : "0.00"
+                    unit: "A"
+                    subtext: root.motorTel.online ? "实时" : "离线"
+                    accentColor: root.motorTel.online ? root.theme.ok : root.theme.textMuted
+                }
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "AI1 电平"
+                    value: root.motorTel.ai1Level ? "高" : "低"
+                    unit: ""
+                    subtext: "数字输入"
+                    accentColor: root.motorTel.online ? root.theme.ok : root.theme.textMuted
+                }
+            }
+
+            // Motor controls
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    Components.AppLabel {
+                        text: "电机控制"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    RowLayout {
+                        spacing: 10
+
+                        Components.AppButton {
+                            text: "正转"
+                            variant: "default"
+                            theme: root.theme
+                            onClicked: {
+                                root.pendingMotorAction = "forward"
+                                root.motorConfirmVisible = true
                             }
+                        }
+
+                        Components.AppButton {
+                            text: "反转"
+                            variant: "default"
+                            theme: root.theme
+                            onClicked: {
+                                root.pendingMotorAction = "reverse"
+                                root.motorConfirmVisible = true
+                            }
+                        }
+
+                        Components.AppButton {
+                            text: "停止"
+                            variant: "destructive"
+                            theme: root.theme
+                            onClicked: if (root.viewModel) root.viewModel.stopMotor()
                         }
                     }
                 }
+            }
 
-                Item { Layout.fillHeight: true }
+            Item { Layout.fillHeight: true }
         }
     }
 
@@ -432,99 +447,99 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-                spacing: 16
+            spacing: 16
 
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppLabel {
-                                text: "DYN200 扭矩传感器"
-                                fontSize: 15
-                                fontWeight: 600
-                                theme: root.theme
-                            }
-
-                            Components.AppBadge {
-                                text: root.torqueTel.online ? "在线" : "离线"
-                                variant: root.torqueTel.online ? "success" : "destructive"
-                                theme: root.theme
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Components.AppLabel {
-                                visible: root.viewModel && root.viewModel.deviceStatuses.length > 1
-                                text: root.viewModel && root.viewModel.deviceStatuses.length > 1 ? root.viewModel.deviceStatuses[1].lastUpdate : ""
-                                fontSize: 11
-                                color: root.theme.textSecondary
-                                theme: root.theme
-                            }
-                        }
+                    RowLayout {
+                        spacing: 10
 
                         Components.AppLabel {
-                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 1 && root.viewModel.deviceStatuses[1].errorCount > 0
-                            text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 1 ? root.viewModel.deviceStatuses[1].errorCount : 0) + " 次"
+                            text: "DYN200 扭矩传感器"
+                            fontSize: 15
+                            fontWeight: 600
+                            theme: root.theme
+                        }
+
+                        Components.AppBadge {
+                            text: root.torqueTel.online ? "在线" : "离线"
+                            variant: root.torqueTel.online ? "success" : "destructive"
+                            theme: root.theme
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Components.AppLabel {
+                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 1
+                            text: root.viewModel && root.viewModel.deviceStatuses.length > 1 ? root.viewModel.deviceStatuses[1].lastUpdate : ""
                             fontSize: 11
-                            color: root.theme.ngColor
+                            color: root.theme.textSecondary
                             theme: root.theme
                         }
                     }
-                }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
+                    Components.AppLabel {
+                        visible: root.viewModel && root.viewModel.deviceStatuses.length > 1 && root.viewModel.deviceStatuses[1].errorCount > 0
+                        text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 1 ? root.viewModel.deviceStatuses[1].errorCount : 0) + " 次"
+                        fontSize: 11
+                        color: root.theme.ngColor
                         theme: root.theme
-                        label: "扭矩"
-                        value: root.torqueTel.torqueNm ? root.torqueTel.torqueNm.toFixed(2) : "0.00"
-                        unit: "Nm"
-                        subtext: root.torqueTel.online ? "实时" : "离线"
-                        accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "转速"
-                        value: root.torqueTel.speedRpm ? root.torqueTel.speedRpm.toFixed(0) : "0"
-                        unit: "RPM"
-                        subtext: root.torqueTel.online ? "实时" : "离线"
-                        accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "功率"
-                        value: root.torqueTel.powerW ? root.torqueTel.powerW.toFixed(1) : "0.0"
-                        unit: "W"
-                        subtext: root.torqueTel.online ? "实时" : "离线"
-                        accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
                     }
                 }
+            }
 
-                Components.AppAlert {
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Components.MetricCard {
                     Layout.fillWidth: true
+                    Layout.preferredHeight: 104
                     theme: root.theme
-                    variant: "default"
-                    description: "此设备为只读传感器，无控制功能"
+                    label: "扭矩"
+                    value: root.torqueTel.torqueNm ? root.torqueTel.torqueNm.toFixed(2) : "0.00"
+                    unit: "Nm"
+                    subtext: root.torqueTel.online ? "实时" : "离线"
+                    accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
                 }
 
-                Item { Layout.fillHeight: true }
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "转速"
+                    value: root.torqueTel.speedRpm ? root.torqueTel.speedRpm.toFixed(0) : "0"
+                    unit: "RPM"
+                    subtext: root.torqueTel.online ? "实时" : "离线"
+                    accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
+                }
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "功率"
+                    value: root.torqueTel.powerW ? root.torqueTel.powerW.toFixed(1) : "0.0"
+                    unit: "W"
+                    subtext: root.torqueTel.online ? "实时" : "离线"
+                    accentColor: root.torqueTel.online ? root.theme.ok : root.theme.textMuted
+                }
+            }
+
+            Components.AppAlert {
+                Layout.fillWidth: true
+                theme: root.theme
+                variant: "default"
+                description: "此设备为只读传感器，无控制功能"
+            }
+
+            Item { Layout.fillHeight: true }
         }
     }
 
@@ -535,96 +550,96 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-                spacing: 16
+            spacing: 16
 
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppLabel {
-                                text: "单圈绝对值编码器"
-                                fontSize: 15
-                                fontWeight: 600
-                                theme: root.theme
-                            }
-
-                            Components.AppBadge {
-                                text: root.encoderTel.online ? "在线" : "离线"
-                                variant: root.encoderTel.online ? "success" : "destructive"
-                                theme: root.theme
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Components.AppLabel {
-                                visible: root.viewModel && root.viewModel.deviceStatuses.length > 2
-                                text: root.viewModel && root.viewModel.deviceStatuses.length > 2 ? root.viewModel.deviceStatuses[2].lastUpdate : ""
-                                fontSize: 11
-                                color: root.theme.textSecondary
-                                theme: root.theme
-                            }
-                        }
+                    RowLayout {
+                        spacing: 10
 
                         Components.AppLabel {
-                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 2 && root.viewModel.deviceStatuses[2].errorCount > 0
-                            text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 2 ? root.viewModel.deviceStatuses[2].errorCount : 0) + " 次"
-                            fontSize: 11
-                            color: root.theme.ngColor
-                            theme: root.theme
-                        }
-                    }
-                }
-
-                Components.MetricCard {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 120
-                    theme: root.theme
-                    label: "当前角度"
-                    value: root.encoderTel.angleDeg !== undefined ? Number(root.encoderTel.angleDeg).toFixed(2) : "0.00"
-                    unit: "deg"
-                    subtext: root.encoderTel.online ? "实时" : "离线"
-                    accentColor: root.encoderTel.online ? root.theme.ok : root.theme.textMuted
-                }
-
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
-
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
-
-                        Components.AppLabel {
-                            text: "标定"
-                            fontSize: 13
+                            text: "单圈绝对值编码器"
+                            fontSize: 15
                             fontWeight: 600
                             theme: root.theme
                         }
 
+                        Components.AppBadge {
+                            text: root.encoderTel.online ? "在线" : "离线"
+                            variant: root.encoderTel.online ? "success" : "destructive"
+                            theme: root.theme
+                        }
+
+                        Item { Layout.fillWidth: true }
+
                         Components.AppLabel {
-                            text: "将当前位置设为零点参考："
-                            fontSize: 12
+                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 2
+                            text: root.viewModel && root.viewModel.deviceStatuses.length > 2 ? root.viewModel.deviceStatuses[2].lastUpdate : ""
+                            fontSize: 11
                             color: root.theme.textSecondary
                             theme: root.theme
                         }
+                    }
 
-                        Components.AppButton {
-                            text: "置零"
-                            variant: "default"
-                            theme: root.theme
-                            onClicked: if (root.viewModel) root.viewModel.setEncoderZero()
-                        }
+                    Components.AppLabel {
+                        visible: root.viewModel && root.viewModel.deviceStatuses.length > 2 && root.viewModel.deviceStatuses[2].errorCount > 0
+                        text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 2 ? root.viewModel.deviceStatuses[2].errorCount : 0) + " 次"
+                        fontSize: 11
+                        color: root.theme.ngColor
+                        theme: root.theme
                     }
                 }
+            }
 
-                Item { Layout.fillHeight: true }
+            Components.MetricCard {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 120
+                theme: root.theme
+                label: "当前角度"
+                value: root.encoderTel.angleDeg !== undefined ? Number(root.encoderTel.angleDeg).toFixed(2) : "0.00"
+                unit: "deg"
+                subtext: root.encoderTel.online ? "实时" : "离线"
+                accentColor: root.encoderTel.online ? root.theme.ok : root.theme.textMuted
+            }
+
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    Components.AppLabel {
+                        text: "标定"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    Components.AppLabel {
+                        text: "将当前位置设为零点参考："
+                        fontSize: 12
+                        color: root.theme.textSecondary
+                        theme: root.theme
+                    }
+
+                    Components.AppButton {
+                        text: "置零"
+                        variant: "default"
+                        theme: root.theme
+                        onClicked: if (root.viewModel) root.viewModel.setEncoderZero()
+                    }
+                }
+            }
+
+            Item { Layout.fillHeight: true }
         }
     }
 
@@ -635,266 +650,283 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-                spacing: 16
+            spacing: 16
 
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppLabel {
-                                text: "制动电源"
-                                fontSize: 15
-                                fontWeight: 600
-                                theme: root.theme
-                            }
-
-                            Components.AppBadge {
-                                text: root.brakeTel.online ? "在线" : "离线"
-                                variant: root.brakeTel.online ? "success" : "destructive"
-                                theme: root.theme
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Components.AppLabel {
-                                visible: root.viewModel && root.viewModel.deviceStatuses.length > 3
-                                text: root.viewModel && root.viewModel.deviceStatuses.length > 3 ? root.viewModel.deviceStatuses[3].lastUpdate : ""
-                                fontSize: 11
-                                color: root.theme.textSecondary
-                                theme: root.theme
-                            }
-                        }
+                    RowLayout {
+                        spacing: 10
 
                         Components.AppLabel {
-                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 3 && root.viewModel.deviceStatuses[3].errorCount > 0
-                            text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 3 ? root.viewModel.deviceStatuses[3].errorCount : 0) + " 次"
+                            text: "制动电源"
+                            fontSize: 15
+                            fontWeight: 600
+                            theme: root.theme
+                        }
+
+                        Components.AppBadge {
+                            text: root.brakeTel.online ? "在线" : "离线"
+                            variant: root.brakeTel.online ? "success" : "destructive"
+                            theme: root.theme
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Components.AppLabel {
+                            visible: root.viewModel && root.viewModel.deviceStatuses.length > 3
+                            text: root.viewModel && root.viewModel.deviceStatuses.length > 3 ? root.viewModel.deviceStatuses[3].lastUpdate : ""
                             fontSize: 11
-                            color: root.theme.ngColor
+                            color: root.theme.textSecondary
                             theme: root.theme
                         }
                     }
-                }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
+                    Components.AppLabel {
+                        visible: root.viewModel && root.viewModel.deviceStatuses.length > 3 && root.viewModel.deviceStatuses[3].errorCount > 0
+                        text: "通信错误: " + (root.viewModel && root.viewModel.deviceStatuses.length > 3 ? root.viewModel.deviceStatuses[3].errorCount : 0) + " 次"
+                        fontSize: 11
+                        color: root.theme.ngColor
                         theme: root.theme
-                        label: "输出电流"
-                        value: root.brakeTel.currentA !== undefined ? Number(root.brakeTel.currentA).toFixed(2) : "0.00"
-                        unit: "A"
-                        subtext: root.brakeTel.online ? "实时" : "离线"
-                        accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "输出电压"
-                        value: root.brakeTel.voltageV !== undefined ? Number(root.brakeTel.voltageV).toFixed(2) : "0.00"
-                        unit: "V"
-                        subtext: root.brakeTel.online ? "实时" : "离线"
-                        accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "输出功率"
-                        value: root.brakeTel.powerW !== undefined ? Number(root.brakeTel.powerW).toFixed(1) : "0.0"
-                        unit: "W"
-                        subtext: root.brakeTel.online ? "实时" : "离线"
-                        accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
                     }
                 }
+            }
 
-                RowLayout {
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Components.MetricCard {
                     Layout.fillWidth: true
-                    spacing: 12
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "工作模式"
-                        value: root.brakeTel.mode || "CC"
-                        unit: ""
-                        subtext: "恒流/恒压"
-                        accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-
-                    Components.MetricCard {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 104
-                        theme: root.theme
-                        label: "输出通道"
-                        value: root.brakeTel.channel !== undefined ? String(root.brakeTel.channel) : "0"
-                        unit: "CH"
-                        subtext: "当前通道"
-                        accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
-                    }
-                }
-
-                // Brake mode switching
-                Components.AppCard {
-                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
                     theme: root.theme
+                    label: "输出电流"
+                    value: root.brakeTel.currentA !== undefined ? Number(root.brakeTel.currentA).toFixed(2) : "0.00"
+                    unit: "A"
+                    subtext: root.brakeTel.online ? "实时" : "离线"
+                    accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                }
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "输出电压"
+                    value: root.brakeTel.voltageV !== undefined ? Number(root.brakeTel.voltageV).toFixed(2) : "0.00"
+                    unit: "V"
+                    subtext: root.brakeTel.online ? "实时" : "离线"
+                    accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                }
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "输出功率"
+                    value: root.brakeTel.powerW !== undefined ? Number(root.brakeTel.powerW).toFixed(1) : "0.0"
+                    unit: "W"
+                    subtext: root.brakeTel.online ? "实时" : "离线"
+                    accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "工作模式"
+                    value: root.brakeTel.mode || "CC"
+                    unit: ""
+                    subtext: "恒流/恒压"
+                    accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                }
+
+                Components.MetricCard {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 104
+                    theme: root.theme
+                    label: "输出通道"
+                    value: root.brakeTel.channel !== undefined ? String(root.brakeTel.channel) : "0"
+                    unit: "CH"
+                    subtext: "当前通道"
+                    accentColor: root.brakeTel.online ? root.theme.ok : root.theme.textMuted
+                }
+            }
+
+            // Brake mode switching
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    Components.AppLabel {
+                        text: "制动模式"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    RowLayout {
+                        spacing: 10
+
+                        Components.AppButton {
+                            text: "恒流 (CC)"
+                            variant: root.brakeModeValue === "CC" ? "default" : "outline"
+                            theme: root.theme
+                            onClicked: {
+                                root.brakeModeValue = "CC"
+                                if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
+                                    root.viewModel.setBrakeMode("CC")
+                            }
+                        }
+
+                        Components.AppButton {
+                            text: "恒压 (CV)"
+                            variant: root.brakeModeValue === "CV" ? "default" : "outline"
+                            theme: root.theme
+                            onClicked: {
+                                root.brakeModeValue = "CV"
+                                if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
+                                    root.viewModel.setBrakeMode("CV")
+                            }
+                        }
 
                         Components.AppLabel {
-                            text: "制动模式"
-                            fontSize: 13
-                            fontWeight: 600
+                            text: "当前: " + root.brakeModeValue
+                            fontSize: 12
+                            color: root.theme.textSecondary
                             theme: root.theme
-                        }
-
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppButton {
-                                text: "恒流 (CC)"
-                                variant: root.brakeModeValue === "CC" ? "default" : "outline"
-                                theme: root.theme
-                                onClicked: {
-                                    root.brakeModeValue = "CC"
-                                    if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
-                                        root.viewModel.setBrakeMode("CC")
-                                }
-                            }
-
-                            Components.AppButton {
-                                text: "恒压 (CV)"
-                                variant: root.brakeModeValue === "CV" ? "default" : "outline"
-                                theme: root.theme
-                                onClicked: {
-                                    root.brakeModeValue = "CV"
-                                    if (root.viewModel && typeof root.viewModel.setBrakeMode === 'function')
-                                        root.viewModel.setBrakeMode("CV")
-                                }
-                            }
-
-                            Components.AppLabel {
-                                text: "当前: " + root.brakeModeValue
-                                fontSize: 12
-                                color: root.theme.textSecondary
-                                theme: root.theme
-                            }
                         }
                     }
                 }
+            }
 
-                // Output controls
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            // Output controls
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        Components.AppLabel {
-                            text: "输出控制"
-                            fontSize: 13
-                            fontWeight: 600
+                    Components.AppLabel {
+                        text: "输出控制"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    RowLayout {
+                        spacing: 10
+
+                        Components.AppButton {
+                            text: "使能输出"
+                            variant: "default"
                             theme: root.theme
+                            onClicked: if (root.viewModel) root.viewModel.setBrakeOutput(true)
                         }
 
-                        RowLayout {
-                            spacing: 10
-
-                            Components.AppButton {
-                                text: "使能输出"
-                                variant: "default"
-                                theme: root.theme
-                                onClicked: if (root.viewModel) root.viewModel.setBrakeOutput(true)
-                            }
-
-                            Components.AppButton {
-                                text: "禁用输出"
-                                variant: "destructive"
-                                theme: root.theme
-                                onClicked: if (root.viewModel) root.viewModel.setBrakeOutput(false)
-                            }
+                        Components.AppButton {
+                            text: "禁用输出"
+                            variant: "destructive"
+                            theme: root.theme
+                            onClicked: if (root.viewModel) root.viewModel.setBrakeOutput(false)
                         }
                     }
                 }
+            }
 
-                // Parameter settings
-                Components.AppCard {
-                    Layout.fillWidth: true
-                    theme: root.theme
+            // Parameter settings
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
 
-                        Components.AppLabel {
-                            text: "参数设置"
-                            fontSize: 13
-                            fontWeight: 600
+                    Components.AppLabel {
+                        text: "参数设置"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    Components.AppLabel {
+                        text: "电流范围 0~5 A，电压范围 0~24 V（超出自动限幅）"
+                        fontSize: 11
+                        color: root.theme.textSecondary
+                        theme: root.theme
+                    }
+
+                    RowLayout {
+                        spacing: 12
+
+                        Components.AppInput {
+                            Layout.preferredWidth: 140
                             theme: root.theme
+                            label: "电流 (A) 0~5:"
+                            placeholderText: "0.00 ~ 5.00"
+                            text: root.brakeCurrentInput
+                            onTextChanged: root.brakeCurrentInput = text
+                            tone: root.brakeCurrentInput.length > 0 && (parseFloat(root.brakeCurrentInput) < 0 || parseFloat(root.brakeCurrentInput) > 5) ? "danger" : "default"
                         }
 
-                        RowLayout {
-                            spacing: 12
-
-                            Components.AppInput {
-                                Layout.preferredWidth: 140
-                                theme: root.theme
-                                label: "电流 (A):"
-                                placeholderText: "输入电流值"
-                                text: root.brakeCurrentInput
-                                onTextChanged: root.brakeCurrentInput = text
-                            }
-
-                            Components.AppButton {
-                                text: "设置电流"
-                                variant: "default"
-                                theme: root.theme
-                                onClicked: {
-                                    if (root.viewModel && root.brakeCurrentInput.length > 0)
-                                        root.viewModel.setBrakeCurrent(parseFloat(root.brakeCurrentInput))
+                        Components.AppButton {
+                            text: "设置电流"
+                            variant: "default"
+                            theme: root.theme
+                            enabled: root.brakeCurrentInput.length > 0 && !isNaN(parseFloat(root.brakeCurrentInput))
+                            onClicked: {
+                                if (root.viewModel && root.brakeCurrentInput.length > 0) {
+                                    var val = parseFloat(root.brakeCurrentInput)
+                                    if (!isNaN(val))
+                                        root.viewModel.setBrakeCurrent(val)
                                 }
                             }
+                        }
 
-                            Components.AppInput {
-                                Layout.preferredWidth: 140
-                                theme: root.theme
-                                label: "电压 (V):"
-                                placeholderText: "输入电压值"
-                                text: root.brakeVoltageInput
-                                onTextChanged: root.brakeVoltageInput = text
-                            }
+                        Components.AppInput {
+                            Layout.preferredWidth: 140
+                            theme: root.theme
+                            label: "电压 (V) 0~24:"
+                            placeholderText: "0.00 ~ 24.00"
+                            text: root.brakeVoltageInput
+                            onTextChanged: root.brakeVoltageInput = text
+                            tone: root.brakeVoltageInput.length > 0 && (parseFloat(root.brakeVoltageInput) < 0 || parseFloat(root.brakeVoltageInput) > 24) ? "danger" : "default"
+                        }
 
-                            Components.AppButton {
-                                text: "设置电压"
-                                variant: "default"
-                                theme: root.theme
-                                onClicked: {
-                                    if (root.viewModel && root.brakeVoltageInput.length > 0)
-                                        root.viewModel.setBrakeVoltage(parseFloat(root.brakeVoltageInput))
+                        Components.AppButton {
+                            text: "设置电压"
+                            variant: "default"
+                            theme: root.theme
+                            enabled: root.brakeVoltageInput.length > 0 && !isNaN(parseFloat(root.brakeVoltageInput))
+                            onClicked: {
+                                if (root.viewModel && root.brakeVoltageInput.length > 0) {
+                                    var val = parseFloat(root.brakeVoltageInput)
+                                    if (!isNaN(val))
+                                        root.viewModel.setBrakeVoltage(val)
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                Item { Layout.fillHeight: true }
+            Item { Layout.fillHeight: true }
         }
     }
 

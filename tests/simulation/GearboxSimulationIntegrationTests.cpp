@@ -79,7 +79,7 @@ private:
         r.name = "SimIntegrationTest";
         r.homeDutyCycle = 20.0;
         r.homeAdvanceDutyCycle = 20.0;
-        r.encoderZeroAngleDeg = 0.0;
+        r.encoderZeroAngleDeg = 0.0;  // Encoder zero is fixed at installation
         r.homeTimeoutMs = 5000;
         r.idleDutyCycle = 50.0;
         r.idleForwardSpinupMs = 200;
@@ -88,11 +88,12 @@ private:
         r.idleReverseSampleMs = 200;
         r.idleTimeoutMs = 10000;
         r.angleTestDutyCycle = 30.0;
-        r.position1TargetDeg = 10.0;
+        // Position targets use absolute angles (not relative to runtime homing)
+        r.position1TargetDeg = 49.0;    // Position 1 absolute target
         r.position1ToleranceDeg = 5.0;
-        r.position2TargetDeg = 50.0;
+        r.position2TargetDeg = 113.5;   // Position 2 absolute target
         r.position2ToleranceDeg = 5.0;
-        r.position3TargetDeg = 120.0;
+        r.position3TargetDeg = 113.5;   // Position 3 absolute target
         r.position3ToleranceDeg = 5.0;
         r.returnZeroToleranceDeg = 3.0;
         r.angleTimeoutMs = 5000;

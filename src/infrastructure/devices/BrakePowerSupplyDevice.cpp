@@ -19,18 +19,21 @@ BrakePowerSupplyDevice::BrakePowerSupplyDevice(Bus::IBusController* busControlle
 bool BrakePowerSupplyDevice::initialize() {
     if (!m_busController || !m_busController->isOpen()) {
         m_lastError = "Bus controller is not open";
+        emit errorOccurred(m_lastError);
         return false;
     }
 
     // Disable both channels initially
     if (!setOutputEnable(1, false) || !setOutputEnable(2, false)) {
         m_lastError = QString("Failed to initialize power supply: %1").arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
     QVector<uint16_t> modeValues;
     if (readInputRegisters(0x0009, 1, modeValues)) {
-        if (modeValues[0] != 1) {
+        if (modeValues[0] != 0) {
+            // Manual: 0=CC mode (SW5=ON), 1=CV mode (SW5=OFF)
             qWarning() << "Brake power supply NOT in CC mode (SW5 should be ON). Current settings will be auto-cleared by device.";
         }
     }
@@ -51,6 +54,7 @@ bool BrakePowerSupplyDevice::setCurrent(int channel, double currentA) {
                           .arg(currentA, 0, 'f', 2)
                           .arg(MAX_CURRENT_A, 0, 'f', 1);
         qWarning() << m_lastError;
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -68,6 +72,7 @@ bool BrakePowerSupplyDevice::setCurrent(int channel, double currentA) {
 
     if (!writeRegister(registerAddr, value)) {
         m_lastError = QString("Failed to set current on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -129,6 +134,7 @@ bool BrakePowerSupplyDevice::setOutputEnable(int channel, bool enable) {
     uint16_t coilAddr = getOutputEnableCoil(channel);
     if (!writeCoil(coilAddr, enable)) {
         m_lastError = QString("Failed to set output enable on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -145,6 +151,7 @@ bool BrakePowerSupplyDevice::readCurrent(int channel, double& currentA) {
     QVector<uint16_t> values;
     if (!readInputRegisters(registerAddr, 1, values)) {
         m_lastError = QString("Failed to read current on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -319,23 +326,26 @@ bool BrakePowerSupplyDevice::setVoltage(int channel, double voltageV) {
                           .arg(voltageV, 0, 'f', 2)
                           .arg(MAX_VOLTAGE_V, 0, 'f', 1);
         qWarning() << m_lastError;
+        emit errorOccurred(m_lastError);
         return false;
     }
 
     uint16_t registerAddr = getSetVoltageRegister(channel);
-    
+
     // Check for uint16_t overflow before conversion
     double rawValue = voltageV * 100.0;
     if (rawValue > 65535.0) {
         m_lastError = QString("Voltage value %1 exceeds uint16_t range after scaling").arg(rawValue);
         qWarning() << m_lastError;
+        emit errorOccurred(m_lastError);
         return false;
     }
-    
+
     uint16_t value = static_cast<uint16_t>(rawValue);
 
     if (!writeRegister(registerAddr, value)) {
         m_lastError = QString("Failed to set voltage on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -352,6 +362,7 @@ bool BrakePowerSupplyDevice::readVoltage(int channel, double& voltageV) {
     QVector<uint16_t> values;
     if (!readInputRegisters(registerAddr, 1, values)) {
         m_lastError = QString("Failed to read voltage on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -369,6 +380,7 @@ bool BrakePowerSupplyDevice::readPower(int channel, double& powerW) {
     QVector<uint16_t> values;
     if (!readInputRegisters(registerAddr, 1, values)) {
         m_lastError = QString("Failed to read power on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -385,6 +397,7 @@ bool BrakePowerSupplyDevice::readMode(int channel, int& mode) {
     QVector<uint16_t> values;
     if (!readInputRegisters(REG_MODE, 1, values)) {
         m_lastError = QString("Failed to read mode on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -402,6 +415,7 @@ bool BrakePowerSupplyDevice::setBrakeMode(int channel, const QString& mode) {
     QVector<uint16_t> values;
     if (!readInputRegisters(REG_MODE, 1, values)) {
         m_lastError = QString("Failed to read mode for setting brake mode on channel %1: %2").arg(channel).arg(m_lastError);
+        emit errorOccurred(m_lastError);
         return false;
     }
 

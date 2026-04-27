@@ -9,10 +9,14 @@ Rectangle {
     required property AppTheme theme
     required property bool running
     readonly property int fieldGroupWidth: 180
+    property var modelOptions: []
     property alias modelIndex: modelBox.currentIndex
     property alias serialNumber: serialField.text
     property alias backlashValue: backlashField.text
     readonly property string modelText: modelBox.currentText
+    readonly property var modelItem: (root.modelOptions && root.modelIndex >= 0 && root.modelIndex < root.modelOptions.length) ? root.modelOptions[root.modelIndex] : null
+    readonly property string modelValue: root.modelItem && root.modelItem.value !== undefined ? String(root.modelItem.value) : modelBox.currentText
+    signal modelChanged(int index)
     required property var onStartRequested
     required property var onStopRequested
 
@@ -49,10 +53,11 @@ Rectangle {
                     objectName: "modelSelectControl"
                     theme: root.theme
                     label: ""
-                    model: ["GBX-42A", "GBX-42B", "GBX-56A"]
+                    model: root.modelOptions
                     popupObjectName: "modelSelectPopup"
                     enabled: !root.running
                     width: parent.width
+                    onActivated: function(index) { root.modelChanged(index) }
                 }
             }
 

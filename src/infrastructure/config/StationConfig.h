@@ -64,6 +64,16 @@ struct StationConfig {
         brakeConfig.stopBits = 1;
         brakeConfig.baudRate = 9600;
     }
+
+    /**
+     * @brief Create a StationConfig with all device-specific defaults per manual specs.
+     *
+     * Use this as the single source of truth for default values, ensuring consistency
+     * between StationConfig construction and ConfigLoader fallback values.
+     */
+    static StationConfig defaultConfig() {
+        return StationConfig{};
+    }
 };
 
 } // namespace Config

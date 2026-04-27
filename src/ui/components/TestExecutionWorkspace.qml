@@ -29,6 +29,10 @@ Item {
     required property real torqueValue
     required property real ai1Value
     required property real ai2Value
+    required property bool motorOnline
+    required property bool torqueOnline
+    required property bool encoderOnline
+    required property bool brakeOnline
     required property string verdictState
     required property string verdictText
     required property var metricColorProvider
@@ -40,14 +44,14 @@ Item {
     property var magnetMarkers: []
     property string anomalyMessage: ""
     property string anomalyType: ""
-    property var runtimeManager: null
-    property var onMockDelayChanged: null
-    property var onMockErrorInjected: null
-    property var onMockScenarioChanged: null
+    property var physicsViolations: []
+    property var physicsViolationStats: ({})
 
     function statusColor(active) {
         return active ? root.theme.okColor : root.theme.textMuted
     }
+
+    Component.onCompleted: console.log("[StartupTrace] TestExecutionWorkspace completed")
 
     RowLayout {
         anchors.fill: parent
@@ -134,6 +138,7 @@ Item {
                                     delegate: MetricCard {
                                         required property string modelData
                                         Layout.fillWidth: true
+                                        compact: true
                                         theme: root.theme
                                         label: modelData
                                         value: root.metricValueProvider(modelData)
@@ -156,6 +161,7 @@ Item {
                                     delegate: MetricCard {
                                         required property string modelData
                                         Layout.fillWidth: true
+                                        compact: true
                                         theme: root.theme
                                         label: modelData
                                         value: root.metricValueProvider(modelData)
@@ -165,48 +171,26 @@ Item {
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    SectionCard {
-                        Layout.fillWidth: true
-                        theme: root.theme
-                        title: "运行状态"
-                        subtitle: "当前阶段、传感器与时间摘要"
+                            GridLayout {
+                                width: parent.width
+                                columns: 3
+                                columnSpacing: 12
+                                rowSpacing: 12
 
-                        GridLayout {
-                            width: parent.width
-                            columns: 4
-                            columnSpacing: 16
-                            rowSpacing: 10
+                                Repeater {
+                                    model: ["制动电压", "制动功率", "累计角度"]
 
-                            Repeater {
-                                model: [
-                                    { label: "当前阶段", value: root.phaseTitle },
-                                    { label: "总耗时", value: root.totalTimeText },
-                                    { label: "AI1", value: root.ai1Value > 0.5 ? "ON" : "--", active: root.ai1Value > 0.5 },
-                                    { label: "AI2", value: root.ai2Value > 0.5 ? "ON" : "--", active: root.ai2Value > 0.5 }
-                                ]
-
-                                delegate: Column {
-                                    required property var modelData
-                                    spacing: 4
-
-                                    Text {
-                                        text: parent.modelData.label
-                                        color: root.theme.textSecondary
-                                        font.pixelSize: 11
-                                        font.bold: true
-                                    }
-
-                                    Text {
-                                        text: parent.modelData.value
-                                        color: parent.modelData.active !== undefined
-                                               ? root.statusColor(parent.modelData.active)
-                                               : root.theme.textPrimary
-                                        font.pixelSize: 13
-                                        font.bold: true
-                                        font.family: parent.modelData.label === "总耗时" ? "Consolas" : ""
+                                    delegate: MetricCard {
+                                        required property string modelData
+                                        Layout.fillWidth: true
+                                        compact: true
+                                        theme: root.theme
+                                        label: modelData
+                                        value: root.metricValueProvider(modelData)
+                                        unit: root.metricUnitProvider(modelData)
+                                        subtext: modelData === "累计角度" ? "虚拟多圈" : "制动参数"
+                                        accentColor: root.metricColorProvider(modelData)
                                     }
                                 }
                             }
@@ -229,21 +213,6 @@ Item {
                         anomalyMessage: root.anomalyMessage
                         anomalyType: root.anomalyType
                         onToggleChannel: root.onToggleChannel
-                    }
-
-                    MockControlPanel {
-                        Layout.fillWidth: true
-                        theme: root.theme
-                        runtimeManager: root.runtimeManager
-                        onDelayChanged: function(delayMs) {
-                            if (root.onMockDelayChanged) root.onMockDelayChanged(delayMs)
-                        }
-                        onErrorInjected: function(errorType) {
-                            if (root.onMockErrorInjected) root.onMockErrorInjected(errorType)
-                        }
-                        onScenarioChanged: function(scenario) {
-                            if (root.onMockScenarioChanged) root.onMockScenarioChanged(scenario)
-                        }
                     }
 
                     SectionCard {
@@ -303,6 +272,15 @@ Item {
                         }
                     }
                 }
+            }
+
+            PhysicsValidationPanel {
+                Layout.fillWidth: true
+                theme: root.theme
+                running: root.running
+                violations: root.physicsViolations
+                violationStats: root.physicsViolationStats
+                panelVisible: true
             }
         }
 

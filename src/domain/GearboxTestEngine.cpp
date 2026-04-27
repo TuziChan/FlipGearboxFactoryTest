@@ -1,9 +1,11 @@
 #include "GearboxTestEngine.h"
 #include "RecipeValidator.h"
+#include "../infrastructure/simulation/SimulationContext.h"
 #include <QDebug>
 #include <QtMath>
 #include <QThread>
 #include <limits>
+#include <atomic>
 
 namespace Domain {
 
@@ -28,6 +30,10 @@ GearboxTestEngine::GearboxTestEngine(QObject* parent)
 , m_lockTimer()
 , m_lockReferenceAngle(0.0)
 , m_currentBrakeCurrent(0.0)
+, m_emergencyStopRequested(false)
+, m_violationLogger(new Infrastructure::Validation::PhysicsViolationLogger())
+, m_physicsValidationEnabled(true)
+, m_simulationContext(nullptr)
 {
 // 33ms cycle time for 30Hz sampling (per correction document)
 m_cycleTimer->setInterval(33);
@@ -65,16 +71,36 @@ void GearboxTestEngine::setBrakeChannel(int channel) {
     m_brakeChannel = qMax(1, channel);
 }
 
+void GearboxTestEngine::setStationName(const QString& stationName) {
+    m_stationName = stationName;
+}
+
+void GearboxTestEngine::setPhysicsValidationEnabled(bool enabled) {
+    m_physicsValidationEnabled = enabled;
+}
+
+void GearboxTestEngine::setValidationConfig(const Infrastructure::Validation::PhysicsValidator::ValidationConfig& config) {
+    m_validationConfig = config;
+}
+
+void GearboxTestEngine::setSimulationContext(Infrastructure::Simulation::SimulationContext* context) {
+    m_simulationContext = context;
+}
+
 bool GearboxTestEngine::startTest(const QString& serialNumber) {
     if (!m_motor || !m_torque || !m_encoder || !m_brake) {
         qWarning() << "Cannot start test: devices not set";
         return false;
     }
 
+    // Reset emergency stop flag
+    m_emergencyStopRequested.store(false, std::memory_order_release);
+
     // Initialize state
     m_state = TestRunState();
     m_state.results.serialNumber = serialNumber;
     m_state.results.recipeName = m_recipe.name;
+    m_state.results.stationName = m_stationName;
     m_state.results.startTime = QDateTime::currentDateTime();
 
     // Reset detection state
@@ -82,12 +108,28 @@ bool GearboxTestEngine::startTest(const QString& serialNumber) {
     m_magnetEventDetected = false;
     m_lockConditionMet = false;
 
+    // Reset impact test state
+    m_impactCycleCount = 0;
+    m_impactCurrentSamples.clear();
+    m_impactTorqueSamples.clear();
+
+    // Start physics validation logging
+    if (m_physicsValidationEnabled && m_violationLogger) {
+        m_violationLogger->startSession(serialNumber);
+    }
+
     // Start timers
     m_testTimer.start();
     m_phaseTimer.start();
 
-    // Transition to homing phase
-    transitionToPhase(TestPhase::PrepareAndHome, TestSubState::SeekingMagnet);
+    // Transition to impact test or homing phase
+    if (m_recipe.impactTestEnabled) {
+        transitionToPhase(TestPhase::ImpactTest, TestSubState::ImpactForwardSpinup);
+        m_state.statusMessage = "Impact test starting...";
+    } else {
+        transitionToPhase(TestPhase::PrepareAndHome, TestSubState::SeekingMagnet);
+        m_state.statusMessage = "Homing...";
+    }
 
     // Start cycle timer
     m_cycleTimer->start();
@@ -97,9 +139,15 @@ bool GearboxTestEngine::startTest(const QString& serialNumber) {
 }
 
 void GearboxTestEngine::emergencyStop() {
+    // ADR-001: Set atomic flag first for immediate interrupt detection
+    m_emergencyStopRequested.store(true, std::memory_order_release);
+
+    // Stop cycle timer
     m_cycleTimer->stop();
+
+    // Immediately stop motor and brake (critical safety actions)
     stopMotor();
-    
+
     if (m_brake) {
         m_brake->setOutputEnable(m_brakeChannel, false);
     }
@@ -108,31 +156,81 @@ void GearboxTestEngine::emergencyStop() {
 }
 
 void GearboxTestEngine::reset() {
-m_cycleTimer->stop();
-stopMotor();
+    // Reset emergency stop flag
+    m_emergencyStopRequested.store(false, std::memory_order_release);
 
-if (m_brake) {
-m_brake->setOutputEnable(m_brakeChannel, false);
+    m_cycleTimer->stop();
+    stopMotor();
+
+    if (m_brake) {
+        m_brake->setOutputEnable(m_brakeChannel, false);
+    }
+
+    m_state = TestRunState();
+    // Reset lock detection state machine
+    m_lockState = LockDetectionState::Idle;
+    m_lockTimer.invalidate();
+    m_lockReferenceAngle = 0.0;
+    emit stateChanged(m_state);
 }
 
-m_state = TestRunState();
-// Reset lock detection state machine
-m_lockState = LockDetectionState::Idle;
-m_lockTimer.invalidate();
-m_lockReferenceAngle = 0.0;
-emit stateChanged(m_state);
+bool GearboxTestEngine::isRunning() const {
+    return m_cycleTimer->isActive() &&
+           m_state.phase != TestPhase::Idle &&
+           m_state.phase != TestPhase::Completed &&
+           m_state.phase != TestPhase::Failed;
 }
 
 void GearboxTestEngine::onCycleTick() {
+    // ADR-001: Check emergency stop flag at tick entry (first checkpoint)
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected at tick entry, aborting cycle";
+        return;
+    }
+
+    // Advance simulation physics once per cycle tick (for mock mode).
+    // This ensures consistent angle updates regardless of how many
+    // device reads occur within a single tick.
+    if (m_simulationContext) {
+        m_simulationContext->advanceTick();
+    }
+
     // Update elapsed times
     m_state.elapsedMs = m_testTimer.elapsed();
     m_state.phaseElapsedMs = m_phaseTimer.elapsed();
 
-    // Acquire telemetry
+    // Acquire telemetry (with emergency stop checkpoints inside)
     if (!acquireTelemetry(m_state.currentTelemetry)) {
         failTest(FailureCategory::Communication, "Failed to acquire telemetry");
         return;
     }
+
+    // ADR-001: Check emergency stop after telemetry acquisition (second checkpoint)
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected after telemetry, aborting cycle";
+        return;
+    }
+
+    // Physics validation (runtime monitoring)
+    if (m_physicsValidationEnabled && m_lastSnapshot.timestamp.isValid()) {
+        auto results = Infrastructure::Validation::PhysicsValidator::validateAll(
+            m_state.currentTelemetry, m_lastSnapshot, m_validationConfig);
+
+        for (const auto& result : results) {
+            if (!result.passed) {
+                qWarning() << "[PhysicsValidation]" << result.ruleName
+                          << "FAILED:" << result.message;
+
+                // Log violation
+                if (m_violationLogger && m_violationLogger->isActive()) {
+                    m_violationLogger->logViolation(result, m_state.currentTelemetry);
+                }
+            }
+        }
+    }
+
+    // Update last snapshot for next validation
+    m_lastSnapshot = m_state.currentTelemetry;
 
     // Check for magnet events
     if (checkMagnetEvent(m_state.currentTelemetry)) {
@@ -141,6 +239,9 @@ void GearboxTestEngine::onCycleTick() {
 
     // Dispatch to phase handler
     switch (m_state.phase) {
+        case TestPhase::ImpactTest:
+            handleImpactTestPhase();
+            break;
         case TestPhase::PrepareAndHome:
             handleHomingPhase();
             break;
@@ -181,33 +282,63 @@ bool GearboxTestEngine::acquireTelemetry(TelemetrySnapshot& snapshot) {
 
     snapshot.timestamp = QDateTime::currentDateTime();
 
-    if (!m_motor->readCurrent(snapshot.motorCurrentA)) {
-        qWarning() << "Failed to read motor current:" << m_motor->lastError();
+    // ADR-001: Check emergency stop before each device read
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected before motor read, aborting telemetry";
         return false;
     }
 
-    if (!m_motor->readAI1Level(snapshot.aqmdAi1Level)) {
-        qWarning() << "Failed to read AI1 level:" << m_motor->lastError();
+    // Motor drive (critical)
+    snapshot.motorOnline = m_motor->readCurrent(snapshot.motorCurrentA)
+                        && m_motor->readAI1Level(snapshot.aqmdAi1Level);
+    if (!snapshot.motorOnline) {
+        qWarning() << "Failed to read motor:" << m_motor->lastError();
         return false;
     }
 
-    if (!m_torque->readAll(snapshot.dynTorqueNm, snapshot.dynSpeedRpm, snapshot.dynPowerW)) {
+    // ADR-001: Check emergency stop after motor read
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected after motor read, aborting telemetry";
+        return false;
+    }
+
+    // Torque sensor (critical)
+    snapshot.torqueOnline = m_torque->readAll(snapshot.dynTorqueNm, snapshot.dynSpeedRpm, snapshot.dynPowerW);
+    if (!snapshot.torqueOnline) {
         qWarning() << "Failed to read torque sensor:" << m_torque->lastError();
         return false;
     }
 
-    if (!m_encoder->readAngle(snapshot.encoderAngleDeg)) {
+    // ADR-001: Check emergency stop after torque read
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected after torque read, aborting telemetry";
+        return false;
+    }
+
+    // Encoder (angle is critical, velocity/totalAngle are non-critical)
+    snapshot.encoderOnline = m_encoder->readAngle(snapshot.encoderAngleDeg);
+    if (!snapshot.encoderOnline) {
         qWarning() << "Failed to read encoder:" << m_encoder->lastError();
         return false;
     }
+    // Non-critical: best-effort reads for additional encoder data
+    m_encoder->readVirtualMultiTurn(snapshot.encoderTotalAngleDeg);
+    m_encoder->readAngularVelocity(snapshot.encoderVelocityRpm);
 
-    if (!m_brake->readCurrent(m_brakeChannel, snapshot.brakeCurrentA)) {
-        qWarning() << "Failed to read brake current:" << m_brake->lastError();
+    // ADR-001: Check emergency stop after encoder read
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected after encoder read, aborting telemetry";
         return false;
     }
 
-    m_brake->readVoltage(m_brakeChannel, snapshot.brakeVoltageV);
-    m_brake->readPower(m_brakeChannel, snapshot.brakePowerW);
+    // Brake power supply (critical)
+    snapshot.brakeOnline = m_brake->readCurrent(m_brakeChannel, snapshot.brakeCurrentA)
+                        && m_brake->readVoltage(m_brakeChannel, snapshot.brakeVoltageV)
+                        && m_brake->readPower(m_brakeChannel, snapshot.brakePowerW);
+    if (!snapshot.brakeOnline) {
+        qWarning() << "Failed to read brake:" << m_brake->lastError();
+        return false;
+    }
 
     return true;
 }
@@ -244,6 +375,14 @@ void GearboxTestEngine::updateProgress() {
         progress = 0.0;
         break;
 
+    case TestPhase::ImpactTest: {
+        // 0-10% for impact test
+        double maxTime = qMax(1, m_recipe.impactTimeoutMs);
+        double frac = qMin(1.0, static_cast<double>(m_state.elapsedMs) / maxTime);
+        progress = frac * 10.0;
+        break;
+    }
+
     case TestPhase::PrepareAndHome: {
         // 0-15%
         double maxTime = qMax(1, m_recipe.homeTimeoutMs);
@@ -271,7 +410,9 @@ void GearboxTestEngine::updateProgress() {
     case TestPhase::IdleRun: {
         // 15-35%: proportional to estimated total idle run time
         double totalExpected = m_recipe.idleForwardSpinupMs + m_recipe.idleForwardSampleMs +
-                               500.0 + m_recipe.idleReverseSpinupMs + m_recipe.idleReverseSampleMs + 500.0;
+                               static_cast<double>(m_recipe.settlingPhaseChangeMs) +
+                               m_recipe.idleReverseSpinupMs + m_recipe.idleReverseSampleMs +
+                               static_cast<double>(m_recipe.settlingPhaseChangeMs);
         qint64 totalPhaseMs = m_phaseAccumulatedMs + m_phaseTimer.elapsed();
         double phaseFrac = qMin(1.0, static_cast<double>(totalPhaseMs) / qMax(1.0, totalExpected));
         progress = 15.0 + phaseFrac * 20.0;
@@ -365,17 +506,36 @@ void GearboxTestEngine::updateProgress() {
 }
 
 bool GearboxTestEngine::setMotorForward(double dutyCycle) {
+    // ADR-001: Check emergency stop before motor control
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected, refusing motor forward command";
+        return false;
+    }
+    if (!m_motor) {
+        return false;
+    }
     m_state.currentDirection = MotorDirection::Forward;
     return m_motor->setMotor(Infrastructure::Devices::IMotorDriveDevice::Direction::Forward, dutyCycle);
 }
 
 bool GearboxTestEngine::setMotorReverse(double dutyCycle) {
+    // ADR-001: Check emergency stop before motor control
+    if (m_emergencyStopRequested.load(std::memory_order_acquire)) {
+        qDebug() << "Emergency stop detected, refusing motor reverse command";
+        return false;
+    }
+    if (!m_motor) {
+        return false;
+    }
     m_state.currentDirection = MotorDirection::Reverse;
     return m_motor->setMotor(Infrastructure::Devices::IMotorDriveDevice::Direction::Reverse, dutyCycle);
 }
 
 bool GearboxTestEngine::stopMotor() {
     m_state.currentDirection = MotorDirection::Stopped;
+    if (!m_motor) {
+        return false;
+    }
     return m_motor->brake();
 }
 
@@ -411,9 +571,8 @@ void GearboxTestEngine::failTest(FailureCategory category, const QString& descri
     if (m_brake) {
         if (!m_brake->setOutputEnable(m_brakeChannel, false)) {
             qCritical() << "  [WARNING] Failed to disable brake output during failure handling!";
-            // Try multiple times for safety
+            // Try multiple times for safety (non-blocking retry)
             for (int retry = 0; retry < 3; ++retry) {
-                QThread::msleep(50);
                 if (m_brake->setOutputEnable(m_brakeChannel, false)) {
                     qDebug() << "  [OK] Brake disabled on retry" << (retry + 1);
                     break;
@@ -449,6 +608,12 @@ void GearboxTestEngine::failTest(FailureCategory category, const QString& descri
     m_state.results.endTime = QDateTime::currentDateTime();
     m_state.statusMessage = QString("FAILED: %1").arg(description);
 
+    // Close physics validation logging
+    if (m_violationLogger && m_violationLogger->isActive()) {
+        m_violationLogger->closeSession();
+        qDebug() << "Physics validation log saved to:" << m_violationLogger->currentLogPath();
+    }
+
     QString categoryStr;
     switch (category) {
         case FailureCategory::None:
@@ -479,9 +644,15 @@ void GearboxTestEngine::failTest(FailureCategory category, const QString& descri
 void GearboxTestEngine::completeTest() {
     m_cycleTimer->stop();
     stopMotor();
-    
+
     if (m_brake) {
         m_brake->setOutputEnable(m_brakeChannel, false);
+    }
+
+    // Close physics validation logging
+    if (m_violationLogger && m_violationLogger->isActive()) {
+        m_violationLogger->closeSession();
+        qDebug() << "Physics validation log saved to:" << m_violationLogger->currentLogPath();
     }
 
     m_state.phase = TestPhase::Completed;
@@ -490,6 +661,7 @@ void GearboxTestEngine::completeTest() {
     
     // Determine overall pass/fail
     m_state.results.overallPassed = 
+        m_state.results.homingCompleted &&
         m_state.results.idleForward.overallPassed &&
         m_state.results.idleReverse.overallPassed &&
         m_state.results.loadForward.overallPassed &&
@@ -559,26 +731,20 @@ void GearboxTestEngine::handleSeekingMagnet() {
 }
 
 void GearboxTestEngine::handleAdvancingToEncoderZero() {
-    // Continue forward to encoder zero point
+    // Homing complete: magnet detected, encoder zero is physically defined at installation.
+    // Send setZeroPoint command for protocol compatibility (acknowledgement on real hardware,
+    // no-op in simulation since encoder zero is fixed).
+    // Record the current angle as the homing reference for diagnostics.
+    stopMotor();
+    if (m_encoder) {
+        m_encoder->setZeroPoint();
+    }
     double currentAngle = m_state.currentTelemetry.encoderAngleDeg;
-    double targetAngle = m_recipe.encoderZeroAngleDeg;
-    
-    // Check if we've reached the target
-    double angleDiff = qAbs(currentAngle - targetAngle);
-    if (angleDiff < 0.5) {  // Within 0.5 degree
-        stopMotor();
-        m_state.results.homingCompleted = true;
-        m_state.results.finalEncoderZeroDeg = currentAngle;
-        m_state.statusMessage = "Homing complete";
-        transitionToSubState(TestSubState::HomeSettled);
-        qDebug() << "Homing complete at angle:" << currentAngle;
-        return;
-    }
-
-    // Check timeout
-    if (m_state.phaseElapsedMs > m_recipe.homeTimeoutMs) {
-        failTest(FailureCategory::Process, "Homing timeout: failed to reach encoder zero");
-    }
+    m_state.results.homingCompleted = true;
+    m_state.results.finalEncoderZeroDeg = currentAngle;
+    m_state.statusMessage = "Homing complete";
+    transitionToSubState(TestSubState::HomeSettled);
+    qDebug() << "Homing complete at angle:" << currentAngle << "- encoder zero point confirmed";
 }
 
 void GearboxTestEngine::handleIdleRunPhase() {
@@ -651,7 +817,7 @@ void GearboxTestEngine::handleSampleForward() {
         
         // Move to reverse
         stopMotor();
-        m_settlingTargetMs = 500;
+        m_settlingTargetMs = m_recipe.settlingPhaseChangeMs;
         transitionToSubState(TestSubState::SettlingForwardDelay);
     }
 }
@@ -694,7 +860,7 @@ void GearboxTestEngine::handleSampleReverse() {
         
         // Move to angle positioning
         stopMotor();
-        m_settlingTargetMs = 500;
+        m_settlingTargetMs = m_recipe.settlingPhaseChangeMs;
         transitionToSubState(TestSubState::SettlingReverseDelay);
     }
 }
@@ -778,7 +944,7 @@ void GearboxTestEngine::handleMoveToPosition2() {
                            m_recipe.position2ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        m_settlingTargetMs = 200;
+        m_settlingTargetMs = m_recipe.settlingAngleMoveMs;
         transitionToSubState(TestSubState::SettlingPosition2Delay);
         return;
     }
@@ -807,7 +973,7 @@ void GearboxTestEngine::handleMoveBackToPosition1() {
                            m_recipe.position1ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        m_settlingTargetMs = 200;
+        m_settlingTargetMs = m_recipe.settlingAngleMoveMs;
         transitionToSubState(TestSubState::SettlingPosition1ReturnDelay);
         return;
     }
@@ -836,7 +1002,7 @@ void GearboxTestEngine::handleMoveToPosition3() {
                            m_recipe.position3ToleranceDeg, measuredAngle);
         m_magnetEventDetected = false;
         stopMotor();
-        m_settlingTargetMs = 200;
+        m_settlingTargetMs = m_recipe.settlingAngleMoveMs;
         transitionToSubState(TestSubState::SettlingPosition3Delay);
         return;
     }
@@ -848,7 +1014,7 @@ void GearboxTestEngine::handleMoveToPosition3() {
 }
 
 void GearboxTestEngine::handleMoveBackToZero() {
-    // Return to encoder zero
+    // Return to encoder zero (0.0 relative to the zero point set during homing)
     if (m_state.currentDirection != MotorDirection::Reverse) {
         if (!setMotorReverse(m_recipe.angleTestDutyCycle)) {
             failTest(FailureCategory::Communication, "Failed to return to zero");
@@ -858,16 +1024,16 @@ void GearboxTestEngine::handleMoveBackToZero() {
     }
 
     double currentAngle = m_state.currentTelemetry.encoderAngleDeg;
-    double targetAngle = m_recipe.encoderZeroAngleDeg;
+    constexpr double targetAngle = 0.0;  // Zero point is always 0 after homing
     
     // Check if we've reached zero
     double angleDiff = qAbs(currentAngle - targetAngle);
     if (angleDiff < m_recipe.returnZeroToleranceDeg) {
         stopMotor();
         // Record zero position angle result (5th measurement)
-        evaluateAngleResult("Zero", m_recipe.encoderZeroAngleDeg,
+        evaluateAngleResult("Zero", targetAngle,
                            m_recipe.returnZeroToleranceDeg, currentAngle);
-        m_settlingTargetMs = 500;
+        m_settlingTargetMs = m_recipe.settlingPhaseChangeMs;
         transitionToSubState(TestSubState::SettlingZeroDelay);
         return;
     }
@@ -989,7 +1155,7 @@ void GearboxTestEngine::handleRampBrakeForward() {
         // Disable brake and stop motor
         m_brake->setOutputEnable(m_brakeChannel, false);
         stopMotor();
-        m_settlingTargetMs = 500;
+        m_settlingTargetMs = m_recipe.settlingPhaseChangeMs;
         
         transitionToSubState(TestSubState::SettlingLoadForwardDelay);
         return;
@@ -1080,7 +1246,7 @@ void GearboxTestEngine::handleRampBrakeReverse() {
         // Disable brake and stop motor
         m_brake->setOutputEnable(m_brakeChannel, false);
         stopMotor();
-        m_settlingTargetMs = 500;
+        m_settlingTargetMs = m_recipe.settlingPhaseChangeMs;
         
         transitionToSubState(TestSubState::SettlingLoadReverseDelay);
         return;
@@ -1127,11 +1293,17 @@ void GearboxTestEngine::handleReturnFinalZero() {
         m_state.statusMessage = "Returning to zero...";
     }
 
+    // After homing, encoder zero point is set, so all angles are relative to zero.
+    // The target is 0.0 (the zero point itself), not encoderZeroAngleDeg.
     double currentAngle = m_state.currentTelemetry.encoderAngleDeg;
-    double targetAngle = m_recipe.encoderZeroAngleDeg;
+    double targetAngle = 0.0;
 
-    // Check if we've reached zero
+    // Check if we've reached zero, with wrap-around handling for angles near 360/0
     double angleDiff = qAbs(currentAngle - targetAngle);
+    if (angleDiff > 180.0) {
+        angleDiff = 360.0 - angleDiff;
+    }
+
     if (angleDiff < m_recipe.returnZeroToleranceDeg) {
         stopMotor();
         m_state.statusMessage = "Final zero settled";
@@ -1399,4 +1571,290 @@ void GearboxTestEngine::handleSettlingLoadReverseDelay() {
     }
 }
 
+// ============================================================================
+// Impact Test Phase Handlers
+// ============================================================================
+
+void GearboxTestEngine::handleImpactTestPhase() {
+    // Check phase-level timeout
+    qint64 totalPhaseMs = m_phaseAccumulatedMs + m_state.phaseElapsedMs;
+    if (totalPhaseMs > m_recipe.impactTimeoutMs) {
+        failTest(FailureCategory::Process, "Impact test phase timeout");
+        return;
+    }
+
+    switch (m_state.subState) {
+        case TestSubState::ImpactForwardSpinup:
+            handleImpactForwardSpinup();
+            break;
+        case TestSubState::ImpactForwardBrakeOn:
+            handleImpactForwardBrakeOn();
+            break;
+        case TestSubState::ImpactForwardBrakeOff:
+            handleImpactForwardBrakeOff();
+            break;
+        case TestSubState::ImpactReverseSpinup:
+            handleImpactReverseSpinup();
+            break;
+        case TestSubState::ImpactReverseBrakeOn:
+            handleImpactReverseBrakeOn();
+            break;
+        case TestSubState::ImpactReverseBrakeOff:
+            handleImpactReverseBrakeOff();
+            break;
+        default:
+            break;
+    }
+}
+
+void GearboxTestEngine::handleImpactForwardSpinup() {
+    if (m_state.phaseElapsedMs == 0 || m_state.phaseElapsedMs < 50) {
+        // First tick: start motor forward
+        setMotorForward(m_recipe.impactDutyCycle);
+        m_impactCycleCount = 0;
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        m_state.statusMessage = "Impact test: forward spinup...";
+        qDebug() << "Impact forward spinup started";
+    }
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactSpinupMs) {
+        // Apply brake
+        if (m_brake) {
+            m_brake->setBrakeMode(m_brakeChannel, "CC");
+            m_brake->setCurrent(m_brakeChannel, m_recipe.impactBrakeCurrentA);
+            m_brake->setOutputEnable(m_brakeChannel, true);
+        }
+        m_impactCycleCount++;
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        transitionToSubState(TestSubState::ImpactForwardBrakeOn);
+        qDebug() << "Impact forward brake applied, cycle" << m_impactCycleCount;
+    }
+}
+
+void GearboxTestEngine::handleImpactForwardBrakeOn() {
+    m_state.statusMessage = QString("Impact forward cycle %1/%2...")
+                                .arg(m_impactCycleCount)
+                                .arg(m_recipe.impactCycles);
+
+    // Accumulate samples
+    m_impactCurrentSamples.append(m_state.currentTelemetry.motorCurrentA);
+    m_impactTorqueSamples.append(m_state.currentTelemetry.dynTorqueNm);
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactBrakeOnMs) {
+        // Calculate cycle results
+        ImpactCycleResult cycleResult;
+        cycleResult.cycleNumber = m_impactCycleCount;
+
+        if (!m_impactCurrentSamples.isEmpty()) {
+            cycleResult.peakCurrentA = *std::max_element(m_impactCurrentSamples.begin(), m_impactCurrentSamples.end());
+            double sumCurrent = 0.0;
+            for (double val : m_impactCurrentSamples) {
+                sumCurrent += val;
+            }
+            cycleResult.avgCurrentA = sumCurrent / m_impactCurrentSamples.size();
+        }
+
+        if (!m_impactTorqueSamples.isEmpty()) {
+            cycleResult.peakTorqueNm = *std::max_element(m_impactTorqueSamples.begin(), m_impactTorqueSamples.end());
+            double sumTorque = 0.0;
+            for (double val : m_impactTorqueSamples) {
+                sumTorque += val;
+            }
+            cycleResult.avgTorqueNm = sumTorque / m_impactTorqueSamples.size();
+        }
+
+        m_state.results.impactForward.cycles.append(cycleResult);
+        qDebug() << "Impact forward cycle" << m_impactCycleCount << "complete:"
+                 << "peak current" << cycleResult.peakCurrentA << "A,"
+                 << "avg current" << cycleResult.avgCurrentA << "A,"
+                 << "peak torque" << cycleResult.peakTorqueNm << "Nm,"
+                 << "avg torque" << cycleResult.avgTorqueNm << "Nm";
+
+        // Release brake
+        if (m_brake) {
+            m_brake->setOutputEnable(m_brakeChannel, false);
+        }
+
+        if (m_impactCycleCount >= m_recipe.impactCycles) {
+            // All forward cycles complete, evaluate and transition to reverse
+            evaluateImpactResult("Forward",
+                                 m_state.results.impactForward.cycles,
+                                 m_state.results.impactForward,
+                                 m_recipe.impactForwardCurrentMin,
+                                 m_recipe.impactForwardCurrentMax,
+                                 m_recipe.impactForwardTorqueMin,
+                                 m_recipe.impactForwardTorqueMax);
+
+            m_impactCycleCount = 0;
+            setMotorReverse(m_recipe.impactDutyCycle);
+            transitionToSubState(TestSubState::ImpactReverseSpinup);
+            qDebug() << "Impact forward complete, starting reverse";
+        } else {
+            // More cycles needed
+            m_impactCurrentSamples.clear();
+            m_impactTorqueSamples.clear();
+            transitionToSubState(TestSubState::ImpactForwardBrakeOff);
+        }
+    }
+}
+
+void GearboxTestEngine::handleImpactForwardBrakeOff() {
+    m_state.statusMessage = QString("Impact forward: brake off...");
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactBrakeOffMs) {
+        // Apply brake again for next cycle
+        if (m_brake) {
+            m_brake->setCurrent(m_brakeChannel, m_recipe.impactBrakeCurrentA);
+            m_brake->setOutputEnable(m_brakeChannel, true);
+        }
+        m_impactCycleCount++;
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        transitionToSubState(TestSubState::ImpactForwardBrakeOn);
+        qDebug() << "Impact forward brake re-applied, cycle" << m_impactCycleCount;
+    }
+}
+
+void GearboxTestEngine::handleImpactReverseSpinup() {
+    if (m_state.phaseElapsedMs == 0 || m_state.phaseElapsedMs < 50) {
+        // First tick: ensure motor is reverse (already set in previous handler)
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        m_state.statusMessage = "Impact test: reverse spinup...";
+        qDebug() << "Impact reverse spinup started";
+    }
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactSpinupMs) {
+        // Apply brake
+        if (m_brake) {
+            m_brake->setBrakeMode(m_brakeChannel, "CC");
+            m_brake->setCurrent(m_brakeChannel, m_recipe.impactBrakeCurrentA);
+            m_brake->setOutputEnable(m_brakeChannel, true);
+        }
+        m_impactCycleCount++;
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        transitionToSubState(TestSubState::ImpactReverseBrakeOn);
+        qDebug() << "Impact reverse brake applied, cycle" << m_impactCycleCount;
+    }
+}
+
+void GearboxTestEngine::handleImpactReverseBrakeOn() {
+    m_state.statusMessage = QString("Impact reverse cycle %1/%2...")
+                                .arg(m_impactCycleCount)
+                                .arg(m_recipe.impactCycles);
+
+    // Accumulate samples
+    m_impactCurrentSamples.append(m_state.currentTelemetry.motorCurrentA);
+    m_impactTorqueSamples.append(m_state.currentTelemetry.dynTorqueNm);
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactBrakeOnMs) {
+        // Calculate cycle results
+        ImpactCycleResult cycleResult;
+        cycleResult.cycleNumber = m_impactCycleCount;
+
+        if (!m_impactCurrentSamples.isEmpty()) {
+            cycleResult.peakCurrentA = *std::max_element(m_impactCurrentSamples.begin(), m_impactCurrentSamples.end());
+            double sumCurrent = 0.0;
+            for (double val : m_impactCurrentSamples) {
+                sumCurrent += val;
+            }
+            cycleResult.avgCurrentA = sumCurrent / m_impactCurrentSamples.size();
+        }
+
+        if (!m_impactTorqueSamples.isEmpty()) {
+            cycleResult.peakTorqueNm = *std::max_element(m_impactTorqueSamples.begin(), m_impactTorqueSamples.end());
+            double sumTorque = 0.0;
+            for (double val : m_impactTorqueSamples) {
+                sumTorque += val;
+            }
+            cycleResult.avgTorqueNm = sumTorque / m_impactTorqueSamples.size();
+        }
+
+        m_state.results.impactReverse.cycles.append(cycleResult);
+        qDebug() << "Impact reverse cycle" << m_impactCycleCount << "complete:"
+                 << "peak current" << cycleResult.peakCurrentA << "A,"
+                 << "avg current" << cycleResult.avgCurrentA << "A,"
+                 << "peak torque" << cycleResult.peakTorqueNm << "Nm,"
+                 << "avg torque" << cycleResult.avgTorqueNm << "Nm";
+
+        // Release brake
+        if (m_brake) {
+            m_brake->setOutputEnable(m_brakeChannel, false);
+        }
+
+        if (m_impactCycleCount >= m_recipe.impactCycles) {
+            // All reverse cycles complete, evaluate and transition to homing
+            evaluateImpactResult("Reverse",
+                                 m_state.results.impactReverse.cycles,
+                                 m_state.results.impactReverse,
+                                 m_recipe.impactReverseCurrentMin,
+                                 m_recipe.impactReverseCurrentMax,
+                                 m_recipe.impactReverseTorqueMin,
+                                 m_recipe.impactReverseTorqueMax);
+
+            stopMotor();
+            m_state.results.impactTestCompleted = true;
+            transitionToPhase(TestPhase::PrepareAndHome, TestSubState::SeekingMagnet);
+            qDebug() << "Impact test complete, transitioning to homing";
+        } else {
+            // More cycles needed
+            m_impactCurrentSamples.clear();
+            m_impactTorqueSamples.clear();
+            transitionToSubState(TestSubState::ImpactReverseBrakeOff);
+        }
+    }
+}
+
+void GearboxTestEngine::handleImpactReverseBrakeOff() {
+    m_state.statusMessage = QString("Impact reverse: brake off...");
+
+    if (m_state.phaseElapsedMs >= m_recipe.impactBrakeOffMs) {
+        // Apply brake again for next cycle
+        if (m_brake) {
+            m_brake->setCurrent(m_brakeChannel, m_recipe.impactBrakeCurrentA);
+            m_brake->setOutputEnable(m_brakeChannel, true);
+        }
+        m_impactCycleCount++;
+        m_impactCurrentSamples.clear();
+        m_impactTorqueSamples.clear();
+        transitionToSubState(TestSubState::ImpactReverseBrakeOn);
+        qDebug() << "Impact reverse brake re-applied, cycle" << m_impactCycleCount;
+    }
+}
+
+void GearboxTestEngine::evaluateImpactResult(const QString& direction,
+                                              const QVector<ImpactCycleResult>& cycles,
+                                              ImpactDirectionResult& result,
+                                              double currentMin, double currentMax,
+                                              double torqueMin, double torqueMax) {
+    result.direction = direction;
+    result.cycles = cycles;
+
+    double totalCurrent = 0.0, totalTorque = 0.0;
+    for (const auto& cycle : cycles) {
+        result.maxCurrentA = std::max(result.maxCurrentA, cycle.peakCurrentA);
+        result.maxTorqueNm = std::max(result.maxTorqueNm, cycle.peakTorqueNm);
+        totalCurrent += cycle.avgCurrentA;
+        totalTorque += cycle.avgTorqueNm;
+    }
+    if (!cycles.isEmpty()) {
+        result.avgCurrentA = totalCurrent / cycles.size();
+        result.avgTorqueNm = totalTorque / cycles.size();
+    }
+
+    result.currentPassed = (result.avgCurrentA >= currentMin) && (result.avgCurrentA <= currentMax);
+    result.torquePassed = (result.avgTorqueNm >= torqueMin) && (result.avgTorqueNm <= torqueMax);
+    result.overallPassed = result.currentPassed && result.torquePassed;
+
+    qDebug() << "Impact" << direction << "results:"
+             << "avgCurrent:" << result.avgCurrentA << (result.currentPassed ? "PASS" : "FAIL")
+             << "avgTorque:" << result.avgTorqueNm << (result.torquePassed ? "PASS" : "FAIL");
+}
+
 } // namespace Domain
+
+
+

@@ -24,12 +24,20 @@ struct TelemetrySnapshot {
     
     // Encoder
     double encoderAngleDeg;
-    
+    double encoderTotalAngleDeg;
+    double encoderVelocityRpm;
+
     // Brake power supply
     double brakeCurrentA;
     double brakeVoltageV;
     double brakePowerW;
-    
+
+    // Device online status (true = last read succeeded)
+    bool motorOnline;
+    bool torqueOnline;
+    bool encoderOnline;
+    bool brakeOnline;
+
     TelemetrySnapshot()
         : timestamp(QDateTime::currentDateTime())
         , motorCurrentA(0.0)
@@ -38,9 +46,15 @@ struct TelemetrySnapshot {
         , dynTorqueNm(0.0)
         , dynPowerW(0.0)
         , encoderAngleDeg(0.0)
+        , encoderTotalAngleDeg(0.0)
+        , encoderVelocityRpm(0.0)
         , brakeCurrentA(0.0)
         , brakeVoltageV(0.0)
         , brakePowerW(0.0)
+        , motorOnline(false)
+        , torqueOnline(false)
+        , encoderOnline(false)
+        , brakeOnline(false)
     {}
 };
 

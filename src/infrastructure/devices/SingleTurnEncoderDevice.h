@@ -38,7 +38,7 @@ public:
                                       int communicationMode = 0,
                                       int autoReportIntervalMs = 20,
                                       QObject* parent = nullptr);
-    ~SingleTurnEncoderDevice() override = default;
+    ~SingleTurnEncoderDevice() override;
 
     bool initialize() override;
     bool readAngle(double& angleDeg) override;
@@ -62,6 +62,10 @@ private:
     int m_autoReportIntervalMs;
     QString m_lastError;
     EncoderProactiveListener* m_proactiveListener;
+
+    // Retry configuration
+    static constexpr int MAX_RETRIES = 3;
+    static constexpr int RETRY_DELAY_MS = 50;
 
     // Register addresses (from correction document)
     static constexpr uint16_t REG_ANGLE = 0x0000;                  // Raw count value (single-turn)

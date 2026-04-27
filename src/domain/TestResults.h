@@ -9,6 +9,39 @@
 namespace Domain {
 
 /**
+ * @brief Individual impact cycle result
+ */
+struct ImpactCycleResult {
+    int cycleNumber;       // 1-based cycle index
+    double peakCurrentA;   // Peak current during this brake cycle
+    double peakTorqueNm;   // Peak torque during this brake cycle
+    double avgCurrentA;    // Average current while brake is on
+    double avgTorqueNm;    // Average torque while brake is on
+};
+
+/**
+ * @brief Impact test result for one direction
+ */
+struct ImpactDirectionResult {
+    QString direction;     // "Forward" or "Reverse"
+    QVector<ImpactCycleResult> cycles;
+    double maxCurrentA;    // Max current across all cycles in this direction
+    double maxTorqueNm;    // Max torque across all cycles
+    double avgCurrentA;    // Average current across all cycles
+    double avgTorqueNm;    // Average torque across all cycles
+    bool currentPassed;
+    bool torquePassed;
+    bool overallPassed;
+
+    ImpactDirectionResult()
+        : direction(), cycles()
+        , maxCurrentA(0.0), maxTorqueNm(0.0)
+        , avgCurrentA(0.0), avgTorqueNm(0.0)
+        , currentPassed(false), torquePassed(false), overallPassed(false)
+    {}
+};
+
+/**
  * @brief Individual angle measurement result
  */
 struct AngleResult {
@@ -94,7 +127,12 @@ struct TestResults {
     // Homing
     bool homingCompleted;
     double finalEncoderZeroDeg;
-    
+
+    // Impact test
+    ImpactDirectionResult impactForward;
+    ImpactDirectionResult impactReverse;
+    bool impactTestCompleted;  // true even when impact test is skipped (if disabled)
+
     // Idle run
     IdleRunResult idleForward;
     IdleRunResult idleReverse;
@@ -118,6 +156,9 @@ struct TestResults {
         , stationName()
         , homingCompleted(false)
         , finalEncoderZeroDeg(0.0)
+        , impactForward()
+        , impactReverse()
+        , impactTestCompleted(true)
         , idleForward()
         , idleReverse()
         , angleResults()

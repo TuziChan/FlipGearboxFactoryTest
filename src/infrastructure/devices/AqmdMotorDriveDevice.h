@@ -53,6 +53,10 @@ private:
     uint8_t m_slaveId;
     QString m_lastError;
 
+    // Retry configuration
+    static constexpr int MAX_RETRIES = 3;
+    static constexpr int RETRY_DELAY_MS = 50;
+
     // Register addresses (from device manual)
     static constexpr uint16_t REG_DEVICE_ID = 0x0000;
     static constexpr uint16_t REG_REAL_TIME_CURRENT = 0x0011;

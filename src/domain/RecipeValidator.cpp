@@ -144,6 +144,45 @@ bool RecipeValidator::validate(const TestRecipe& recipe, QStringList& errors) {
     valid &= validateRange(recipe.gearBacklashCompensationDeg, MIN_ANGLE, MAX_ANGLE, 
                           "gearBacklashCompensationDeg", errors);
 
+    // Settling delays
+    valid &= validateRange(recipe.settlingAngleMoveMs, MIN_DURATION_MS, MAX_DURATION_MS,
+                          "settlingAngleMoveMs", errors);
+    valid &= validateRange(recipe.settlingPhaseChangeMs, MIN_DURATION_MS, MAX_DURATION_MS,
+                          "settlingPhaseChangeMs", errors);
+
+    // Impact test parameters (only validate if enabled)
+    if (recipe.impactTestEnabled) {
+        valid &= validateRange(recipe.impactDutyCycle, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE,
+                              "impactDutyCycle", errors);
+        valid &= validateRange(recipe.impactSpinupMs, MIN_DURATION_MS, MAX_DURATION_MS,
+                              "impactSpinupMs", errors);
+        valid &= validatePositive(recipe.impactCycles, "impactCycles", errors);
+        valid &= validateRange(recipe.impactBrakeCurrentA, MIN_CURRENT, MAX_CURRENT,
+                              "impactBrakeCurrentA", errors);
+        valid &= validateRange(recipe.impactBrakeOnMs, MIN_DURATION_MS, MAX_DURATION_MS,
+                              "impactBrakeOnMs", errors);
+        valid &= validateRange(recipe.impactBrakeOffMs, MIN_DURATION_MS, MAX_DURATION_MS,
+                              "impactBrakeOffMs", errors);
+        valid &= validateRange(recipe.impactTimeoutMs, MIN_TIMEOUT_MS, MAX_TIMEOUT_MS,
+                              "impactTimeoutMs", errors);
+        valid &= validateRange(recipe.impactForwardCurrentMin, MIN_CURRENT, MAX_CURRENT,
+                              "impactForwardCurrentMin", errors);
+        valid &= validateRange(recipe.impactForwardCurrentMax, MIN_CURRENT, MAX_CURRENT,
+                              "impactForwardCurrentMax", errors);
+        valid &= validateRange(recipe.impactForwardTorqueMin, MIN_TORQUE, MAX_TORQUE,
+                              "impactForwardTorqueMin", errors);
+        valid &= validateRange(recipe.impactForwardTorqueMax, MIN_TORQUE, MAX_TORQUE,
+                              "impactForwardTorqueMax", errors);
+        valid &= validateRange(recipe.impactReverseCurrentMin, MIN_CURRENT, MAX_CURRENT,
+                              "impactReverseCurrentMin", errors);
+        valid &= validateRange(recipe.impactReverseCurrentMax, MIN_CURRENT, MAX_CURRENT,
+                              "impactReverseCurrentMax", errors);
+        valid &= validateRange(recipe.impactReverseTorqueMin, MIN_TORQUE, MAX_TORQUE,
+                              "impactReverseTorqueMin", errors);
+        valid &= validateRange(recipe.impactReverseTorqueMax, MIN_TORQUE, MAX_TORQUE,
+                              "impactReverseTorqueMax", errors);
+    }
+
     // Logical consistency checks
     if (recipe.idleForwardCurrentAvgMin > recipe.idleForwardCurrentAvgMax) {
         errors.append("idleForwardCurrentAvgMin must be <= idleForwardCurrentAvgMax");
@@ -221,6 +260,34 @@ bool RecipeValidator::validate(const TestRecipe& recipe, QStringList& errors) {
         errors.append(QString("loadTimeoutMs (%1) should be >= 2x sum of load durations (%2)")
                      .arg(recipe.loadTimeoutMs).arg(totalLoadTime * 2));
         valid = false;
+    }
+
+    // Impact test consistency checks
+    if (recipe.impactTestEnabled) {
+        if (recipe.impactForwardCurrentMin > recipe.impactForwardCurrentMax) {
+            errors.append("impactForwardCurrentMin must be <= impactForwardCurrentMax");
+            valid = false;
+        }
+        if (recipe.impactForwardTorqueMin > recipe.impactForwardTorqueMax) {
+            errors.append("impactForwardTorqueMin must be <= impactForwardTorqueMax");
+            valid = false;
+        }
+        if (recipe.impactReverseCurrentMin > recipe.impactReverseCurrentMax) {
+            errors.append("impactReverseCurrentMin must be <= impactReverseCurrentMax");
+            valid = false;
+        }
+        if (recipe.impactReverseTorqueMin > recipe.impactReverseTorqueMax) {
+            errors.append("impactReverseTorqueMin must be <= impactReverseTorqueMax");
+            valid = false;
+        }
+
+        int totalImpactTime = recipe.impactSpinupMs +
+                              (recipe.impactBrakeOnMs + recipe.impactBrakeOffMs) * recipe.impactCycles;
+        if (totalImpactTime * 2 > recipe.impactTimeoutMs) { // *2 for forward and reverse
+            errors.append(QString("impactTimeoutMs (%1) should be >= 2x estimated impact duration (%2)")
+                         .arg(recipe.impactTimeoutMs).arg(totalImpactTime * 2));
+            valid = false;
+        }
     }
 
     return valid;

@@ -114,8 +114,8 @@ bool DeviceConfigService::saveDeviceConfig(const QVariantMap& deviceConfig) {
         obj["parity"] = map.value("parity").toString();
         obj["stopBits"] = map.value("stopBits").toInt();
         obj["enabled"] = map.value("enabled", true).toBool();
-        if (map.contains("pollIntervalUs")) obj["pollIntervalUs"] = map.value("pollIntervalUs").toInt();
-        if (map.contains("communicationMode")) obj["communicationMode"] = map.value("communicationMode").toInt();
+        obj["pollIntervalUs"] = map.value("pollIntervalUs", 5000).toInt();
+        obj["communicationMode"] = map.value("communicationMode", 0).toInt();
         if (key == "encoder") obj["resolution"] = map.value("resolution").toInt();
         if (key == "brake") {
             obj["channel"] = map.value("channel", 1).toInt();

@@ -41,6 +41,16 @@ Components.AppScrollArea {
                 onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("name", text)
             }
 
+            Components.AppLabel { text: "SN规则:"; theme: root.theme }
+            Components.AppInput {
+                Layout.fillWidth: true
+                placeholderText: "例如 yyyymmdd00001"
+                text: root.recipe ? (root.recipe.serialNumberRule || "") : ""
+                readOnly: !root.isEditing
+                theme: root.theme
+                onTextChanged: if (root.isEditing && root.recipeVM) root.recipeVM.updateEditField("serialNumberRule", text)
+            }
+
             Components.AppLabel { text: "描述:"; theme: root.theme; Layout.alignment: Qt.AlignTop }
             Components.AppTextarea {
                 Layout.fillWidth: true

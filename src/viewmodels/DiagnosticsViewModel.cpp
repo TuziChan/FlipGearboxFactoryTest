@@ -1,7 +1,11 @@
 #include "DiagnosticsViewModel.h"
 #include "../infrastructure/devices/IMotorDriveDevice.h"
+#include "../infrastructure/devices/ITorqueSensorDevice.h"
+#include "../infrastructure/devices/IEncoderDevice.h"
+#include "../infrastructure/devices/IBrakePowerDevice.h"
 #include <QDateTime>
 #include <QRegularExpression>
+#include <algorithm>
 
 namespace ViewModels {
 
@@ -104,6 +108,7 @@ void DiagnosticsViewModel::setMotorForward(double dutyCyclePercent) {
         appendLog("发送", "AQMD", "电机未启用，无法正转", false);
         return;
     }
+    dutyCyclePercent = std::clamp(dutyCyclePercent, 0.0, 100.0);
     const bool ok = m_runtime->motor()->setMotor(Infrastructure::Devices::IMotorDriveDevice::Direction::Forward, dutyCyclePercent);
     appendLog("发送", "AQMD", ok ? QString("设置正转 %1%").arg(dutyCyclePercent, 0, 'f', 1)
                                   : QString("设置正转失败: %1").arg(m_runtime->motor()->lastError()), ok);
@@ -115,6 +120,7 @@ void DiagnosticsViewModel::setMotorReverse(double dutyCyclePercent) {
         appendLog("发送", "AQMD", "电机未启用，无法反转", false);
         return;
     }
+    dutyCyclePercent = std::clamp(dutyCyclePercent, 0.0, 100.0);
     const bool ok = m_runtime->motor()->setMotor(Infrastructure::Devices::IMotorDriveDevice::Direction::Reverse, dutyCyclePercent);
     appendLog("发送", "AQMD", ok ? QString("设置反转 %1%").arg(dutyCyclePercent, 0, 'f', 1)
                                   : QString("设置反转失败: %1").arg(m_runtime->motor()->lastError()), ok);
@@ -147,6 +153,7 @@ void DiagnosticsViewModel::setBrakeCurrent(double currentA) {
         appendLog("发送", "制动电源", "制动电源未启用，无法设置电流", false);
         return;
     }
+    currentA = std::clamp(currentA, 0.0, 5.0);
     const bool ok = m_runtime->brake()->setCurrent(m_runtime->brakeChannel(), currentA);
     appendLog("发送", "制动电源", ok ? QString("设置电流 %1 A").arg(currentA, 0, 'f', 2)
                                      : QString("设置电流失败: %1").arg(m_runtime->brake()->lastError()), ok);
@@ -158,6 +165,7 @@ void DiagnosticsViewModel::setBrakeVoltage(double voltageV) {
         appendLog("发送", "制动电源", "制动电源未启用，无法设置电压", false);
         return;
     }
+    voltageV = std::clamp(voltageV, 0.0, 24.0);
     const bool ok = m_runtime->brake()->setVoltage(m_runtime->brakeChannel(), voltageV);
     appendLog("发送", "制动电源", ok ? QString("设置电压 %1 V").arg(voltageV, 0, 'f', 2)
                                      : QString("设置电压失败: %1").arg(m_runtime->brake()->lastError()), ok);
@@ -205,6 +213,7 @@ void DiagnosticsViewModel::switchMockMode(bool mockMode) {
 void DiagnosticsViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
     qDebug() << "DiagnosticsViewModel: Runtime recreated, updating reference";
     m_runtime = newRuntime;
+    emit isMockModeChanged();
 
     // Clear logs and reinitialize
     m_communicationLogs.clear();
@@ -252,30 +261,20 @@ void DiagnosticsViewModel::updateDeviceStatus(int index) {
 }
 
 QVariantMap DiagnosticsViewModel::buildMotorStatus() {
+    static const QVariantMap s_offline{
+        {"currentA", 0.0},
+        {"ai1Level", false},
+        {"online", false}
+    };
+
     if (!m_runtime || !m_runtime->motor()) {
-        QVariantMap newMotorTelemetry{
-            {"currentA", 0.0},
-            {"ai1Level", false},
-            {"online", false}
-        };
-        if (m_motorTelemetry != newMotorTelemetry) {
-            m_motorTelemetry = newMotorTelemetry;
-            emit motorTelemetryChanged();
-        }
+        setTelemetryOffline(m_motorTelemetry, &DiagnosticsViewModel::motorTelemetryChanged, s_offline);
         return buildOfflineStatus("AQMD 电机驱动器", "设备未启用");
     }
 
     const QString motorBusReason = busOfflineReason(m_runtime->aqmdBus());
     if (!motorBusReason.isEmpty()) {
-        QVariantMap newMotorTelemetry{
-            {"currentA", 0.0},
-            {"ai1Level", false},
-            {"online", false}
-        };
-        if (m_motorTelemetry != newMotorTelemetry) {
-            m_motorTelemetry = newMotorTelemetry;
-            emit motorTelemetryChanged();
-        }
+        setTelemetryOffline(m_motorTelemetry, &DiagnosticsViewModel::motorTelemetryChanged, s_offline);
         return buildOfflineStatus("AQMD 电机驱动器", motorBusReason);
     }
 
@@ -306,32 +305,21 @@ QVariantMap DiagnosticsViewModel::buildMotorStatus() {
 }
 
 QVariantMap DiagnosticsViewModel::buildTorqueStatus() {
+    static const QVariantMap s_offline{
+        {"torqueNm", 0.0},
+        {"speedRpm", 0.0},
+        {"powerW", 0.0},
+        {"online", false}
+    };
+
     if (!m_runtime || !m_runtime->torque()) {
-        QVariantMap newTorqueTelemetry{
-            {"torqueNm", 0.0},
-            {"speedRpm", 0.0},
-            {"powerW", 0.0},
-            {"online", false}
-        };
-        if (m_torqueTelemetry != newTorqueTelemetry) {
-            m_torqueTelemetry = newTorqueTelemetry;
-            emit torqueTelemetryChanged();
-        }
+        setTelemetryOffline(m_torqueTelemetry, &DiagnosticsViewModel::torqueTelemetryChanged, s_offline);
         return buildOfflineStatus("DYN200 扭矩传感器", "设备未启用");
     }
 
     const QString torqueBusReason = busOfflineReason(m_runtime->dyn200Bus());
     if (!torqueBusReason.isEmpty()) {
-        QVariantMap newTorqueTelemetry{
-            {"torqueNm", 0.0},
-            {"speedRpm", 0.0},
-            {"powerW", 0.0},
-            {"online", false}
-        };
-        if (m_torqueTelemetry != newTorqueTelemetry) {
-            m_torqueTelemetry = newTorqueTelemetry;
-            emit torqueTelemetryChanged();
-        }
+        setTelemetryOffline(m_torqueTelemetry, &DiagnosticsViewModel::torqueTelemetryChanged, s_offline);
         return buildOfflineStatus("DYN200 扭矩传感器", torqueBusReason);
     }
 
@@ -365,84 +353,75 @@ QVariantMap DiagnosticsViewModel::buildTorqueStatus() {
 }
 
 QVariantMap DiagnosticsViewModel::buildEncoderStatus() {
+    static const QVariantMap s_offline{
+        {"angleDeg", 0.0},
+        {"totalAngleDeg", 0.0},
+        {"velocityRpm", 0.0},
+        {"online", false}
+    };
+
     if (!m_runtime || !m_runtime->encoder()) {
-        QVariantMap newEncoderTelemetry{
-            {"angleDeg", 0.0},
-            {"online", false}
-        };
-        if (m_encoderTelemetry != newEncoderTelemetry) {
-            m_encoderTelemetry = newEncoderTelemetry;
-            emit encoderTelemetryChanged();
-        }
+        setTelemetryOffline(m_encoderTelemetry, &DiagnosticsViewModel::encoderTelemetryChanged, s_offline);
         return buildOfflineStatus("单圈绝对值编码器", "设备未启用");
     }
 
     const QString encoderBusReason = busOfflineReason(m_runtime->encoderBus());
     if (!encoderBusReason.isEmpty()) {
-        QVariantMap newEncoderTelemetry{
-            {"angleDeg", 0.0},
-            {"online", false}
-        };
-        if (m_encoderTelemetry != newEncoderTelemetry) {
-            m_encoderTelemetry = newEncoderTelemetry;
-            emit encoderTelemetryChanged();
-        }
+        setTelemetryOffline(m_encoderTelemetry, &DiagnosticsViewModel::encoderTelemetryChanged, s_offline);
         return buildOfflineStatus("单圈绝对值编码器", encoderBusReason);
     }
 
     double angleDeg = 0.0;
-    const bool ok = m_runtime->encoder()->readAngle(angleDeg);
-    
+    double totalAngleDeg = 0.0;
+    double velocityRpm = 0.0;
+    const bool angleOk = m_runtime->encoder()->readAngle(angleDeg);
+    // Best-effort reads: totalAngle and velocity are non-critical (align with GearboxTestEngine)
+    m_runtime->encoder()->readVirtualMultiTurn(totalAngleDeg);
+    m_runtime->encoder()->readAngularVelocity(velocityRpm);
+    const bool online = angleOk;
+
     QVariantMap newEncoderTelemetry{
         {"angleDeg", angleDeg},
-        {"online", ok}
+        {"totalAngleDeg", totalAngleDeg},
+        {"velocityRpm", velocityRpm},
+        {"online", online}
     };
     if (m_encoderTelemetry != newEncoderTelemetry) {
         m_encoderTelemetry = newEncoderTelemetry;
         emit encoderTelemetryChanged();
     }
-    
+
     return {
         {"name", "单圈绝对值编码器"},
-        {"status", ok ? "online" : "offline"},
+        {"status", online ? "online" : "offline"},
         {"lastUpdate", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")},
-        {"summary", ok ? QString("角度 %1°").arg(angleDeg, 0, 'f', 2)
+        {"summary", online ? QString("角度 %1° / 累计 %2° / 转速 %3 RPM")
+                                .arg(angleDeg, 0, 'f', 2)
+                                .arg(totalAngleDeg, 0, 'f', 2)
+                                .arg(velocityRpm, 0, 'f', 1)
                         : QString("通信失败: %1").arg(humanizeError(m_runtime->encoder()->lastError()))},
-        {"errorCount", ok ? 0 : 1}
+        {"errorCount", online ? 0 : 1}
     };
 }
 
 QVariantMap DiagnosticsViewModel::buildBrakeStatus() {
+    static const QVariantMap s_offline{
+        {"currentA", 0.0},
+        {"voltageV", 0.0},
+        {"powerW", 0.0},
+        {"mode", "CC"},
+        {"channel", 0},
+        {"online", false}
+    };
+
     if (!m_runtime || !m_runtime->brake()) {
-        QVariantMap newBrakeTelemetry{
-            {"currentA", 0.0},
-            {"voltageV", 0.0},
-            {"powerW", 0.0},
-            {"mode", "CC"},
-            {"channel", 0},
-            {"online", false}
-        };
-        if (m_brakeTelemetry != newBrakeTelemetry) {
-            m_brakeTelemetry = newBrakeTelemetry;
-            emit brakeTelemetryChanged();
-        }
+        setTelemetryOffline(m_brakeTelemetry, &DiagnosticsViewModel::brakeTelemetryChanged, s_offline);
         return buildOfflineStatus("制动电源", "设备未启用");
     }
 
     const QString brakeBusReason = busOfflineReason(m_runtime->brakeBus());
     if (!brakeBusReason.isEmpty()) {
-        QVariantMap newBrakeTelemetry{
-            {"currentA", 0.0},
-            {"voltageV", 0.0},
-            {"powerW", 0.0},
-            {"mode", "CC"},
-            {"channel", 0},
-            {"online", false}
-        };
-        if (m_brakeTelemetry != newBrakeTelemetry) {
-            m_brakeTelemetry = newBrakeTelemetry;
-            emit brakeTelemetryChanged();
-        }
+        setTelemetryOffline(m_brakeTelemetry, &DiagnosticsViewModel::brakeTelemetryChanged, s_offline);
         return buildOfflineStatus("制动电源", brakeBusReason);
     }
 
@@ -452,9 +431,9 @@ QVariantMap DiagnosticsViewModel::buildBrakeStatus() {
     int mode = 0;
     const bool currentOk = m_runtime->brake()->readCurrent(m_runtime->brakeChannel(), currentA);
     const bool voltageOk = m_runtime->brake()->readVoltage(m_runtime->brakeChannel(), voltageV);
-    m_runtime->brake()->readPower(m_runtime->brakeChannel(), powerW);
-    m_runtime->brake()->readMode(m_runtime->brakeChannel(), mode);
-    const bool online = currentOk && voltageOk;
+    const bool powerOk = m_runtime->brake()->readPower(m_runtime->brakeChannel(), powerW);
+    const bool modeOk = m_runtime->brake()->readMode(m_runtime->brakeChannel(), mode);
+    const bool online = currentOk && voltageOk && powerOk && modeOk;
     QString modeStr = (mode == 1) ? "CV" : "CC";
     
     QVariantMap newBrakeTelemetry{
@@ -493,6 +472,15 @@ QVariantMap DiagnosticsViewModel::buildOfflineStatus(const QString& name, const 
         {"summary", humanizeError(reason)},
         {"errorCount", 1}
     };
+}
+
+void DiagnosticsViewModel::setTelemetryOffline(QVariantMap& member,
+                                               void (DiagnosticsViewModel::*signal)(),
+                                               const QVariantMap& offlineValues) {
+    if (member != offlineValues) {
+        member = offlineValues;
+        emit (this->*signal)();
+    }
 }
 
 void DiagnosticsViewModel::appendLog(const QString& direction, const QString& device, const QString& message, bool success) {

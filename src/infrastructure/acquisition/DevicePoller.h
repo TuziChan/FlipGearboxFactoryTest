@@ -126,13 +126,20 @@ protected:
         m_running.store(true);
         while (m_running.load()) {
             double angleDeg = 0.0;
-            bool ok = m_device->readAngle(angleDeg);
+            double totalAngleDeg = 0.0;
+            double velocityRpm = 0.0;
+
+            bool angleOk = m_device->readAngle(angleDeg);
+            m_device->readVirtualMultiTurn(totalAngleDeg);
+            m_device->readAngularVelocity(velocityRpm);
 
             uint64_t ts = TelemetryBuffer::nowNs();
             m_buffer->timestampNs.store(ts);
 
-            if (ok) {
+            if (angleOk) {
                 m_buffer->angleDeg.store(angleDeg);
+                m_buffer->totalAngleDeg.store(totalAngleDeg);
+                m_buffer->velocityRpm.store(velocityRpm);
                 m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {
@@ -171,13 +178,21 @@ protected:
         m_running.store(true);
         while (m_running.load()) {
             double currentA = 0.0;
-            bool ok = m_device->readCurrent(m_channel, currentA);
+            double voltageV = 0.0;
+            double powerW = 0.0;
+
+            bool ok = true;
+            if (!m_device->readCurrent(m_channel, currentA)) ok = false;
+            if (!m_device->readVoltage(m_channel, voltageV)) ok = false;
+            if (!m_device->readPower(m_channel, powerW)) ok = false;
 
             uint64_t ts = TelemetryBuffer::nowNs();
             m_buffer->timestampNs.store(ts);
 
             if (ok) {
                 m_buffer->currentA.store(currentA);
+                m_buffer->voltageV.store(voltageV);
+                m_buffer->powerW.store(powerW);
                 m_buffer->valid.store(true);
                 m_buffer->successCount.fetch_add(1);
             } else {

@@ -12,6 +12,7 @@ namespace Domain {
  */
 enum class TestPhase {
     Idle,
+    ImpactTest,
     PrepareAndHome,
     IdleRun,
     AnglePositioning,
@@ -27,7 +28,15 @@ enum class TestPhase {
 enum class TestSubState {
     // Idle
     NotStarted,
-    
+
+    // Impact test
+    ImpactForwardSpinup,
+    ImpactForwardBrakeOn,
+    ImpactForwardBrakeOff,
+    ImpactReverseSpinup,
+    ImpactReverseBrakeOn,
+    ImpactReverseBrakeOff,
+
     // Homing
     SeekingMagnet,
     AdvancingToEncoderZero,
@@ -41,13 +50,9 @@ enum class TestSubState {
     
     // Angle positioning
     MoveToPosition1,
-    HoldAfterPosition1,
     MoveToPosition2,
-    HoldAfterPosition2,
     MoveBackToPosition1,
-    HoldAfterPosition1Return,
     MoveToPosition3,
-    HoldAfterPosition3,
     MoveBackToZero,
     
     // Load test
@@ -124,6 +129,7 @@ struct TestRunState {
     QString phaseString() const {
         switch (phase) {
             case TestPhase::Idle: return "Idle";
+            case TestPhase::ImpactTest: return "Impact Test";
             case TestPhase::PrepareAndHome: return "Homing";
             case TestPhase::IdleRun: return "Idle Run Test";
             case TestPhase::AnglePositioning: return "Angle Positioning";

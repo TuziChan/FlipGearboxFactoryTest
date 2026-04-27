@@ -43,8 +43,8 @@ public:
         , m_forceSpeedOverride(false)
         , m_overrideSpeedRpm(0.0)
     {
-        // Default magnet positions for angle test (3°, 49°, 113°)
-        m_magnetPositions = {3.0, 49.0, 113.0};
+        // Default magnet positions for angle test (3°, 49°, 113.5°)
+        m_magnetPositions = {3.0, 49.0, 113.5};
     }
 
     // ========== Fault Injection ==========

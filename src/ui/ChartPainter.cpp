@@ -5,7 +5,8 @@
 ChartPainter::ChartPainter(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
-    setRenderTarget(QQuickPaintedItem::FramebufferObject);
+    // Use Image render target to avoid GPU/FBO-related startup crashes on some systems.
+    setRenderTarget(QQuickPaintedItem::Image);
     setAntialiasing(true);
 }
 

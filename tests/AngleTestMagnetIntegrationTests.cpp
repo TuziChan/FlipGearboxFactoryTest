@@ -11,7 +11,7 @@ using namespace Domain;
  * @brief Integration tests for angle test with magnet detection
  *
  * Simulates the complete angle positioning phase with realistic
- * magnet detection behavior at 3°, 49°, and 113°.
+ * magnet detection behavior at 3°, 49°, and 113.5°.
  */
 class AngleTestMagnetIntegrationTests : public QObject {
     Q_OBJECT
@@ -58,7 +58,7 @@ void AngleTestMagnetIntegrationTests::init() {
     m_brake->initialize();
 
     // Setup magnet detection
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(true);
 }
@@ -72,14 +72,14 @@ void AngleTestMagnetIntegrationTests::cleanup() {
 
 void AngleTestMagnetIntegrationTests::testCompleteAngleTestSequence() {
     // Simulate the complete angle test sequence:
-    // 0° -> Position1(3°) -> Position2(49°) -> Position1(3°) -> Position3(113°) -> 0°
+    // 0° -> Position1(3°) -> Position2(49°) -> Position1(3°) -> Position3(113.5°) -> 0°
 
     QVector<QPair<QString, double>> sequence = {
         {"Start", 0.0},
         {"Position1", 3.0},
         {"Position2", 49.0},
         {"Position1 Return", 3.0},
-        {"Position3", 113.0},
+        {"Position3", 113.5},
         {"Return to Zero", 0.0}
     };
 
@@ -129,7 +129,7 @@ void AngleTestMagnetIntegrationTests::testCompleteAngleTestSequence() {
             QVERIFY(qAbs(detectionAngle - 49.0) < 1.0);
         } else if (phaseName == "Position3") {
             QVERIFY2(magnetDetectedInPhase, "Should detect magnet at Position3");
-            QVERIFY(qAbs(detectionAngle - 113.0) < 1.0);
+            QVERIFY(qAbs(detectionAngle - 113.5) < 1.0);
         }
     }
 
@@ -139,7 +139,7 @@ void AngleTestMagnetIntegrationTests::testCompleteAngleTestSequence() {
     // Verify pass counts
     QCOMPARE(m_motor->getMagnetPassCount(0), 2);  // 3° magnet passed twice
     QCOMPARE(m_motor->getMagnetPassCount(1), 1);  // 49° magnet passed once
-    QCOMPARE(m_motor->getMagnetPassCount(2), 1);  // 113° magnet passed once
+    QCOMPARE(m_motor->getMagnetPassCount(2), 1);  // 113.5° magnet passed once
 }
 
 void AngleTestMagnetIntegrationTests::testAngleTestWithForwardAndReverse() {

@@ -392,21 +392,26 @@ private slots:
         
         bool level = false;
         
-        // Initially magnet not detected
+        // Initially magnet not detected (AI1 high = true)
         QVERIFY(motor.readAI1Level(level));
-        QVERIFY(!level);
+        QVERIFY(level);  // No magnet -> AI1 high (true)
         
         // Start motor
         motor.setMotor(Devices::IMotorDriveDevice::Direction::Forward, 20.0);
         
-        // Advance simulation to trigger magnet detection
+        // Advance simulation and check for magnet detection during movement
+        bool magnetDetected = false;
         for (int i = 0; i < 100; i++) {
             ctx.advanceTick();
+            QVERIFY(motor.readAI1Level(level));
+            if (!level) {
+                magnetDetected = true;  // Magnet detected -> AI1 low (false)
+                break;
+            }
         }
         
-        // Eventually magnet should be detected
-        QVERIFY(motor.readAI1Level(level));
-        QVERIFY(level);
+        // Magnet should have been detected as the motor passed through its position
+        QVERIFY(magnetDetected);
     }
     
     // ========== SimulatedTorqueDevice Tests ==========

@@ -9,27 +9,22 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 include(CTest)
+enable_testing()
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 SerialPort Test)
+# CTest Configuration
+set(CTEST_PARALLEL_LEVEL 8 CACHE STRING "Number of parallel test jobs")
+set(DART_TESTING_TIMEOUT 300 CACHE STRING "Test timeout in seconds")
+set(CTEST_OUTPUT_ON_FAILURE ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Graphs SerialPort Test Qml)
 
 qt_standard_project_setup(REQUIRES 6.10)
 
-# Main application executable
-qt_add_executable(appFlipGearboxFactoryTest
-    main.cpp
-    assets/app.rc
-    
-    # Domain Layer
-    src/domain/TelemetrySnapshot.h
-    src/domain/FailureReason.h
-    src/domain/TestRecipe.h
-    src/domain/TestResults.h
-    src/domain/TestRunState.h
-    src/domain/RecipeValidator.h
-    src/domain/RecipeValidator.cpp
-    src/domain/GearboxTestEngine.h
-    src/domain/GearboxTestEngine.cpp
-    
+# ============================================================================
+# Layer 1: Infrastructure Library (Base Layer - No Dependencies)
+# ============================================================================
+
+qt_add_library(FlipGearboxInfra STATIC
     # Infrastructure - Bus
     src/infrastructure/bus/ModbusFrame.h
     src/infrastructure/bus/ModbusFrame.cpp
@@ -37,13 +32,13 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/bus/IBusController.cpp
     src/infrastructure/bus/ModbusRtuBusController.h
     src/infrastructure/bus/ModbusRtuBusController.cpp
-    
+
     # Infrastructure - Devices (Interfaces)
     src/infrastructure/devices/IMotorDriveDevice.h
     src/infrastructure/devices/ITorqueSensorDevice.h
     src/infrastructure/devices/IEncoderDevice.h
     src/infrastructure/devices/IBrakePowerDevice.h
-    
+
     # Infrastructure - Devices (Real Hardware)
     src/infrastructure/devices/AqmdMotorDriveDevice.h
     src/infrastructure/devices/AqmdMotorDriveDevice.cpp
@@ -57,7 +52,7 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/devices/SingleTurnEncoderDevice.cpp
     src/infrastructure/devices/BrakePowerSupplyDevice.h
     src/infrastructure/devices/BrakePowerSupplyDevice.cpp
-    
+
     # Infrastructure - Simulation
     src/infrastructure/simulation/SimulationContext.h
     src/infrastructure/simulation/SimulatedBusController.h
@@ -86,13 +81,27 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/simulation/MockDeviceManager.cpp
     src/infrastructure/simulation/MockDeviceTestExample.h
     src/infrastructure/simulation/MockDeviceTestExample.cpp
-    
+    src/infrastructure/simulation/HardwareSimulationHarness.h
+    src/infrastructure/simulation/HardwareSimulationHarness.cpp
+    src/infrastructure/simulation/SimulationScenario.h
+    src/infrastructure/simulation/SimulationScenario.cpp
+    src/infrastructure/simulation/SimulatedBusControllerWithFaults.h
+    src/infrastructure/simulation/EnhancedSimulationContext.h
+
+    # Infrastructure - Testing
+    src/infrastructure/testing/TestOrchestrator.h
+    src/infrastructure/testing/TestOrchestrator.cpp
+    src/infrastructure/testing/TeamExecutionMonitor.h
+    src/infrastructure/testing/TeamExecutionMonitor.cpp
+    src/infrastructure/testing/BuildPipelineRunner.h
+    src/infrastructure/testing/BuildPipelineRunner.cpp
+
     # Infrastructure - Acquisition
     src/infrastructure/acquisition/TelemetryBuffer.h
     src/infrastructure/acquisition/DevicePoller.h
     src/infrastructure/acquisition/AcquisitionScheduler.h
     src/infrastructure/acquisition/AcquisitionScheduler.cpp
-    
+
     # Infrastructure - Config
     src/infrastructure/config/AppConfig.h
     src/infrastructure/config/StationConfig.h
@@ -100,6 +109,8 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/config/RecipeConfig.cpp
     src/infrastructure/config/ConfigLoader.h
     src/infrastructure/config/ConfigLoader.cpp
+    src/infrastructure/config/StationConfigValidator.h
+    src/infrastructure/config/StationConfigValidator.cpp
     src/infrastructure/config/DeviceConfigService.h
     src/infrastructure/config/DeviceConfigService.cpp
     src/infrastructure/config/StationRuntime.h
@@ -109,12 +120,93 @@ qt_add_executable(appFlipGearboxFactoryTest
     src/infrastructure/config/RuntimeManager.h
     src/infrastructure/config/RuntimeManager.cpp
 
+    # Infrastructure - Logging
+    src/infrastructure/logging/LogManager.h
+    src/infrastructure/logging/LogManager.cpp
+
+    # Infrastructure - Monitoring
+    src/infrastructure/monitoring/PerformanceMonitor.h
+    src/infrastructure/monitoring/PerformanceMonitor.cpp
+
+    # Infrastructure - Validation
+    src/infrastructure/validation/PhysicsValidator.h
+    src/infrastructure/validation/PhysicsValidator.cpp
+    src/infrastructure/validation/PhysicsViolationLogger.h
+    src/infrastructure/validation/PhysicsViolationLogger.cpp
+
+    # Infrastructure - Reporting
+    src/infrastructure/reporting/ReportGenerator.h
+    src/infrastructure/reporting/ReportGenerator.cpp
+    src/infrastructure/reporting/JsonReportWriter.h
+    src/infrastructure/reporting/JsonReportWriter.cpp
+    src/infrastructure/reporting/TestReportGenerator.h
+    src/infrastructure/reporting/TestReportGenerator.cpp
+
     # Infrastructure - Services
     src/infrastructure/services/HistoryService.h
     src/infrastructure/services/HistoryService.cpp
     src/infrastructure/services/RecipeService.h
     src/infrastructure/services/RecipeService.cpp
-    
+)
+
+target_include_directories(FlipGearboxInfra
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(FlipGearboxInfra
+    PUBLIC
+        Qt6::Core
+        Qt6::SerialPort
+)
+
+# ============================================================================
+# Layer 2: Domain Library (Depends on Infrastructure)
+# ============================================================================
+
+qt_add_library(FlipGearboxDomain STATIC
+    # Domain Layer
+    src/domain/TelemetrySnapshot.h
+    src/domain/FailureReason.h
+    src/domain/TestRecipe.h
+    src/domain/TestResults.h
+    src/domain/TestRunState.h
+    src/domain/RecipeValidator.h
+    src/domain/RecipeValidator.cpp
+    src/domain/GearboxTestEngine.h
+    src/domain/GearboxTestEngine.cpp
+)
+
+target_include_directories(FlipGearboxDomain
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(FlipGearboxDomain
+    PUBLIC
+        FlipGearboxInfra
+        Qt6::Core
+)
+
+# ============================================================================
+# Layer 3: UI Library (Depends on Domain)
+# ============================================================================
+
+qt_add_library(FlipGearboxUI STATIC
+    # TeamOps - AI Team Monitoring
+    src/teamops/TeamRoleStatus.h
+    src/teamops/TeamRoleStatus.cpp
+    src/teamops/ITeamDataProvider.h
+    src/teamops/ITeamDataProvider.cpp
+    src/teamops/MockTeamDataProvider.h
+    src/teamops/MockTeamDataProvider.cpp
+    src/teamops/FileTeamDataProvider.h
+    src/teamops/FileTeamDataProvider.cpp
+    src/teamops/TeamMonitorService.h
+    src/teamops/TeamMonitorService.cpp
+    src/teamops/TeamOpsViewModel.h
+    src/teamops/TeamOpsViewModel.cpp
+
     # ViewModels
     src/viewmodels/TestExecutionViewModel.h
     src/viewmodels/TestExecutionViewModel.cpp
@@ -128,6 +220,43 @@ qt_add_executable(appFlipGearboxFactoryTest
     # UI Components (C++)
     src/ui/ChartPainter.h
     src/ui/ChartPainter.cpp
+)
+
+target_include_directories(FlipGearboxUI
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(FlipGearboxUI
+    PUBLIC
+        FlipGearboxDomain
+        Qt6::Core
+        Qt6::Quick
+)
+
+# ============================================================================
+# Legacy Compatibility: FlipGearboxTestLib (Transitional)
+# ============================================================================
+
+qt_add_library(FlipGearboxTestLib STATIC
+    tests/framework/AutoTestFramework.cpp
+    tests/framework/AutoTestFramework.h
+    tests/framework/MockTestRunner.cpp
+    tests/framework/MockTestRunner.h
+)
+
+target_link_libraries(FlipGearboxTestLib
+    PUBLIC
+        FlipGearboxUI
+        Qt6::Test
+)
+
+# ============================================================================
+# Main Application Executable
+# ============================================================================
+
+qt_add_executable(appFlipGearboxFactoryTest
+    main.cpp
 )
 
 # QML module for the application
@@ -223,6 +352,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/PlaceholderPage.qml
         src/ui/components/MockControlPanel.qml
         src/ui/components/TestExecutionWorkspace.qml
+        src/ui/components/PhysicsValidationPanel.qml
         
         # UI Pages
         src/ui/pages/AppShell.qml
@@ -239,6 +369,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/pages/recipe/RecipeIdleForm.qml
         src/ui/pages/recipe/RecipeAngleForm.qml
         src/ui/pages/recipe/RecipeLoadForm.qml
+        src/ui/pages/recipe/RecipeImpactForm.qml
 )
 
 # Copy fonts to build directory
@@ -276,474 +407,122 @@ set_target_properties(appFlipGearboxFactoryTest PROPERTIES
 # Link libraries for main application
 target_link_libraries(appFlipGearboxFactoryTest
     PRIVATE
+        FlipGearboxTestLib
         Qt6::Quick
         Qt6::QuickControls2
-        Qt6::SerialPort
+        Qt6::Graphs
 )
+
+if(WIN32)
+    target_link_libraries(appFlipGearboxFactoryTest PRIVATE dbghelp)
+endif()
 
 # ============================================================================
-# Test Executables
+# Individual Test Executables
 # ============================================================================
 
-# QML Smoke Tests
-qt_add_executable(QmlSmokeTests
-    tests/ui/QmlSmokeTests.cpp
-)
+# Unified Test Runner (standalone executable with main())
+qt_add_executable(UnifiedTestRunner tests/framework/UnifiedTestRunner.cpp)
+set_target_properties(UnifiedTestRunner PROPERTIES WIN32_EXECUTABLE FALSE)
+target_include_directories(UnifiedTestRunner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(UnifiedTestRunner PRIVATE FlipGearboxUI Qt6::Core)
 
-set_target_properties(QmlSmokeTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_link_libraries(QmlSmokeTests
-    PRIVATE
-        Qt6::Quick
-        Qt6::Test
-)
-
-target_compile_definitions(QmlSmokeTests
-    PRIVATE
-        TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-# Test Execution Verification
-qt_add_executable(TestExecutionVerification
-    tests/TestExecutionVerification.cpp
-    tests/mocks/MockDevices.h
-    src/domain/GearboxTestEngine.h
-    src/domain/GearboxTestEngine.cpp
-    src/domain/RecipeValidator.h
-    src/domain/RecipeValidator.cpp
-    src/domain/TelemetrySnapshot.h
-    src/domain/TestRunState.h
-    src/domain/TestRecipe.h
-    src/domain/TestResults.h
-    src/domain/FailureReason.h
-    src/infrastructure/config/StationConfig.h
-    src/infrastructure/config/ConfigLoader.h
-    src/infrastructure/config/ConfigLoader.cpp
-    src/infrastructure/config/RecipeConfig.h
-    src/infrastructure/config/RecipeConfig.cpp
-    src/infrastructure/bus/IBusController.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/devices/IBrakePowerDevice.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
-    src/infrastructure/acquisition/TelemetryBuffer.h
-    src/infrastructure/acquisition/DevicePoller.h
-    src/infrastructure/acquisition/AcquisitionScheduler.h
-    src/infrastructure/acquisition/AcquisitionScheduler.cpp
-)
-
-set_target_properties(TestExecutionVerification PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(TestExecutionVerification PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(TestExecutionVerification
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
+# Helper macro to create test executables
+macro(add_gearbox_test TEST_NAME TEST_SOURCE)
+    qt_add_executable(${TEST_NAME} ${TEST_SOURCE} tests/mocks/MockDevices.h)
+    set_target_properties(${TEST_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_definitions(${TEST_NAME} PRIVATE TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(${TEST_NAME} PRIVATE FlipGearboxTestLib Qt6::Test)
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endmacro()
 
 # Protocol Layer Tests
-qt_add_executable(ProtocolLayerTests
-    tests/ProtocolLayerTests.cpp
-    tests/mocks/MockDevices.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/bus/IBusController.h
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/devices/IBrakePowerDevice.h
-)
+add_gearbox_test(ProtocolLayerTests tests/ProtocolLayerTests.cpp)
+set_tests_properties(ProtocolLayerTests PROPERTIES LABELS "protocol;unit")
 
-set_target_properties(ProtocolLayerTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
+add_gearbox_test(ModbusCrcTests tests/protocol/ModbusCrcTests.cpp)
+set_tests_properties(ModbusCrcTests PROPERTIES LABELS "protocol;unit")
 
-target_include_directories(ProtocolLayerTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Device Layer Tests
+add_gearbox_test(BrakePowerConstantVoltageTest tests/devices/BrakePowerConstantVoltageTest.cpp)
+set_tests_properties(BrakePowerConstantVoltageTest PROPERTIES LABELS "device;unit")
 
-target_link_libraries(ProtocolLayerTests
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
+add_gearbox_test(AngleTestMagnetIntegrationTests tests/AngleTestMagnetIntegrationTests.cpp)
+set_tests_properties(AngleTestMagnetIntegrationTests PROPERTIES LABELS "device;integration")
 
-# Brake Power Constant Voltage Test
-qt_add_executable(BrakePowerConstantVoltageTest
-    tests/devices/BrakePowerConstantVoltageTest.cpp
-    tests/mocks/MockDevices.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
-    src/infrastructure/devices/IBrakePowerDevice.h
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/bus/IBusController.h
-    src/domain/TestRecipe.h
-    src/infrastructure/config/RecipeConfig.h
-    src/infrastructure/config/RecipeConfig.cpp
-)
-
-set_target_properties(BrakePowerConstantVoltageTest PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(BrakePowerConstantVoltageTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(BrakePowerConstantVoltageTest
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
-
-# History ViewModel Tests
-qt_add_executable(HistoryViewModelTests
-    tests/viewmodels/HistoryViewModelTests.cpp
-    src/viewmodels/HistoryViewModel.h
-    src/viewmodels/HistoryViewModel.cpp
-    src/infrastructure/services/HistoryService.h
-    src/infrastructure/services/HistoryService.cpp
-)
-
-set_target_properties(HistoryViewModelTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(HistoryViewModelTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(HistoryViewModelTests
-    PRIVATE
-        Qt6::Core
-        Qt6::Test
-)
-
-# Recipe ViewModel Tests
-qt_add_executable(RecipeViewModelTests
-    tests/viewmodels/RecipeViewModelTests.cpp
-    src/viewmodels/RecipeViewModel.h
-    src/viewmodels/RecipeViewModel.cpp
-    src/infrastructure/services/RecipeService.h
-    src/infrastructure/services/RecipeService.cpp
-    src/infrastructure/config/RecipeConfig.h
-    src/infrastructure/config/RecipeConfig.cpp
-)
-
-set_target_properties(RecipeViewModelTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(RecipeViewModelTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(RecipeViewModelTests
-    PRIVATE
-        Qt6::Core
-        Qt6::Test
-)
-
-# ============================================================================
-# CTest Configuration
-# ============================================================================
-
-# Simulation Runtime Tests
-qt_add_executable(SimulationRuntimeTests
-    tests/simulation/SimulationRuntimeTests.cpp
-    src/infrastructure/config/StationRuntimeFactory.h
-    src/infrastructure/config/StationRuntimeFactory.cpp
-    src/infrastructure/config/StationRuntime.h
-    src/infrastructure/config/StationRuntime.cpp
-    src/infrastructure/config/StationConfig.h
-    src/infrastructure/simulation/SimulationContext.h
-    src/infrastructure/simulation/SimulatedBusController.h
-    src/infrastructure/simulation/SimulatedMotorDevice.h
-    src/infrastructure/simulation/SimulatedMotorDevice.cpp
-    src/infrastructure/simulation/SimulatedTorqueDevice.h
-    src/infrastructure/simulation/SimulatedTorqueDevice.cpp
-    src/infrastructure/simulation/SimulatedEncoderDevice.h
-    src/infrastructure/simulation/SimulatedEncoderDevice.cpp
-    src/infrastructure/simulation/SimulatedBrakeDevice.h
-    src/infrastructure/simulation/SimulatedBrakeDevice.cpp
-    src/infrastructure/simulation/MockModbusDevice.h
-    src/infrastructure/simulation/MockModbusDevice.cpp
-    src/infrastructure/simulation/MockMotorDevice.h
-    src/infrastructure/simulation/MockMotorDevice.cpp
-    src/infrastructure/simulation/MockTorqueDevice.h
-    src/infrastructure/simulation/MockTorqueDevice.cpp
-    src/infrastructure/simulation/MockEncoderDevice.h
-    src/infrastructure/simulation/MockEncoderDevice.cpp
-    src/infrastructure/simulation/MockBrakeDevice.h
-    src/infrastructure/simulation/MockBrakeDevice.cpp
-    src/infrastructure/simulation/MockSerialBusController.h
-    src/infrastructure/simulation/MockSerialBusController.cpp
-    src/infrastructure/simulation/MockDeviceManager.h
-    src/infrastructure/simulation/MockDeviceManager.cpp
-    src/infrastructure/simulation/MockDeviceTestExample.h
-    src/infrastructure/simulation/MockDeviceTestExample.cpp
-    src/infrastructure/bus/IBusController.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/bus/ModbusRtuBusController.h
-    src/infrastructure/bus/ModbusRtuBusController.cpp
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/devices/IBrakePowerDevice.h
-    src/infrastructure/devices/AqmdMotorDriveDevice.h
-    src/infrastructure/devices/AqmdMotorDriveDevice.cpp
-    src/infrastructure/devices/Dyn200TorqueSensorDevice.h
-    src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
-    src/infrastructure/devices/Dyn200ProactiveListener.h
-    src/infrastructure/devices/Dyn200ProactiveListener.cpp
-    src/infrastructure/devices/EncoderProactiveListener.h
-    src/infrastructure/devices/EncoderProactiveListener.cpp
-    src/infrastructure/devices/SingleTurnEncoderDevice.h
-    src/infrastructure/devices/SingleTurnEncoderDevice.cpp
-    src/infrastructure/devices/BrakePowerSupplyDevice.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
-    src/domain/GearboxTestEngine.h
-    src/domain/GearboxTestEngine.cpp
-    src/domain/RecipeValidator.h
-    src/domain/RecipeValidator.cpp
-    src/domain/TestRecipe.h
-    src/domain/TestResults.h
-    src/domain/TestRunState.h
-    src/domain/TelemetrySnapshot.h
-    src/domain/FailureReason.h
-    src/infrastructure/acquisition/TelemetryBuffer.h
-    src/infrastructure/acquisition/DevicePoller.h
-    src/infrastructure/acquisition/AcquisitionScheduler.h
-    src/infrastructure/acquisition/AcquisitionScheduler.cpp
-)
-
-set_target_properties(SimulationRuntimeTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(SimulationRuntimeTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(SimulationRuntimeTests
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
-
-# Gearbox Simulation Integration Tests
-qt_add_executable(GearboxSimulationIntegrationTests
-    tests/simulation/GearboxSimulationIntegrationTests.cpp
-    src/infrastructure/config/StationRuntimeFactory.h
-    src/infrastructure/config/StationRuntimeFactory.cpp
-    src/infrastructure/config/StationRuntime.h
-    src/infrastructure/config/StationRuntime.cpp
-    src/infrastructure/config/StationConfig.h
-    src/infrastructure/simulation/SimulationContext.h
-    src/infrastructure/simulation/SimulatedBusController.h
-    src/infrastructure/simulation/SimulatedMotorDevice.h
-    src/infrastructure/simulation/SimulatedMotorDevice.cpp
-    src/infrastructure/simulation/SimulatedTorqueDevice.h
-    src/infrastructure/simulation/SimulatedTorqueDevice.cpp
-    src/infrastructure/simulation/SimulatedEncoderDevice.h
-    src/infrastructure/simulation/SimulatedEncoderDevice.cpp
-    src/infrastructure/simulation/SimulatedBrakeDevice.h
-    src/infrastructure/simulation/SimulatedBrakeDevice.cpp
-    src/infrastructure/simulation/MockModbusDevice.h
-    src/infrastructure/simulation/MockModbusDevice.cpp
-    src/infrastructure/simulation/MockMotorDevice.h
-    src/infrastructure/simulation/MockMotorDevice.cpp
-    src/infrastructure/simulation/MockTorqueDevice.h
-    src/infrastructure/simulation/MockTorqueDevice.cpp
-    src/infrastructure/simulation/MockEncoderDevice.h
-    src/infrastructure/simulation/MockEncoderDevice.cpp
-    src/infrastructure/simulation/MockBrakeDevice.h
-    src/infrastructure/simulation/MockBrakeDevice.cpp
-    src/infrastructure/simulation/MockSerialBusController.h
-    src/infrastructure/simulation/MockSerialBusController.cpp
-    src/infrastructure/simulation/MockDeviceManager.h
-    src/infrastructure/simulation/MockDeviceManager.cpp
-    src/infrastructure/simulation/MockDeviceTestExample.h
-    src/infrastructure/simulation/MockDeviceTestExample.cpp
-    src/infrastructure/bus/IBusController.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/bus/ModbusRtuBusController.h
-    src/infrastructure/bus/ModbusRtuBusController.cpp
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/devices/IBrakePowerDevice.h
-    src/infrastructure/devices/AqmdMotorDriveDevice.h
-    src/infrastructure/devices/AqmdMotorDriveDevice.cpp
-    src/infrastructure/devices/Dyn200TorqueSensorDevice.h
-    src/infrastructure/devices/Dyn200TorqueSensorDevice.cpp
-    src/infrastructure/devices/Dyn200ProactiveListener.h
-    src/infrastructure/devices/Dyn200ProactiveListener.cpp
-    src/infrastructure/devices/EncoderProactiveListener.h
-    src/infrastructure/devices/EncoderProactiveListener.cpp
-    src/infrastructure/devices/SingleTurnEncoderDevice.h
-    src/infrastructure/devices/SingleTurnEncoderDevice.cpp
-    src/infrastructure/devices/BrakePowerSupplyDevice.h
-    src/infrastructure/devices/BrakePowerSupplyDevice.cpp
-    src/domain/GearboxTestEngine.h
-    src/domain/GearboxTestEngine.cpp
-    src/domain/RecipeValidator.h
-    src/domain/RecipeValidator.cpp
-    src/domain/TestRecipe.h
-    src/domain/TestResults.h
-    src/domain/TestRunState.h
-    src/domain/TelemetrySnapshot.h
-    src/domain/FailureReason.h
-    src/infrastructure/acquisition/TelemetryBuffer.h
-    src/infrastructure/acquisition/DevicePoller.h
-    src/infrastructure/acquisition/AcquisitionScheduler.h
-    src/infrastructure/acquisition/AcquisitionScheduler.cpp
-)
-
-set_target_properties(GearboxSimulationIntegrationTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-target_include_directories(GearboxSimulationIntegrationTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(GearboxSimulationIntegrationTests
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
+add_gearbox_test(BoundaryProtectionTests tests/BoundaryProtectionTests.cpp)
+set_tests_properties(BoundaryProtectionTests PROPERTIES LABELS "device;integration")
 
 # Domain Engine Tests
-qt_add_executable(DomainEngineTests
-    tests/DomainEngineTests.cpp
-    tests/mocks/MockDevices.h
-    src/domain/GearboxTestEngine.h
-    src/domain/GearboxTestEngine.cpp
-    src/domain/RecipeValidator.h
-    src/domain/RecipeValidator.cpp
-    src/domain/TelemetrySnapshot.h
-    src/domain/TestRunState.h
-    src/domain/TestRecipe.h
-    src/domain/TestResults.h
-    src/domain/FailureReason.h
-    src/infrastructure/bus/IBusController.h
-    src/infrastructure/bus/ModbusFrame.h
-    src/infrastructure/bus/ModbusFrame.cpp
-    src/infrastructure/devices/IMotorDriveDevice.h
-    src/infrastructure/devices/ITorqueSensorDevice.h
-    src/infrastructure/devices/IEncoderDevice.h
-    src/infrastructure/devices/IBrakePowerDevice.h
-    src/infrastructure/acquisition/TelemetryBuffer.h
-    src/infrastructure/acquisition/DevicePoller.h
-    src/infrastructure/acquisition/AcquisitionScheduler.h
-    src/infrastructure/acquisition/AcquisitionScheduler.cpp
+add_gearbox_test(DomainEngineTests tests/DomainEngineTests.cpp)
+set_tests_properties(DomainEngineTests PROPERTIES LABELS "domain;unit")
+
+add_gearbox_test(DomainEngineAdvancedTests tests/DomainEngineAdvancedTests.cpp)
+set_tests_properties(DomainEngineAdvancedTests PROPERTIES LABELS "domain;unit")
+
+add_gearbox_test(JudgementLogicTests tests/domain/JudgementLogicTests.cpp)
+set_tests_properties(JudgementLogicTests PROPERTIES LABELS "domain;unit")
+
+add_gearbox_test(TestExecutionVerification tests/TestExecutionVerification.cpp)
+set_tests_properties(TestExecutionVerification PROPERTIES LABELS "domain;integration")
+
+# ViewModel Tests
+add_gearbox_test(TestExecutionViewModelTests tests/viewmodels/TestExecutionViewModelTests.cpp)
+set_tests_properties(TestExecutionViewModelTests PROPERTIES LABELS "viewmodel;integration")
+
+add_gearbox_test(HistoryViewModelTests tests/viewmodels/HistoryViewModelTests.cpp)
+set_tests_properties(HistoryViewModelTests PROPERTIES LABELS "viewmodel;integration")
+
+add_gearbox_test(RecipeViewModelTests tests/viewmodels/RecipeViewModelTests.cpp)
+set_tests_properties(RecipeViewModelTests PROPERTIES LABELS "viewmodel;integration")
+
+# UI Tests
+add_gearbox_test(QmlSmokeTests tests/ui/QmlSmokeTests.cpp)
+set_tests_properties(QmlSmokeTests PROPERTIES LABELS "ui;integration")
+
+add_gearbox_test(TestExecutionPageTests tests/ui/TestExecutionPageTests.cpp)
+set_tests_properties(TestExecutionPageTests PROPERTIES LABELS "ui;integration")
+
+# Simulation Tests
+add_gearbox_test(SimulationRuntimeTests tests/simulation/SimulationRuntimeTests.cpp)
+set_tests_properties(SimulationRuntimeTests PROPERTIES LABELS "infrastructure;unit")
+
+add_gearbox_test(MockMotorMagnetDetectionTests tests/simulation/MockMotorMagnetDetectionTests.cpp)
+set_tests_properties(MockMotorMagnetDetectionTests PROPERTIES LABELS "infrastructure;unit")
+
+add_gearbox_test(GearboxSimulationIntegrationTests tests/simulation/GearboxSimulationIntegrationTests.cpp)
+set_tests_properties(GearboxSimulationIntegrationTests PROPERTIES LABELS "integration;e2e")
+
+add_gearbox_test(HardwareSimulationHarnessTests tests/simulation/HardwareSimulationHarnessTests.cpp)
+set_tests_properties(HardwareSimulationHarnessTests PROPERTIES LABELS "infrastructure;unit")
+
+add_gearbox_test(MockPhysicsValidationTests tests/simulation/MockPhysicsValidationTests.cpp)
+
+add_gearbox_test(CrossDevicePhysicsTests tests/simulation/CrossDevicePhysicsTests.cpp)
+set_tests_properties(CrossDevicePhysicsTests PROPERTIES LABELS "infrastructure;integration;physics")
+set_tests_properties(MockPhysicsValidationTests PROPERTIES LABELS "infrastructure;unit;physics")
+
+# Stability Tests
+add_gearbox_test(LongRunningStabilityTest tests/stability/LongRunningStabilityTest.cpp)
+set_tests_properties(LongRunningStabilityTest PROPERTIES
+    LABELS "integration;e2e"
+    TIMEOUT 1800
 )
 
-set_target_properties(DomainEngineTests PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
+# Framework Tests
+add_gearbox_test(AutoTestFrameworkTests tests/framework/AutoTestFrameworkTests.cpp)
+set_tests_properties(AutoTestFrameworkTests PROPERTIES LABELS "infrastructure;unit")
 
-target_include_directories(DomainEngineTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_gearbox_test(MockTestRunnerTests tests/framework/MockTestRunnerTests.cpp)
+set_tests_properties(MockTestRunnerTests PROPERTIES LABELS "infrastructure;unit")
 
-target_link_libraries(DomainEngineTests
-    PRIVATE
-        Qt6::Core
-        Qt6::SerialPort
-        Qt6::Test
-)
+add_gearbox_test(PerformanceMonitorTests tests/infrastructure/PerformanceMonitorTests.cpp)
+set_tests_properties(PerformanceMonitorTests PROPERTIES LABELS "infrastructure;unit")
 
-set(QT_TEST_PATH "F:/Qt/6.11.0/mingw_64/bin;F:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}")
-
-add_test(
-    NAME TestExecutionVerification
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:TestExecutionVerification> -o - -txt
-)
-
-add_test(
-    NAME ProtocolLayerTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:ProtocolLayerTests> -o - -txt
-)
-
-add_test(
-    NAME BrakePowerConstantVoltageTest
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:BrakePowerConstantVoltageTest> -o - -txt
-)
-
-add_test(
-    NAME QmlSmokeTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "QT_QUICK_CONTROLS_STYLE=Basic"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:QmlSmokeTests> -o - -txt
-)
-
-add_test(
-    NAME HistoryViewModelTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:HistoryViewModelTests> -o - -txt
-)
-
-add_test(
-    NAME RecipeViewModelTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:RecipeViewModelTests> -o - -txt
-)
-
-
-add_test(
-    NAME SimulationRuntimeTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:SimulationRuntimeTests> -o - -txt
-)
-
-add_test(
-    NAME GearboxSimulationIntegrationTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:GearboxSimulationIntegrationTests> -o - -txt
-)
-add_test(
-    NAME DomainEngineTests
-    COMMAND
-        ${CMAKE_COMMAND} -E env
-        "QT_QPA_PLATFORM=offscreen"
-        "PATH=${QT_TEST_PATH}"
-        $<TARGET_FILE:DomainEngineTests> -o - -txt
-)
+add_gearbox_test(TestReportGeneratorTests tests/infrastructure/TestReportGeneratorTests.cpp)
+set_tests_properties(TestReportGeneratorTests PROPERTIES LABELS "infrastructure;unit")
 
 # ============================================================================
 # Installation
@@ -755,3 +534,11 @@ install(TARGETS appFlipGearboxFactoryTest
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+if(WIN32)
+    qt_generate_deploy_qml_app_script(
+        TARGET appFlipGearboxFactoryTest
+        OUTPUT_SCRIPT appFlipGearboxFactoryTest_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+    install(SCRIPT ${appFlipGearboxFactoryTest_deploy_script})
+endif()

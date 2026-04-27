@@ -2,6 +2,7 @@
 #include "../bus/ModbusFrame.h"
 #include "../bus/ModbusRtuBusController.h"
 #include <QDebug>
+#include <QThread>
 
 namespace Infrastructure {
 namespace Devices {
@@ -29,6 +30,7 @@ Dyn200TorqueSensorDevice::~Dyn200TorqueSensorDevice() {
 bool Dyn200TorqueSensorDevice::initialize() {
     if (!m_busController || !m_busController->isOpen()) {
         m_lastError = "Bus controller is not open";
+        emit errorOccurred(m_lastError);
         return false;
     }
 
@@ -38,6 +40,7 @@ bool Dyn200TorqueSensorDevice::initialize() {
         double torque;
         if (!readTorque(torque)) {
             m_lastError = QString("Failed to verify DYN200 communication: %1").arg(m_lastError);
+            emit errorOccurred(m_lastError);
             return false;
         }
         
@@ -66,15 +69,20 @@ bool Dyn200TorqueSensorDevice::initialize() {
                 break;
             default:
                 m_lastError = QString("Invalid communication mode: %1").arg(m_communicationMode);
+                emit errorOccurred(m_lastError);
                 return false;
         }
         
         // Write to register 0x1CH to switch mode
         if (!writeRegister(REG_COMM_MODE, modeValue)) {
             m_lastError = QString("Failed to switch DYN200 to proactive mode: %1").arg(m_lastError);
+            emit errorOccurred(m_lastError);
             return false;
         }
-        
+
+        // Wait for device to apply the new communication mode before starting listener
+        QThread::msleep(200);
+
         qDebug() << "DYN200 switched to proactive mode, register 0x1CH =" << modeValue;
         qDebug() << "WARNING: To switch back to Modbus RTU mode, manual factory reset is required via sensor buttons";
         
@@ -82,6 +90,7 @@ bool Dyn200TorqueSensorDevice::initialize() {
         QSerialPort* serialPort = getSerialPort();
         if (!serialPort) {
             m_lastError = "Failed to get serial port from bus controller";
+            emit errorOccurred(m_lastError);
             return false;
         }
         
@@ -195,50 +204,112 @@ QString Dyn200TorqueSensorDevice::lastError() const {
 
 bool Dyn200TorqueSensorDevice::readRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values) {
     QByteArray request = Bus::ModbusFrame::buildReadHoldingRegisters(m_slaveId, address, count);
-    QByteArray response;
-    
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
-    }
 
-    if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
-        // Check if it's an exception response
-        uint8_t functionCode = static_cast<uint8_t>(response[1]);
-        if (functionCode & 0x80) {
-            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
-            m_lastError = QString("Modbus exception: %1").arg(exception.second);
-        } else {
-            m_lastError = "Invalid read response or CRC error";
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("DYN200 read registers failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("DYN200 read registers failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
         }
-        return false;
+
+        if (!Bus::ModbusFrame::parseReadHoldingRegistersResponse(response, count, values)) {
+            // Check if it's an exception response
+            uint8_t functionCode = static_cast<uint8_t>(response[1]);
+            if (functionCode & 0x80) {
+                QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+                m_lastError = QString("Modbus exception: %1").arg(exception.second);
+            } else {
+                m_lastError = "Invalid read response or CRC error";
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("DYN200 parse read response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("DYN200 parse read response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("DYN200 read registers succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool Dyn200TorqueSensorDevice::writeRegister(uint16_t address, uint16_t value) {
     QByteArray request = Bus::ModbusFrame::buildWriteSingleRegister(m_slaveId, address, value);
-    QByteArray response;
-    
-    if (!m_busController->sendRequest(request, response)) {
-        m_lastError = m_busController->lastError();
-        return false;
-    }
 
-    if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
-        // Check if it's an exception response
-        uint8_t functionCode = static_cast<uint8_t>(response[1]);
-        if (functionCode & 0x80) {
-            QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
-            m_lastError = QString("Modbus exception: %1").arg(exception.second);
-        } else {
-            m_lastError = "Invalid write response or CRC error";
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        QByteArray response;
+
+        if (!m_busController->sendRequest(request, response)) {
+            m_lastError = m_busController->lastError();
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("DYN200 write register failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("DYN200 write register failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
         }
-        return false;
+
+        if (!Bus::ModbusFrame::parseWriteSingleRegisterResponse(response, address, value)) {
+            // Check if it's an exception response
+            uint8_t functionCode = static_cast<uint8_t>(response[1]);
+            if (functionCode & 0x80) {
+                QPair<uint8_t, QString> exception = Bus::ModbusFrame::parseExceptionResponse(response);
+                m_lastError = QString("Modbus exception: %1").arg(exception.second);
+            } else {
+                m_lastError = "Invalid write response or CRC error";
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                qWarning() << QString("DYN200 parse write response failed (attempt %1/%2): %3. Retrying...")
+                              .arg(attempt + 1).arg(MAX_RETRIES).arg(m_lastError);
+                QThread::msleep(RETRY_DELAY_MS);
+                continue;
+            }
+
+            qCritical() << QString("DYN200 parse write response failed after %1 attempts: %2")
+                           .arg(MAX_RETRIES).arg(m_lastError);
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        // Success
+        if (attempt > 0) {
+            qDebug() << QString("DYN200 write register succeeded on attempt %1").arg(attempt + 1);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 int32_t Dyn200TorqueSensorDevice::combineToInt32(uint16_t highWord, uint16_t lowWord) const {

@@ -103,7 +103,7 @@ void MockDeviceTestExample::testBasicCommunication() {
 
 void MockDeviceTestExample::testAngleMagnetDetection() {
     qDebug() << "\n--- Test 2: Angle Test with Magnet Detection ---";
-    qDebug() << "Magnet positions: 3°, 49°, 113°";
+    qDebug() << "Magnet positions: 3°, 49°, 113.5°";
     qDebug() << "Detection window: ±2°";
 
     bool encoderOpen = m_mockManager->busController()->open("COM3", 9600, 1000, "None", 1);
@@ -128,8 +128,8 @@ void MockDeviceTestExample::testAngleMagnetDetection() {
         {49.0, true, "At second magnet (49°)"},
         {51.0, false, "After second magnet"},
         {111.0, false, "Before third magnet"},
-        {113.0, true, "At third magnet (113°)"},
-        {115.0, false, "After third magnet"},
+        {113.5, true, "At third magnet (113.5°)"},
+        {115.5, false, "After third magnet"},
         {180.0, false, "Halfway point"},
         {270.0, false, "Three-quarter point"},
         {359.0, false, "Near wrap-around"}

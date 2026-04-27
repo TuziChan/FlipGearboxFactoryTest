@@ -32,7 +32,7 @@ public:
     bool initialized = false;
 
     // Magnet detection configuration
-    QVector<double> magnetPositionsDeg = {3.0, 49.0, 113.0};  // Default magnet positions
+    QVector<double> magnetPositionsDeg = {3.0, 49.0, 113.5};  // Default magnet positions
     double magnetDetectionWindowDeg = 0.5;  // Detection window around magnet position
     bool enableMagnetDetection = false;
     double* linkedEncoderAngle = nullptr;  // Pointer to encoder angle for automatic detection

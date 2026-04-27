@@ -13,6 +13,15 @@
 #include "../infrastructure/devices/IEncoderDevice.h"
 #include "../infrastructure/devices/IBrakePowerDevice.h"
 #include "../infrastructure/acquisition/AcquisitionScheduler.h"
+#include "../infrastructure/validation/PhysicsValidator.h"
+#include "../infrastructure/validation/PhysicsViolationLogger.h"
+
+// Forward declaration for optional simulation context
+namespace Infrastructure {
+namespace Simulation {
+class SimulationContext;
+}
+}
 
 namespace Domain {
 
@@ -48,6 +57,26 @@ public:
      */
     void setRecipe(const TestRecipe& recipe);
     void setBrakeChannel(int channel);
+    void setStationName(const QString& stationName);
+
+    /**
+     * @brief Enable/disable physics validation (default: enabled)
+     */
+    void setPhysicsValidationEnabled(bool enabled);
+
+    /**
+     * @brief Configure physics validation thresholds
+     */
+    void setValidationConfig(const Infrastructure::Validation::PhysicsValidator::ValidationConfig& config);
+
+    /**
+     * @brief Set simulation context for mock mode tick advancement
+     * 
+     * When set, the engine will advance the simulation physics once per
+     * cycle tick, ensuring consistent angle updates regardless of how
+     * many device reads occur within a single tick.
+     */
+    void setSimulationContext(Infrastructure::Simulation::SimulationContext* context);
 
     /**
      * @brief Start test with given serial number
@@ -69,6 +98,11 @@ public:
      */
     TestRunState currentState() const { return m_state; }
 
+    /**
+     * @brief Check if test is currently running
+     */
+    bool isRunning() const;
+
 signals:
     void stateChanged(const TestRunState& state);
     void testCompleted(const TestResults& results);
@@ -88,6 +122,7 @@ private:
 
     // Configuration
     TestRecipe m_recipe;
+    QString m_stationName;
     int m_brakeChannel;  // Which channel to use for brake
 
     // Runtime state
@@ -105,6 +140,11 @@ private:
     QVector<double> m_speedSamples;
     QVector<double> m_torqueSamples;
     static constexpr int MAX_SAMPLE_BUFFER_SIZE = 10000; // Max samples (~5 min at 33ms)
+
+    // Impact test state
+    int m_impactCycleCount;
+    QVector<double> m_impactCurrentSamples;
+    QVector<double> m_impactTorqueSamples;
 
 // Lock detection state - improved state machine
 enum class LockDetectionState {
@@ -126,6 +166,18 @@ bool m_lockConditionMet = false;
     // Phase time accumulator (total time across sub-states within a phase)
     qint64 m_phaseAccumulatedMs = 0;
 
+    // Emergency stop flag (ADR-001: atomic for thread-safe interrupt)
+    std::atomic<bool> m_emergencyStopRequested;
+
+    // Physics validation (runtime monitoring)
+    Infrastructure::Validation::PhysicsValidator::ValidationConfig m_validationConfig;
+    Infrastructure::Validation::PhysicsViolationLogger* m_violationLogger;
+    TelemetrySnapshot m_lastSnapshot;
+    bool m_physicsValidationEnabled;
+
+    // Simulation context (optional, for mock mode tick advancement)
+    Infrastructure::Simulation::SimulationContext* m_simulationContext;
+
     // Phase management
     void transitionToPhase(TestPhase newPhase, TestSubState newSubState);
     void transitionToSubState(TestSubState newSubState);
@@ -138,6 +190,7 @@ bool m_lockConditionMet = false;
     bool checkMagnetEvent(const TelemetrySnapshot& snapshot);
 
     // Phase handlers
+    void handleImpactTestPhase();
     void handleHomingPhase();
     void handleIdleRunPhase();
     void handleAnglePositioningPhase();
@@ -145,6 +198,12 @@ bool m_lockConditionMet = false;
     void handleReturnToZeroPhase();
 
     // Sub-state handlers
+    void handleImpactForwardSpinup();
+    void handleImpactForwardBrakeOn();
+    void handleImpactForwardBrakeOff();
+    void handleImpactReverseSpinup();
+    void handleImpactReverseBrakeOn();
+    void handleImpactReverseBrakeOff();
     void handleSeekingMagnet();
     void handleAdvancingToEncoderZero();
     void handleSpinupForward();
@@ -173,7 +232,12 @@ bool m_lockConditionMet = false;
     void handleSettlingLoadReverseDelay();
 
     // Judgment helpers
-    void evaluateIdleResults(const QString& direction, 
+    void evaluateImpactResult(const QString& direction,
+                              const QVector<ImpactCycleResult>& cycles,
+                              ImpactDirectionResult& result,
+                              double currentMin, double currentMax,
+                              double torqueMin, double torqueMax);
+    void evaluateIdleResults(const QString& direction,
                              const QVector<double>& currentSamples,
                              const QVector<double>& speedSamples,
                              IdleRunResult& result);

@@ -158,7 +158,7 @@ Item {
                     width: parent.width - (root.showCloseButton ? 40 : 0)
                     color: root.theme.textPrimary
                     font.pixelSize: 18
-                    font.weight: Font.SemiBold
+                    font.weight: Font.DemiBold
                     font.family: "Inter, system-ui, -apple-system, sans-serif"
                     wrapMode: Text.WordWrap
                 }

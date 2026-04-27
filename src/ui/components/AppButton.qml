@@ -23,15 +23,21 @@ Rectangle {
     readonly property bool ghostVariant: variant === "ghost"
     readonly property bool linkVariant: variant === "link"
     readonly property bool iconOnly: size === "icon" || size === "icon-sm" || size === "icon-lg" || size === "icon-xs"
+    readonly property int minButtonWidth: block ? 160 :
+                                          size === "xs" ? 68 :
+                                          size === "sm" ? 84 :
+                                          size === "lg" ? 118 :
+                                          size === "icon-xs" ? 24 :
+                                          size === "icon-sm" ? 32 :
+                                          size === "icon" ? 36 :
+                                          size === "icon-lg" ? 40 : 104
+    readonly property int horizontalPadding: size === "xs" ? 8 :
+                                             size === "sm" ? 12 :
+                                             size === "lg" ? 16 : 14
 
-    implicitWidth: block ? 160 :
-                   size === "xs" ? 68 :
-                   size === "sm" ? 84 :
-                   size === "lg" ? 118 :
-                   size === "icon-xs" ? 24 :
-                   size === "icon-sm" ? 32 :
-                   size === "icon" ? 36 :
-                   size === "icon-lg" ? 40 : 104
+    implicitWidth: iconOnly
+                   ? minButtonWidth
+                   : Math.max(minButtonWidth, contentLayout.implicitWidth + horizontalPadding * 2)
     implicitHeight: size === "xs" ? 24 :
                     size === "sm" ? 32 :
                     size === "lg" ? 40 :

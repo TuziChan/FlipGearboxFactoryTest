@@ -17,7 +17,7 @@ namespace Simulation {
  * 
  * Demonstrates:
  * - Multi-port concurrent communication
- * - Angle test with magnet detection (3°, 49°, 113°)
+ * - Angle test with magnet detection (3°, 49°, 113.5°)
  * - High-speed data acquisition
  * - Error injection and recovery
  * - Data link blocking scenarios
@@ -42,7 +42,7 @@ public:
     /**
      * @brief Test 2: Angle test with magnet detection
      * 
-     * Tests magnet detection at 3°, 49°, 113° with proper consideration
+     * Tests magnet detection at 3°, 49°, 113.5° with proper consideration
      * of previous magnet positions.
      */
     void testAngleMagnetDetection();

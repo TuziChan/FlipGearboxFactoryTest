@@ -79,11 +79,11 @@ Item {
 
         return {
 
-            fileName: "", name: "", description: "",
+            fileName: "", name: "", description: "", serialNumberRule: "yyyymmdd00001",
 
             homeDutyCycle: 20.0, homeAdvanceDutyCycle: 20.0,
 
-            encoderZeroAngleDeg: 3.0, homeTimeoutMs: 30000,
+            encoderZeroAngleDeg: 0.0, homeTimeoutMs: 30000,
 
             idleDutyCycle: 50.0,
 
@@ -109,9 +109,9 @@ Item {
 
             angleTestDutyCycle: 30.0,
 
-            position1TargetDeg: 3.0, position1ToleranceDeg: 3.0,
+            position1TargetDeg: 49.0, position1ToleranceDeg: 3.0,
 
-            position2TargetDeg: 49.0, position2ToleranceDeg: 3.0,
+            position2TargetDeg: 113.5, position2ToleranceDeg: 3.0,
 
             position3TargetDeg: 113.5, position3ToleranceDeg: 3.0,
 
@@ -137,7 +137,25 @@ Item {
 
             loadReverseCurrentMin: 1.0, loadReverseCurrentMax: 3.0,
 
-            loadReverseTorqueMin: 10.0, loadReverseTorqueMax: 50.0
+            loadReverseTorqueMin: 10.0, loadReverseTorqueMax: 50.0,
+
+            impactTestEnabled: false,
+
+            impactDutyCycle: 50.0, impactSpinupMs: 3000,
+
+            impactCycles: 3, impactBrakeCurrentA: 5.0,
+
+            impactBrakeOnMs: 2000, impactBrakeOffMs: 500,
+
+            impactTimeoutMs: 60000,
+
+            impactForwardCurrentMin: 1.0, impactForwardCurrentMax: 5.0,
+
+            impactForwardTorqueMin: 5.0, impactForwardTorqueMax: 50.0,
+
+            impactReverseCurrentMin: 1.0, impactReverseCurrentMax: 5.0,
+
+            impactReverseTorqueMin: 5.0, impactReverseTorqueMax: 50.0
 
         }
 
@@ -189,7 +207,7 @@ Item {
 
         var savedFileName = root.recipeVM.editingRecipe ? root.recipeVM.editingRecipe.fileName : ""
 
-        var wasNew = root.selectedRecipeIndex < 0
+        var previousIndex = root.selectedRecipeIndex
 
         var ok = root.recipeVM.saveEdit()
 
@@ -197,21 +215,24 @@ Item {
 
         root.isEditing = false
 
-        if (wasNew && savedFileName) {
+        Qt.callLater(function() {
+            if (!root.recipeVM)
+                return
 
-            for (var i = 0; i < recipeListModel.count; i++) {
+            root.recipeVM.loadAll()
 
-                if (recipeListModel.get(i).fileName === savedFileName) {
-
-                    root.selectedRecipeIndex = i
-
-                    break
-
+            if (savedFileName) {
+                for (var i = 0; i < recipeListModel.count; i++) {
+                    if (recipeListModel.get(i).fileName === savedFileName) {
+                        root.selectedRecipeIndex = i
+                        return
+                    }
                 }
-
             }
 
-        }
+            if (previousIndex >= 0 && previousIndex < recipeListModel.count)
+                root.selectedRecipeIndex = previousIndex
+        })
 
     }
 
@@ -635,7 +656,7 @@ Item {
 
                             theme: root.theme
 
-                            model: ["基本信息", "归零参数", "空载测试", "角度定位", "负载测试"]
+                            model: ["基本信息", "归零参数", "空载测试", "角度定位", "负载测试", "冲击测试"]
 
                             currentIndex: root.currentTabIndex
 
@@ -702,6 +723,18 @@ Item {
                             }
 
                             RecipeForms.RecipeLoadForm {
+
+                                theme: root.theme
+
+                                recipe: root.activeRecipeData()
+
+                                isEditing: root.isEditing
+
+                                recipeVM: root.recipeVM
+
+                            }
+
+                            RecipeForms.RecipeImpactForm {
 
                                 theme: root.theme
 

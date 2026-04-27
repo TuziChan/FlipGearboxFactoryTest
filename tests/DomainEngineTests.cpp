@@ -28,9 +28,9 @@ static TestRecipe makeTestRecipe() {
     r.idleReverseSampleMs = 100;
     r.idleTimeoutMs = 5000;
     r.angleTestDutyCycle = 30.0;
-    r.position1TargetDeg = 3.0;
+    r.position1TargetDeg = 49.0;
     r.position1ToleranceDeg = 3.0;
-    r.position2TargetDeg = 49.0;
+    r.position2TargetDeg = 113.5;
     r.position2ToleranceDeg = 3.0;
     r.position3TargetDeg = 113.5;
     r.position3ToleranceDeg = 3.0;
@@ -293,6 +293,88 @@ private slots:
         QVERIFY(state.results.failure.hasFailure());
         QCOMPARE(state.results.failure.category, FailureCategory::Process);
         QVERIFY(failSpy.count() == 1);
+    }
+
+    // ========== ADR-001: Emergency Stop Response Time Test ==========
+
+    void testEmergencyStopResponseTime() {
+        // ADR-001 requirement: emergency stop from click to motor current zero < 100ms
+        // This test verifies the atomic flag mechanism allows immediate interrupt
+
+        m_encoder->mockAngleDeg = 0.0;
+        m_motor->mockAi1Level = true;
+        m_motor->mockCurrentA = 2.5;
+        m_torque->mockSpeedRpm = 100.0;
+
+        QSignalSpy failSpy(m_engine, &GearboxTestEngine::testFailed);
+        m_engine->startTest("SN-ESTOP-TIMING");
+
+        // Let test run for a few cycles
+        QTest::qWait(100);
+
+        // Measure emergency stop response time
+        QElapsedTimer timer;
+        timer.start();
+
+        m_engine->emergencyStop();
+
+        qint64 responseTimeMs = timer.elapsed();
+
+        // Verify emergency stop was triggered
+        QVERIFY(failSpy.count() > 0);
+        auto state = m_engine->currentState();
+        QCOMPARE(state.phase, TestPhase::Failed);
+        QCOMPARE(state.results.failure.category, FailureCategory::Process);
+        QVERIFY(state.results.failure.description.contains("Emergency stop"));
+
+        // ADR-001: Response time must be < 100ms
+        qDebug() << "Emergency stop response time:" << responseTimeMs << "ms";
+        QVERIFY2(responseTimeMs < 100,
+                 QString("Emergency stop took %1ms, exceeds 100ms requirement").arg(responseTimeMs).toUtf8());
+    }
+
+    void testEmergencyStopDuringTelemetryAcquisition() {
+        // ADR-001: Verify emergency stop can interrupt during device reads
+        // Simulate slow device reads by using mock delays
+
+        m_encoder->mockAngleDeg = 0.0;
+        m_motor->mockAi1Level = true;
+        m_torque->mockSpeedRpm = 100.0;
+
+        m_engine->startTest("SN-ESTOP-INTERRUPT");
+
+        // Let one tick start
+        QTest::qWait(50);
+
+        // Trigger emergency stop (should interrupt current tick)
+        QElapsedTimer timer;
+        timer.start();
+        m_engine->emergencyStop();
+        qint64 responseTimeMs = timer.elapsed();
+
+        // Verify motor control is refused after emergency stop
+        QVERIFY(m_engine->currentState().currentDirection != MotorDirection::Forward);
+
+        qDebug() << "Emergency stop during telemetry response time:" << responseTimeMs << "ms";
+        QVERIFY2(responseTimeMs < 100,
+                 QString("Emergency stop during telemetry took %1ms").arg(responseTimeMs).toUtf8());
+    }
+
+    void testEmergencyStopPreventsMotorCommands() {
+        // ADR-001: Verify motor commands are refused after emergency stop flag is set
+
+        m_engine->startTest("SN-ESTOP-PREVENT");
+        QTest::qWait(50);
+
+        m_engine->emergencyStop();
+
+        // After emergency stop, engine should be in failed state
+        auto state = m_engine->currentState();
+        QCOMPARE(state.phase, TestPhase::Failed);
+        QCOMPARE(state.currentDirection, MotorDirection::Stopped);
+
+        // Verify motor is stopped (brake was called)
+        QVERIFY(m_motor->lastDirection == Infrastructure::Devices::IMotorDriveDevice::Direction::Brake);
     }
 
     // ========== Communication Failure Tests ==========

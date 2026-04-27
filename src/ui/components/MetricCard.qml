@@ -12,6 +12,7 @@ Rectangle {
     required property string unit
     required property string subtext
     required property color accentColor
+    property bool compact: false
 
     radius: root.theme.radiusLarge
     color: root.theme.cardColor
@@ -19,18 +20,18 @@ Rectangle {
     border.width: 1
     clip: true
 
-    implicitHeight: 108
+    implicitHeight: root.compact ? 60 : 108
 
     ColumnLayout {
-        width: parent.width - 40
-        x: 20
-        y: 16
-        spacing: 4
+        width: parent.width - (root.compact ? 28 : 40)
+        x: root.compact ? 14 : 20
+        y: root.compact ? 10 : 16
+        spacing: root.compact ? 2 : 4
 
         Text {
             text: root.label
             color: root.theme.textSecondary
-            font.pixelSize: 12
+            font.pixelSize: root.compact ? 11 : 12
             font.weight: Font.Medium
             Layout.fillWidth: true
             elide: Text.ElideRight
@@ -43,7 +44,7 @@ Rectangle {
             Text {
                 text: root.value
                 color: root.accentColor
-                font.pixelSize: 28
+                font.pixelSize: root.compact ? 20 : 28
                 font.weight: Font.DemiBold
                 font.family: "Consolas"
                 Layout.fillWidth: true
@@ -54,7 +55,7 @@ Rectangle {
             Text {
                 text: root.unit
                 color: root.theme.textSecondary
-                font.pixelSize: 13
+                font.pixelSize: root.compact ? 11 : 13
                 visible: root.unit.length > 0
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -63,7 +64,7 @@ Rectangle {
         Text {
             text: root.subtext
             color: root.theme.textMuted
-            font.pixelSize: 11
+            font.pixelSize: root.compact ? 10 : 11
             Layout.fillWidth: true
             elide: Text.ElideRight
         }

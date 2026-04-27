@@ -91,8 +91,8 @@ void MagnetDetectionMockTests::testSingleMagnetDetection() {
 }
 
 void MagnetDetectionMockTests::testMultipleMagnetDetection() {
-    // Setup: Three magnets at 3°, 49°, 113°
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    // Setup: Three magnets at 3°, 49°, 113.5°
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(true);
 
@@ -120,16 +120,16 @@ void MagnetDetectionMockTests::testMultipleMagnetDetection() {
     m_motor->readAI1Level(level);
     QVERIFY(level == true);
 
-    // Detect third magnet at 113°
-    m_encoder->setAngle(113.0);
+    // Detect third magnet at 113.5°
+    m_encoder->setAngle(113.5);
     m_motor->readAI1Level(level);
     QVERIFY(level == false);
     QCOMPARE(m_motor->getMagnetPassCount(2), 1);
 }
 
 void MagnetDetectionMockTests::testMagnetDetectionWithAngleSimulation() {
-    // Setup: Magnets at 3°, 49°, 113°
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    // Setup: Magnets at 3°, 49°, 113.5°
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(true);
 
@@ -163,7 +163,7 @@ void MagnetDetectionMockTests::testMagnetDetectionWithAngleSimulation() {
     QCOMPARE(magnetDetectionCount, 3);
     QCOMPARE(m_motor->getMagnetPassCount(0), 1);  // 3° magnet
     QCOMPARE(m_motor->getMagnetPassCount(1), 1);  // 49° magnet
-    QCOMPARE(m_motor->getMagnetPassCount(2), 1);  // 113° magnet
+    QCOMPARE(m_motor->getMagnetPassCount(2), 1);  // 113.5° magnet
 }
 
 void MagnetDetectionMockTests::testMagnetPassCountTracking() {
@@ -200,7 +200,7 @@ void MagnetDetectionMockTests::testSkipFirstMagnetWhenMovingToSecond() {
     // This tests the key requirement: when moving to position 2 (49°),
     // the system should detect the magnet at 49° but not re-trigger on 3°
 
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(true);
 
@@ -233,7 +233,7 @@ void MagnetDetectionMockTests::testSkipFirstMagnetWhenMovingToSecond() {
 
 void MagnetDetectionMockTests::testReverseDirectionMagnetDetection() {
     // Test reverse direction: moving from 120° back to 0°
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(true);
 
@@ -256,7 +256,7 @@ void MagnetDetectionMockTests::testReverseDirectionMagnetDetection() {
 
     // Should detect all 3 magnets in reverse order
     QCOMPARE(detectedAngles.size(), 3);
-    QVERIFY(qAbs(detectedAngles[0] - 113.0) < 1.0);  // First: 113°
+    QVERIFY(qAbs(detectedAngles[0] - 113.5) < 1.0);  // First: 113.5°
     QVERIFY(qAbs(detectedAngles[1] - 49.0) < 1.0);   // Second: 49°
     QVERIFY(qAbs(detectedAngles[2] - 3.0) < 1.0);    // Third: 3°
 }
@@ -355,7 +355,7 @@ void MagnetDetectionMockTests::testMagnetDetectionWindow() {
 }
 
 void MagnetDetectionMockTests::testNoMagnetDetectionWhenDisabled() {
-    m_motor->setMagnetPositions({3.0, 49.0, 113.0});
+    m_motor->setMagnetPositions({3.0, 49.0, 113.5});
     m_motor->linkEncoderAngle(&m_encoder->mockAngleDeg);
     m_motor->setMagnetDetectionEnabled(false);  // Disabled
 
@@ -370,7 +370,7 @@ void MagnetDetectionMockTests::testNoMagnetDetectionWhenDisabled() {
     m_motor->readAI1Level(level);
     QVERIFY(level == true);
 
-    m_encoder->setAngle(113.0);
+    m_encoder->setAngle(113.5);
     m_motor->readAI1Level(level);
     QVERIFY(level == true);
 

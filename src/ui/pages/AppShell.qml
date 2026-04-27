@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import "../components" as Components
 
 Item {
@@ -61,12 +62,57 @@ Item {
         return selectNav(componentGalleryNavIndex)
     }
 
+    function openMockControlWindow() {
+        mockControlWindow.show()
+        mockControlWindow.raise()
+        mockControlWindow.requestActivate()
+        return true
+    }
+
+    function closeMockControlWindow() {
+        mockControlWindow.hide()
+        return true
+    }
+
+    function syncMockControlWindow(shouldOpen) {
+        if (shouldOpen)
+            return openMockControlWindow()
+        return closeMockControlWindow()
+    }
+
     Components.AppTheme {
         id: theme
         objectName: "appTheme"
         themeName: "sky"
         styleName: "mira"
         darkMode: false
+    }
+
+    QtObject {
+        id: mockControlWindowController
+        property bool visible: mockControlWindow.visible
+
+        function openWindow() {
+            return root.openMockControlWindow()
+        }
+
+        function closeWindow() {
+            return root.closeMockControlWindow()
+        }
+    }
+
+    Connections {
+        target: typeof diagnosticsViewModel !== 'undefined' ? diagnosticsViewModel : null
+        enabled: typeof diagnosticsViewModel !== 'undefined' && diagnosticsViewModel !== null
+
+        function onIsMockModeChanged() {
+            root.syncMockControlWindow(diagnosticsViewModel.isMockMode)
+        }
+    }
+
+    Component.onCompleted: {
+        if (typeof diagnosticsViewModel !== 'undefined' && diagnosticsViewModel)
+            root.syncMockControlWindow(diagnosticsViewModel.isMockMode)
     }
 
     ListModel {
@@ -119,7 +165,7 @@ Item {
                     Loader { active: StackLayout.isCurrentItem; sourceComponent: RecipePage { theme: theme } }
                     Loader { active: StackLayout.isCurrentItem; sourceComponent: HistoryPage { theme: theme } }
                     Loader { active: StackLayout.isCurrentItem; sourceComponent: DeviceConfigPage { theme: theme } }
-                    Loader { active: StackLayout.isCurrentItem; sourceComponent: DiagnosticsPage { theme: theme } }
+                    Loader { active: StackLayout.isCurrentItem; sourceComponent: DiagnosticsPage { theme: theme; mockControlWindowController: mockControlWindowController } }
                     Loader { active: StackLayout.isCurrentItem; sourceComponent: ComponentGalleryPage { theme: theme } }
                 }
             }
@@ -144,6 +190,32 @@ Item {
                     return result;
                 }
                 clockText: Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss")
+            }
+        }
+
+        Window {
+            id: mockControlWindow
+            title: "Mock 控制"
+            width: 420
+            height: 360
+            minimumWidth: 380
+            minimumHeight: 320
+            visible: false
+            modality: Qt.NonModal
+            transientParent: root.Window.window
+            flags: Qt.Tool | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            color: theme.bgColor
+
+            Rectangle {
+                anchors.fill: parent
+                color: theme.bgColor
+
+                Components.MockControlPanel {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    theme: theme
+                    runtimeManager: typeof runtimeManager !== 'undefined' ? runtimeManager : null
+                }
             }
         }
 

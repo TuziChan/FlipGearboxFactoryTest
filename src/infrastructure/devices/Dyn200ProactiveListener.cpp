@@ -9,6 +9,7 @@ Dyn200ProactiveListener::Dyn200ProactiveListener(ProtocolMode mode, QObject* par
     , m_serialPort(nullptr)
     , m_mode(mode)
     , m_buffer()
+    , m_running(false)
     , m_latestTorque(0.0)
     , m_latestSpeed(0.0)
     , m_speedValid(mode != Ascii)
@@ -20,32 +21,65 @@ Dyn200ProactiveListener::~Dyn200ProactiveListener() {
 }
 
 void Dyn200ProactiveListener::start(QSerialPort* serialPort) {
+    // Use mutex to ensure atomic check-and-set of m_running
+    QMutexLocker locker(&m_mutex);
+    
+    if (m_running.load()) {
+        qWarning() << "Dyn200ProactiveListener already running, ignoring duplicate start()";
+        return;
+    }
     if (!serialPort || !serialPort->isOpen()) {
+        locker.unlock();
         emit errorOccurred("Serial port is not open");
         return;
     }
 
     m_serialPort = serialPort;
     m_buffer.clear();
+    m_running.store(true);
     
-    connect(m_serialPort, &QSerialPort::readyRead, this, &Dyn200ProactiveListener::onReadyRead);
+    // Connect outside the lock - Qt signal connection is thread-safe
+    locker.unlock();
+    
+    connect(m_serialPort, &QSerialPort::readyRead,
+            this, &Dyn200ProactiveListener::onReadyRead,
+            Qt::UniqueConnection);  // Prevent duplicate connections
     
     qDebug() << "Dyn200ProactiveListener started in mode" << m_mode;
 }
 
 void Dyn200ProactiveListener::stop() {
+    // First atomically set m_running to false to prevent new onReadyRead() from proceeding
+    if (!m_running.load()) {
+        return;
+    }
+    m_running.store(false);
+
+    // Disconnect signal handler - this ensures no more onReadyRead() will be invoked
+    // after this point (already queued callbacks may still run but will exit early)
+    QMutexLocker locker(&m_mutex);
     if (m_serialPort) {
-        disconnect(m_serialPort, &QSerialPort::readyRead, this, &Dyn200ProactiveListener::onReadyRead);
+        disconnect(m_serialPort, &QSerialPort::readyRead,
+                   this, &Dyn200ProactiveListener::onReadyRead);
         m_serialPort = nullptr;
     }
     m_buffer.clear();
 }
 
 void Dyn200ProactiveListener::onReadyRead() {
-    if (!m_serialPort) {
+    // Quick check without lock - m_running is atomic
+    if (!m_running.load()) {
         return;
     }
 
+    QMutexLocker locker(&m_mutex);
+    
+    // Double-check after acquiring lock
+    if (!m_serialPort || !m_running.load()) {
+        return;
+    }
+
+    // Read and append data under lock protection
     m_buffer.append(m_serialPort->readAll());
 
     switch (m_mode) {
@@ -88,9 +122,9 @@ void Dyn200ProactiveListener::parseHex6ByteFrame() {
         
         // D3 MSB indicates torque sign
         bool torqueNegative = (d3 & 0x80) != 0;
-        
-        // Speed is int16 (D3D4)
-        int16_t speedRaw = static_cast<int16_t>(d3 | (d4 << 8));
+
+        // Speed is int16 (D3D4), mask out D3 MSB (torque sign bit) to avoid sign contamination
+        int16_t speedRaw = static_cast<int16_t>((d3 & 0x7F) | (d4 << 8));
         
         // Apply scaling
         double torque = torqueRaw * 0.01; // Scale to N·m
@@ -98,11 +132,11 @@ void Dyn200ProactiveListener::parseHex6ByteFrame() {
             torque = -torque;
         }
         double speed = speedRaw; // Already in RPM
-        
-        m_latestTorque = torque;
-        m_latestSpeed = speed;
-        m_speedValid = true;
-        
+
+        m_latestTorque.store(torque);
+        m_latestSpeed.store(speed);
+        m_speedValid.store(true);
+
         emit dataReceived(torque, speed, true);
         
         // Remove processed frame
@@ -149,11 +183,11 @@ void Dyn200ProactiveListener::parseHex8ByteFrame() {
         // Apply scaling
         double torque = torqueRaw * 0.01; // Scale to N·m
         double speed = speedRaw; // Already in RPM
-        
-        m_latestTorque = torque;
-        m_latestSpeed = speed;
-        m_speedValid = true;
-        
+
+        m_latestTorque.store(torque);
+        m_latestSpeed.store(speed);
+        m_speedValid.store(true);
+
         emit dataReceived(torque, speed, true);
         
         // Remove processed frame
@@ -173,9 +207,9 @@ void Dyn200ProactiveListener::parseAsciiFrame() {
         double torque = torqueStr.toDouble(&ok);
         
         if (ok) {
-            m_latestTorque = torque;
-            m_speedValid = false; // ASCII mode doesn't provide speed
-            
+            m_latestTorque.store(torque);
+            m_speedValid.store(false); // ASCII mode doesn't provide speed
+
             emit dataReceived(torque, 0.0, false);
         } else {
             emit errorOccurred(QString("Failed to parse ASCII torque: '%1'").arg(torqueStr));

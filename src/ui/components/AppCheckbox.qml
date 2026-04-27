@@ -79,7 +79,9 @@ Item {
 
     TapHandler {
         enabled: !root.disabled
-        margin: -8
+        acceptedButtons: Qt.LeftButton
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        margin: 8
         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         onTapped: root.toggle()
     }

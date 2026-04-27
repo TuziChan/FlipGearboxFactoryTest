@@ -31,6 +31,8 @@ plugins.qmltypes
 .qmlls.build.ini
 .qt/
 .rcc/
+*_autogen/
+Desktop_*/
 
 # Qt creator / project user state
 .qtcreator/

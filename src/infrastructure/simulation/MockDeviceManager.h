@@ -64,7 +64,7 @@ public:
      * @brief Simulate angle test scenario with magnet detection
      * @param angleDeg Current angle in degrees
      * 
-     * Magnet positions: 3°, 49°, 113°
+     * Magnet positions: 3°, 49°, 113.5°
      * Detection window: ±2° around each magnet
      */
     void simulateAngleTestScenario(double angleDeg);
@@ -111,7 +111,7 @@ private:
     // Magnet positions for angle test (degrees)
     static constexpr double MAGNET_POS_1 = 3.0;
     static constexpr double MAGNET_POS_2 = 49.0;
-    static constexpr double MAGNET_POS_3 = 113.0;
+    static constexpr double MAGNET_POS_3 = 113.5;
     static constexpr double MAGNET_DETECTION_WINDOW = 2.0;
 
     bool isNearMagnet(double angleDeg, double magnetPos) const;

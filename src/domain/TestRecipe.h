@@ -47,12 +47,17 @@ struct TestRecipe {
     double idleReverseSpeedMaxMax;
     
     // Angle positioning parameters
+    // Encoder zero is fixed at installation (~0°), not set dynamically during homing.
+    // All position targets are absolute angles:
+    //   Position 1: 49.0°
+    //   Position 2: 113.5°
+    //   Position 3: 113.5° (backlash check)
     double angleTestDutyCycle;      // % for angle test
-    double position1TargetDeg;      // Target angle for position 1
+    double position1TargetDeg;      // Absolute target angle for position 1
     double position1ToleranceDeg;   // Tolerance for position 1
-    double position2TargetDeg;      // Target angle for position 2
+    double position2TargetDeg;      // Absolute target angle for position 2
     double position2ToleranceDeg;   // Tolerance for position 2
-    double position3TargetDeg;      // Target angle for position 3
+    double position3TargetDeg;      // Absolute target angle for position 3
     double position3ToleranceDeg;   // Tolerance for position 3
     double returnZeroToleranceDeg;  // Tolerance for return-to-zero
     int angleTimeoutMs;             // Timeout for each angle move
@@ -90,14 +95,41 @@ struct TestRecipe {
     // Return to zero
     int returnZeroTimeoutMs;        // Timeout for return-to-zero phase
 
+    // Settling delays (non-blocking pauses between sub-states)
+    int settlingAngleMoveMs;        // Settling between angle position moves (e.g., position 2→1)
+    int settlingPhaseChangeMs;      // Settling between major phases (e.g., idle→angle, zero→load)
+
     // Gear backlash compensation
     double gearBacklashCompensationDeg; // Added to target angle during execution
+
+    // Serial number generation rule
+    QString serialNumberRule;           // e.g. yyyymmdd00001
+
+    // Impact test parameters
+    bool impactTestEnabled;            // Enable impact test phase (default false)
+    double impactDutyCycle;            // % for impact spinup (default 50.0)
+    int impactSpinupMs;                // Spinup time before impact braking (default 3000)
+    int impactCycles;                  // Number of brake/release cycles per direction (default 3)
+    double impactBrakeCurrentA;        // Brake current for impact (default 5.0)
+    int impactBrakeOnMs;               // Duration to hold brake on (default 2000)
+    int impactBrakeOffMs;              // Duration between brake cycles (default 500)
+    int impactTimeoutMs;               // Total timeout for impact phase (default 60000)
+
+    // Impact test current/torque limits
+    double impactForwardCurrentMin;
+    double impactForwardCurrentMax;
+    double impactForwardTorqueMin;
+    double impactForwardTorqueMax;
+    double impactReverseCurrentMin;
+    double impactReverseCurrentMax;
+    double impactReverseTorqueMin;
+    double impactReverseTorqueMax;
 
     TestRecipe()
         : name("Default")
         , homeDutyCycle(20.0)
         , homeAdvanceDutyCycle(20.0)
-        , encoderZeroAngleDeg(3.0)
+        , encoderZeroAngleDeg(0.0)
         , homeTimeoutMs(30000)
         , idleDutyCycle(50.0)
         , idleForwardSpinupMs(3000)
@@ -122,11 +154,11 @@ struct TestRecipe {
         , idleReverseSpeedMaxMin(60.0)
         , idleReverseSpeedMaxMax(160.0)
         , angleTestDutyCycle(30.0)
-        , position1TargetDeg(3.0)
+        , position1TargetDeg(49.0)     // Absolute: second magnet (zero point is fixed at ~0°, magnet at 49°)
         , position1ToleranceDeg(3.0)
-        , position2TargetDeg(49.0)
+        , position2TargetDeg(113.5)    // Absolute: third magnet (113.5°)
         , position2ToleranceDeg(3.0)
-        , position3TargetDeg(113.5)
+        , position3TargetDeg(113.5)    // Absolute: same as position 2 (backlash check)
         , position3ToleranceDeg(3.0)
         , returnZeroToleranceDeg(1.0)
         , angleTimeoutMs(15000)
@@ -152,7 +184,26 @@ struct TestRecipe {
         , loadReverseTorqueMin(10.0)
         , loadReverseTorqueMax(50.0)
         , returnZeroTimeoutMs(15000)
+        , settlingAngleMoveMs(200)
+        , settlingPhaseChangeMs(500)
         , gearBacklashCompensationDeg(0.0)
+        , serialNumberRule("yyyymmdd00001")
+        , impactTestEnabled(false)
+        , impactDutyCycle(50.0)
+        , impactSpinupMs(3000)
+        , impactCycles(3)
+        , impactBrakeCurrentA(5.0)
+        , impactBrakeOnMs(2000)
+        , impactBrakeOffMs(500)
+        , impactTimeoutMs(60000)
+        , impactForwardCurrentMin(1.0)
+        , impactForwardCurrentMax(5.0)
+        , impactForwardTorqueMin(5.0)
+        , impactForwardTorqueMax(50.0)
+        , impactReverseCurrentMin(1.0)
+        , impactReverseCurrentMax(5.0)
+        , impactReverseTorqueMin(5.0)
+        , impactReverseTorqueMax(50.0)
     {}
 };
 

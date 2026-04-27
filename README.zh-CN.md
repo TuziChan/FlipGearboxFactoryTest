@@ -1,184 +1,266 @@
-<p align="center">
-  <img src="docs/assets/banner.jpg" alt="Multica — 人类与 AI，并肩前行" width="100%">
-</p>
+# FlipGearboxFactoryTest
 
-<div align="center">
+**齿轮箱工厂测试系统** - 基于 Qt6 的工业自动化测试平台
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg">
-  <img alt="Multica" src="docs/assets/logo-light.svg" width="50">
-</picture>
+## 项目简介
 
-# Multica
+FlipGearboxFactoryTest 是一个用于齿轮箱质量检测的自动化测试系统,提供:
 
-**你的下一批员工，不是人类。**
+- **多设备协同控制**: 电机驱动、扭矩传感器、编码器、制动电源
+- **Modbus RTU 通信**: RS485 工业通信协议
+- **完整测试流程**: 找零、空载、角度定位、负载测试
+- **实时数据采集**: 高频遥测数据和可视化
+- **Mock 模式仿真**: 无硬件开发和测试
 
-开源的 Managed Agents 平台。<br/>
-将编码 Agent 变成真正的队友——分配任务、跟踪进度、积累技能。
+## 技术栈
 
-[![CI](https://github.com/multica-ai/multica/actions/workflows/ci.yml/badge.svg)](https://github.com/multica-ai/multica/actions/workflows/ci.yml)
-[![GitHub stars](https://img.shields.io/github/stars/multica-ai/multica?style=flat)](https://github.com/multica-ai/multica/stargazers)
+- **UI 框架**: Qt 6.11 (QML + Qt Quick)
+- **编程语言**: C++20
+- **构建系统**: CMake 3.16+
+- **通信协议**: Modbus RTU (RS485)
+- **架构模式**: MVVM (Model-View-ViewModel)
 
-[官网](https://multica.ai) · [云服务](https://multica.ai/app) · [X](https://x.com/MulticaAI) · [自部署指南](SELF_HOSTING.md) · [参与贡献](CONTRIBUTING.md)
+## 快速开始
 
-**[English](README.md) | 简体中文**
+### 环境要求
 
-</div>
+- Qt 6.11+ (包含 Qt Quick 和 Qt SerialPort 模块)
+- CMake 3.16+
+- MinGW 13.1.0+ (Windows) 或 GCC/Clang (Linux)
+- 支持 C++20 的编译器
 
-## Multica 是什么？
-
-Multica 将编码 Agent 变成真正的队友。像分配给同事一样分配给 Agent——它们会自主接手工作、编写代码、报告阻塞问题、更新状态。
-
-不再需要复制粘贴 prompt，不再需要盯着运行过程。你的 Agent 出现在看板上、参与对话、随着时间积累可复用的技能。可以理解为开源的 Managed Agents 基础设施——厂商中立、可自部署、专为人类 + AI 团队设计。支持 **Claude Code**、**Codex**、**OpenClaw**、**OpenCode**、**Hermes**、**Gemini**、**Pi** 和 **Cursor Agent**。
-
-<p align="center">
-  <img src="docs/assets/hero-screenshot.png" alt="Multica 看板视图" width="800">
-</p>
-
-## 功能特性
-
-Multica 管理完整的 Agent 生命周期：从任务分配到执行监控再到技能复用。
-
-- **Agent 即队友** — 像分配给同事一样分配给 Agent。它们有个人档案、出现在看板上、发表评论、创建 Issue、主动报告阻塞问题。
-- **自主执行** — 设置后无需管理。完整的任务生命周期管理（排队、认领、执行、完成/失败），通过 WebSocket 实时推送进度。
-- **可复用技能** — 每个解决方案都成为全团队可复用的技能。部署、数据库迁移、代码审查——技能让团队能力随时间持续增长。
-- **统一运行时** — 一个控制台管理所有算力。本地 daemon 和云端运行时，自动检测可用 CLI，实时监控。
-- **多工作区** — 按团队组织工作，工作区级别隔离。每个工作区有独立的 Agent、Issue 和设置。
-
----
-
-## 快速安装
-
-### macOS / Linux（推荐 Homebrew）
+### 构建
 
 ```bash
-brew install multica-ai/tap/multica
+# 配置
+cmake -S . -B build -G "MinGW Makefiles"
+
+# 编译
+cmake --build build
+
+# 运行
+.\build\appFlipGearboxFactoryTest.exe
 ```
 
-后续可用 `brew upgrade multica-ai/tap/multica` 更新 CLI。
-
-### macOS / Linux（安装脚本）
+### 运行测试
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash
+# 运行所有测试
+ctest --test-dir build --output-on-failure
+
+# 运行特定测试
+.\build\DomainEngineTests.exe
 ```
 
-如果没有 Homebrew，可以使用安装脚本。脚本会安装 Multica CLI：检测到 `brew` 时通过 Homebrew 安装，否则直接下载二进制。
-
-### Windows (PowerShell)
-
-```powershell
-irm https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.ps1 | iex
-```
-
-安装完成后，一条命令完成配置、认证和启动：
-
-```bash
-multica setup          # 连接 Multica Cloud，登录，启动 daemon
-```
-
-> **自部署？** 加上 `--with-server` 在本地部署完整的 Multica 服务：
->
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server
-> multica setup self-host
-> ```
->
-> 需要 Docker。详见 [自部署指南](SELF_HOSTING.md)。
-
----
-
-## 快速上手
-
-安装好 CLI（或注册 [Multica 云服务](https://multica.ai)）后，按以下步骤将第一个任务分配给 Agent：
-
-### 1. 配置并启动 daemon
-
-```bash
-multica setup           # 配置、认证、启动 daemon（一条命令搞定）
-```
-
-daemon 在后台运行，保持你的机器与 Multica 的连接。它会自动检测 PATH 中可用的 Agent CLI（`claude`、`codex`、`openclaw`、`opencode`、`hermes`、`gemini`、`pi`、`cursor-agent`）。
-
-### 2. 确认运行时已连接
-
-在 Multica Web 端打开你的工作区，进入 **设置 → 运行时（Runtimes）**，你应该能看到你的机器已作为一个活跃的 **Runtime** 出现在列表中。
-
-> **什么是 Runtime（运行时）？** Runtime 是可以执行 Agent 任务的计算环境。它可以是你的本地机器（通过 daemon 连接），也可以是云端实例。每个 Runtime 会上报可用的 Agent CLI，Multica 据此决定将任务路由到哪里执行。
-
-### 3. 创建 Agent
-
-进入 **设置 → Agents**，点击 **新建 Agent**。选择你刚连接的 Runtime，选择 Provider（Claude Code、Codex、OpenClaw、OpenCode、Hermes、Gemini、Pi 或 Cursor Agent），并为 Agent 起个名字——它将以这个名字出现在看板、评论和任务分配中。
-
-### 4. 分配你的第一个任务
-
-在看板上创建一个 Issue（或通过 `multica issue create` 命令创建），然后将其分配给你的新 Agent。Agent 会自动接手任务、在你的 Runtime 上执行、并实时汇报进度——就像一个真正的队友一样。
-
-大功告成！你的 Agent 现在是团队的一员了。 🎉
-
----
-
-## Multica vs Paperclip
-
-| | Multica | Paperclip |
-|---|---------|-----------|
-| **定位** | 团队 AI Agent 协作平台 | 个人 AI Agent 公司模拟器 |
-| **用户模型** | 多人团队，角色权限 | 单人 Board Operator |
-| **Agent 交互** | Issue + Chat 对话 | Issue + Heartbeat |
-| **部署** | 云端优先 | 本地优先 |
-| **管理深度** | 轻量（Issue / Project / Labels） | 重度（组织架构 / 审批 / 预算） |
-| **扩展** | Skills 系统 | Skills + 插件系统 |
-
-**简单来说：Multica 专为团队协作打造，让团队和 AI Agent 一起高效完成项目。**
-
-## 架构
+## 架构设计
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────────┐
-│   Next.js    │────>│  Go 后端     │────>│   PostgreSQL     │
-│   前端       │<────│  (Chi + WS)  │<────│   (pgvector)     │
-└──────────────┘     └──────┬───────┘     └──────────────────┘
-                            │
-                     ┌──────┴───────┐
-                     │ Agent Daemon │  运行在你的机器上
-                     └──────────────┘  （Claude Code、Codex、OpenCode、
-                                        OpenClaw、Hermes、Gemini、
-                                        Pi、Cursor Agent）
+┌─────────────────────────────────────────────────────────┐
+│                   UI 层 (QML)                           │
+│  TestExecutionPage │ RecipePage │ DiagnosticsPage      │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│                ViewModel 层 (C++)                       │
+│  TestExecutionViewModel │ RecipeViewModel │ ...         │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│                  Domain 层 (C++)                        │
+│  GearboxTestEngine (33ms 周期, 状态机)                  │
+│  TestRecipe │ TestResults │ TelemetrySnapshot           │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────┐
+│             Infrastructure 层 (C++)                     │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ 设备实现                                         │  │
+│  │  AqmdMotorDriveDevice │ Dyn200TorqueSensorDevice │  │
+│  │  SingleTurnEncoderDevice │ BrakePowerSupplyDevice│  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ 总线通信                                         │  │
+│  │  ModbusRtuBusController │ ModbusFrame            │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ 配置与服务                                       │  │
+│  │  StationRuntime │ ConfigLoader │ RecipeService   │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-| 层级 | 技术栈 |
-|------|--------|
-| 前端 | Next.js 16 (App Router) |
-| 后端 | Go (Chi router, sqlc, gorilla/websocket) |
-| 数据库 | PostgreSQL 17 with pgvector |
-| Agent 运行时 | 本地 daemon 执行 Claude Code、Codex、OpenClaw、OpenCode、Hermes、Gemini、Pi 或 Cursor Agent |
+## 支持的设备
+
+| 设备 | 型号 | 协议 | 功能 |
+|------|------|------|------|
+| 电机驱动 | AQMD3610NS-A2 | Modbus RTU | 速度控制、磁铁检测 |
+| 扭矩传感器 | DYN200 | Modbus RTU | 扭矩、转速、功率测量 |
+| 编码器 | 单圈绝对值 | Modbus RTU | 角度定位 |
+| 制动电源 | 双通道数控电源 | Modbus RTU | 负载模拟 |
+
+## 测试流程
+
+1. **找零阶段**: 检测磁铁位置并设置编码器零点
+2. **空载阶段**: 低速稳定运行,验证基线扭矩
+3. **角度阶段**: 定位到目标角度,验证精度
+4. **负载阶段**: 施加制动负载,测量扭矩和锁死检测
+5. **返回阶段**: 返回零点位置
+
+## 项目状态
+
+**当前进度**: 约 70% 完成
+
+✅ **已完成**:
+- 基础设施层 (总线、设备、配置)
+- 领域层 (测试引擎、状态机)
+- ViewModel 层 (MVVM 绑定)
+- Mock/仿真框架
+- 完整测试套件
+
+🚧 **进行中**:
+- 硬件验证
+- 报告生成
+- 日志系统
+
+详细状态见 [IMPLEMENTATION_PROGRESS.md](IMPLEMENTATION_PROGRESS.md)
+
+## 文档
+
+- **[用户手册](Docs/USER_MANUAL.md)** - 操作指南
+- **[部署指南](Docs/DEPLOYMENT_GUIDE.md)** - 安装和配置
+- **[故障排查](Docs/TROUBLESHOOTING.md)** - 常见问题
+- **[Mock 模式指南](Docs/MOCK_MODE_GUIDE.md)** - 仿真使用
+- **[设备寄存器参考](Docs/Device_Register_Reference_Guide.md)** - 硬件规格
+
+## 配置
+
+### 工站配置
+
+编辑 `config/station.json`:
+
+```json
+{
+  "stationId": "STATION-001",
+  "devices": {
+    "motor": {
+      "type": "AQMD3610NS-A2",
+      "slaveId": 1,
+      "serialPort": "COM3"
+    },
+    "torqueSensor": {
+      "type": "DYN200",
+      "slaveId": 2,
+      "serialPort": "COM4"
+    }
+  }
+}
+```
+
+### 配方配置
+
+编辑 `config/recipes/GBX-42A.json`:
+
+```json
+{
+  "recipeId": "GBX-42A",
+  "homingSpeed": 50,
+  "idleSpeed": 100,
+  "targetAngle": 180.0,
+  "loadTorque": 5.0,
+  "lockThreshold": 0.5
+}
+```
 
 ## 开发
 
-参与 Multica 代码贡献，请参阅 [贡献指南](CONTRIBUTING.md)。
+### 代码结构
 
-**环境要求：** [Node.js](https://nodejs.org/) v20+, [pnpm](https://pnpm.io/) v10.28+, [Go](https://go.dev/) v1.26+, [Docker](https://www.docker.com/)
-
-```bash
-pnpm install
-cp .env.example .env
-make setup
-make start
+```
+src/
+├── domain/              # 业务逻辑 (测试引擎、配方)
+├── infrastructure/      # 技术实现
+│   ├── bus/            # Modbus RTU 通信
+│   ├── devices/        # 设备驱动
+│   ├── config/         # 配置系统
+│   ├── simulation/     # Mock 设备
+│   └── services/       # 应用服务
+├── viewmodels/         # MVVM 视图模型
+└── ui/                 # QML 组件和页面
 ```
 
-完整的开发流程、worktree 支持、测试和问题排查请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+### Mock 模式运行
 
-## 开源协议
+当真实硬件不可用时,应用程序自动使用 mock 设备:
 
-[Apache 2.0](LICENSE)
+```cpp
+// 在 main.cpp 中
+auto runtime = StationRuntimeFactory::create(config);
+// 串口不可用时自动回退到仿真模式
+```
 
-## Star History
+### 添加新设备
 
-<a href="https://www.star-history.com/?repos=multica-ai%2Fmultica&type=date&legend=bottom-right">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=multica-ai/multica&type=date&legend=top-left" />
-  </picture>
-</a>
+1. 在 `src/infrastructure/devices/IYourDevice.h` 定义接口
+2. 在 `src/infrastructure/devices/YourDevice.cpp` 实现驱动
+3. 在 `src/infrastructure/simulation/MockYourDevice.cpp` 添加 mock
+4. 在 `StationRuntimeFactory` 中注册
+
+## 测试
+
+### 测试分类
+
+- **单元测试**: 领域逻辑、协议解析
+- **集成测试**: 设备通信、状态机
+- **UI 测试**: QML 组件渲染
+- **仿真测试**: Mock 设备行为
+
+### 测试覆盖
+
+```bash
+# 运行所有测试
+cmake --build build --target run-all-tests
+
+# 运行特定测试套件
+.\build\DomainEngineTests.exe
+.\build\ProtocolLayerTests.exe
+.\build\SimulationRuntimeTests.exe
+```
+
+## 故障排查
+
+### 串口访问
+
+**Windows**: 确保 COM 口未被其他应用占用
+
+**Linux**: 将用户添加到 `dialout` 组:
+```bash
+sudo usermod -a -G dialout $USER
+```
+
+### 构建问题
+
+**找不到 Qt**: 设置 `CMAKE_PREFIX_PATH`:
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH=F:/Qt/6.11.0/mingw_64
+```
+
+**MinGW 链接错误**: 确保 MinGW bin 目录在 PATH 中
+
+更多解决方案见 [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)
+
+## 许可证
+
+[待确定]
+
+## 贡献
+
+欢迎贡献! 请确保:
+- 代码遵循 C++20 标准
+- 提交 PR 前所有测试通过
+- QML 组件遵循 AppTheme 约定
+- 设备实现包含 mock 对应物
+
+---
+
+**项目版本**: 0.1  
+**最后更新**: 2026-04-24

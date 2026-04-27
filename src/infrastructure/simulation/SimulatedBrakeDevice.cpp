@@ -25,6 +25,15 @@ bool SimulatedBrakeDevice::initialize() {
 bool SimulatedBrakeDevice::setCurrent(int channel, double currentA) {
     if (!m_context) return false;
 
+    // Safety limit matching real device (BrakePowerSupplyDevice: MAX_CURRENT_A = 5.0)
+    constexpr double MAX_CURRENT_A = 5.0;
+    if (currentA < 0.0 || currentA > MAX_CURRENT_A) {
+        m_lastError = QString("Current %1A exceeds safety limit [0, %2A]")
+                          .arg(currentA, 0, 'f', 2)
+                          .arg(MAX_CURRENT_A, 0, 'f', 1);
+        return false;
+    }
+
     m_channelCurrents[channel] = currentA;
 
     // Update context with channel 1 current (primary brake channel)
@@ -51,7 +60,7 @@ bool SimulatedBrakeDevice::setOutputEnable(int channel, bool enable) {
 bool SimulatedBrakeDevice::readCurrent(int channel, double& currentA) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     currentA = m_channelCurrents.value(channel, 0.0);
     return true;
@@ -59,6 +68,15 @@ bool SimulatedBrakeDevice::readCurrent(int channel, double& currentA) {
 
 bool SimulatedBrakeDevice::setVoltage(int channel, double voltageV) {
     if (!m_context) return false;
+
+    // Safety limit matching real device (BrakePowerSupplyDevice: MAX_VOLTAGE_V = 24.0)
+    constexpr double MAX_VOLTAGE_V = 24.0;
+    if (voltageV < 0.0 || voltageV > MAX_VOLTAGE_V) {
+        m_lastError = QString("Voltage %1V exceeds safety limit [0, %2V]")
+                          .arg(voltageV, 0, 'f', 2)
+                          .arg(MAX_VOLTAGE_V, 0, 'f', 1);
+        return false;
+    }
 
     m_channelVoltages[channel] = voltageV;
 
@@ -73,7 +91,7 @@ bool SimulatedBrakeDevice::setVoltage(int channel, double voltageV) {
 bool SimulatedBrakeDevice::readVoltage(int channel, double& voltageV) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     voltageV = m_channelVoltages.value(channel, 0.0);
     return true;
@@ -82,7 +100,7 @@ bool SimulatedBrakeDevice::readVoltage(int channel, double& voltageV) {
 bool SimulatedBrakeDevice::readPower(int channel, double& powerW) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Power = Current * Voltage
     double current = m_channelCurrents.value(channel, 0.0);
@@ -95,7 +113,7 @@ bool SimulatedBrakeDevice::readPower(int channel, double& powerW) {
 bool SimulatedBrakeDevice::readMode(int channel, int& mode) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     mode = m_channelModes.value(channel, 0);
     return true;
@@ -115,7 +133,7 @@ bool SimulatedBrakeDevice::setBrakeMode(int channel, const QString& mode) {
 }
 
 QString SimulatedBrakeDevice::lastError() const {
-    return QString();
+    return m_lastError;
 }
 
 } // namespace Simulation

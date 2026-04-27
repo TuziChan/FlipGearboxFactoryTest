@@ -97,7 +97,7 @@ void testBasicCommunication(MockDeviceManager* manager)
 void testAngleMagnetDetection(MockDeviceManager* manager)
 {
     qDebug() << "\n--- Test 2: Angle Magnet Detection ---";
-    qDebug() << "Magnet positions: 3°, 49°, 113° (±2° detection window)";
+    qDebug() << "Magnet positions: 3°, 49°, 113.5° (±2° detection window)";
 
     auto* busController = manager->busController();
     auto* motorDriver = new AqmdMotorDriveDevice(busController, 1);
@@ -114,7 +114,7 @@ void testAngleMagnetDetection(MockDeviceManager* manager)
         {5.0, false, "After first magnet"},
         {49.0, true, "At second magnet (49°)"},
         {51.0, false, "After second magnet"},
-        {113.0, true, "At third magnet (113°)"},
+        {113.5, true, "At third magnet (113.5°)"},
         {115.0, false, "After third magnet"},
         {180.0, false, "No magnet at 180°"}
     };

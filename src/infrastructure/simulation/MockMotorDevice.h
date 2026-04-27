@@ -2,6 +2,7 @@
 #define MOCKMOTORDEVICE_H
 
 #include "MockModbusDevice.h"
+#include <QVector>
 
 namespace Infrastructure {
 namespace Simulation {
@@ -44,6 +45,46 @@ public:
      */
     bool isBraking() const;
 
+    /**
+     * @brief Link encoder angle for automatic magnet detection
+     */
+    void linkEncoderAngle(double* anglePtr);
+
+    /**
+     * @brief Enable/disable automatic magnet detection
+     */
+    void setMagnetDetectionEnabled(bool enabled);
+
+    /**
+     * @brief Check if magnet detection is enabled
+     */
+    bool isMagnetDetectionEnabled() const;
+
+    /**
+     * @brief Set magnet positions (degrees)
+     */
+    void setMagnetPositions(const QVector<double>& positions);
+
+    /**
+     * @brief Get magnet positions
+     */
+    QVector<double> getMagnetPositions() const;
+
+    /**
+     * @brief Get magnet pass count for specific magnet
+     */
+    int getMagnetPassCount(int magnetIndex) const;
+
+    /**
+     * @brief Reset magnet detection state
+     */
+    void resetMagnetDetection();
+
+    /**
+     * @brief Set detection window (degrees around magnet position)
+     */
+    void setDetectionWindow(double windowDeg);
+
 protected:
     void onRegisterWrite(uint16_t address, uint16_t value) override;
     void updateDynamicRegisters() override;
@@ -60,6 +101,17 @@ private:
     double m_simulatedCurrentA;
     bool m_ai1InputLevel;
     bool m_isBraking;
+
+    // Automatic magnet detection
+    double* m_linkedEncoderAngle;
+    bool m_magnetDetectionEnabled;
+    QVector<double> m_magnetPositions;
+    QVector<int> m_magnetPassCounts;
+    QVector<bool> m_magnetLastState;
+    double m_detectionWindowDeg;
+
+    void updateMagnetDetection();
+    bool isAngleInWindow(double angle, double targetAngle, double window) const;
 };
 
 } // namespace Simulation

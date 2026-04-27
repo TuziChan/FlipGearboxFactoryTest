@@ -77,6 +77,9 @@ private:
     QVariantMap buildEncoderStatus();
     QVariantMap buildBrakeStatus();
     QVariantMap buildOfflineStatus(const QString& name, const QString& reason) const;
+    void setTelemetryOffline(QVariantMap& member,
+                             void (DiagnosticsViewModel::*signal)(),
+                             const QVariantMap& offlineValues);
     void appendLog(const QString& direction, const QString& device, const QString& message, bool success);
     void setStatusMessage(const QString& message);
     void onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime);

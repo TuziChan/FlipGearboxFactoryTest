@@ -36,6 +36,7 @@ private:
     QMap<int, double> m_channelVoltages;
     QMap<int, bool> m_channelOutputs;
     QMap<int, int> m_channelModes; // 0=CC, 1=CV
+    QString m_lastError;
 };
 
 } // namespace Simulation

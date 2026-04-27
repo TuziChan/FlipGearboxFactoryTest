@@ -8,7 +8,13 @@ MockMotorDevice::MockMotorDevice(uint8_t slaveId, QObject* parent)
     , m_simulatedCurrentA(0.0)
     , m_ai1InputLevel(false)
     , m_isBraking(false)
+    , m_linkedEncoderAngle(nullptr)
+    , m_magnetDetectionEnabled(false)
+    , m_magnetPositions({3.0, 49.0, 113.5})  // Default positions (absolute degrees)
+    , m_detectionWindowDeg(2.0)
 {
+    m_magnetPassCounts.resize(m_magnetPositions.size(), 0);
+    m_magnetLastState.resize(m_magnetPositions.size(), false);
     // Initialize device ID
     setHoldingRegister(REG_DEVICE_ID, 0x3610); // AQMD3610
 
@@ -80,6 +86,11 @@ void MockMotorDevice::updateDynamicRegisters() {
     uint16_t currentRaw = static_cast<uint16_t>(m_simulatedCurrentA * 100.0);
     setHoldingRegister(REG_REAL_TIME_CURRENT, currentRaw);
 
+    // Update automatic magnet detection
+    if (m_magnetDetectionEnabled) {
+        updateMagnetDetection();
+    }
+
     // Update AI1 level based on direction
     uint16_t direction = getHoldingRegister(REG_AI1_PORT_DIRECTION);
     if (direction == 0) {
@@ -87,6 +98,95 @@ void MockMotorDevice::updateDynamicRegisters() {
         setHoldingRegister(REG_AI1_PORT_LEVEL, m_ai1InputLevel ? 1 : 0);
     }
     // Output mode: level is controlled by writes
+}
+
+void MockMotorDevice::linkEncoderAngle(double* anglePtr) {
+    m_linkedEncoderAngle = anglePtr;
+}
+
+void MockMotorDevice::setMagnetDetectionEnabled(bool enabled) {
+    m_magnetDetectionEnabled = enabled;
+    if (enabled) {
+        resetMagnetDetection();
+    }
+}
+
+bool MockMotorDevice::isMagnetDetectionEnabled() const {
+    return m_magnetDetectionEnabled;
+}
+
+void MockMotorDevice::setMagnetPositions(const QVector<double>& positions) {
+    m_magnetPositions = positions;
+    m_magnetPassCounts.resize(positions.size(), 0);
+    m_magnetLastState.resize(positions.size(), false);
+}
+
+QVector<double> MockMotorDevice::getMagnetPositions() const {
+    return m_magnetPositions;
+}
+
+int MockMotorDevice::getMagnetPassCount(int magnetIndex) const {
+    if (magnetIndex >= 0 && magnetIndex < m_magnetPassCounts.size()) {
+        return m_magnetPassCounts[magnetIndex];
+    }
+    return 0;
+}
+
+void MockMotorDevice::resetMagnetDetection() {
+    m_magnetPassCounts.fill(0);
+    m_magnetLastState.fill(false);
+}
+
+void MockMotorDevice::setDetectionWindow(double windowDeg) {
+    m_detectionWindowDeg = windowDeg;
+}
+
+void MockMotorDevice::updateMagnetDetection() {
+    if (!m_linkedEncoderAngle) {
+        return;
+    }
+
+    double currentAngle = *m_linkedEncoderAngle;
+    bool anyMagnetDetected = false;
+
+    // Check each magnet position
+    for (int i = 0; i < m_magnetPositions.size(); ++i) {
+        bool inWindow = isAngleInWindow(currentAngle, m_magnetPositions[i], m_detectionWindowDeg);
+
+        // Detect rising edge (entering magnet zone)
+        if (inWindow && !m_magnetLastState[i]) {
+            m_magnetPassCounts[i]++;
+        }
+
+        m_magnetLastState[i] = inWindow;
+
+        if (inWindow) {
+            anyMagnetDetected = true;
+        }
+    }
+
+    // Update AI1 input level (low when magnet detected)
+    m_ai1InputLevel = !anyMagnetDetected;
+}
+
+bool MockMotorDevice::isAngleInWindow(double angle, double targetAngle, double window) const {
+    // Normalize angles to 0-360 range
+    auto normalize = [](double a) {
+        while (a < 0.0) a += 360.0;
+        while (a >= 360.0) a -= 360.0;
+        return a;
+    };
+
+    angle = normalize(angle);
+    targetAngle = normalize(targetAngle);
+
+    // Calculate angular distance (shortest path)
+    double diff = qAbs(angle - targetAngle);
+    if (diff > 180.0) {
+        diff = 360.0 - diff;
+    }
+
+    return diff <= window;
 }
 
 } // namespace Simulation

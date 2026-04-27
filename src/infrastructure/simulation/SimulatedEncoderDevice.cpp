@@ -1,4 +1,5 @@
 #include "SimulatedEncoderDevice.h"
+#include <QDebug>
 
 namespace Infrastructure {
 namespace Simulation {
@@ -16,7 +17,7 @@ bool SimulatedEncoderDevice::initialize() {
 bool SimulatedEncoderDevice::readAngle(double& angleDeg) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Get angle from context (already wrapped to 0-360)
     angleDeg = m_context->encoderAngleDeg();
@@ -26,7 +27,7 @@ bool SimulatedEncoderDevice::readAngle(double& angleDeg) {
 bool SimulatedEncoderDevice::readVirtualMultiTurn(double& totalAngleDeg) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Get total accumulated angle
     totalAngleDeg = m_context->encoderTotalAngleDeg();
@@ -36,7 +37,7 @@ bool SimulatedEncoderDevice::readVirtualMultiTurn(double& totalAngleDeg) {
 bool SimulatedEncoderDevice::readAngularVelocity(double& velocityRpm) {
     if (!m_context) return false;
 
-    m_context->advanceTick();
+    m_context->incrementTickCount();
 
     // Get velocity from context
     velocityRpm = m_context->encoderAngularVelocityRpm();
@@ -46,8 +47,10 @@ bool SimulatedEncoderDevice::readAngularVelocity(double& velocityRpm) {
 bool SimulatedEncoderDevice::setZeroPoint() {
     if (!m_context) return false;
 
-    // Set current angle as zero point
-    m_context->setEncoderZeroOffset(m_context->encoderAngleDeg() + m_context->encoderTotalAngleDeg());
+    // In simulation, the encoder zero point is fixed at installation time.
+    // Real absolute encoders have a physically defined zero that doesn't change at runtime.
+    // setZeroPoint() is kept as a no-op acknowledgement for protocol compatibility.
+    qDebug("SimulatedEncoderDevice::setZeroPoint() - no-op, encoder zero is fixed at installation");
     return true;
 }
 
