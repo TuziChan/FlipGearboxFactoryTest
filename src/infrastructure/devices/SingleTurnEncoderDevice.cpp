@@ -390,5 +390,31 @@ bool SingleTurnEncoderDevice::writeRegister(uint16_t address, uint16_t value) {
     return false;
 }
 
+bool SingleTurnEncoderDevice::setResolution(uint16_t resolution) {
+    if (!writeRegister(REG_RESOLUTION, resolution)) {
+        m_lastError = QString("Failed to set resolution: %1").arg(m_lastError);
+        emit errorOccurred(m_lastError);
+        return false;
+    }
+
+    m_resolution = resolution;
+
+    // Update listener resolution if active
+    if (m_proactiveListener) {
+        m_proactiveListener->setResolution(resolution);
+    }
+
+    qDebug() << "Encoder resolution set to" << resolution;
+    return true;
+}
+
+uint16_t SingleTurnEncoderDevice::getResolution() const {
+    return m_resolution;
+}
+
+int SingleTurnEncoderDevice::getCommunicationMode() const {
+    return m_communicationMode;
+}
+
 } // namespace Devices
 } // namespace Infrastructure

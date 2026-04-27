@@ -42,6 +42,7 @@ public:
     double latestVelocity() const;    // Valid in Velocity mode (RPM)
     bool isValid() const;
     ProtocolMode mode() const;
+    void setResolution(uint16_t resolution);
 
 signals:
     void dataReceived(double value);

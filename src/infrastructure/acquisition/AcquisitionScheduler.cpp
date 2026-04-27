@@ -80,25 +80,21 @@ void AcquisitionScheduler::stop() {
 
     if (m_motorPoller) {
         m_motorPoller->stop();
-        m_motorPoller->wait(2000);
         m_motorPoller.reset();
     }
 
     if (m_torquePoller) {
         m_torquePoller->stop();
-        m_torquePoller->wait(2000);
         m_torquePoller.reset();
     }
 
     if (m_encoderPoller) {
         m_encoderPoller->stop();
-        m_encoderPoller->wait(2000);
         m_encoderPoller.reset();
     }
 
     if (m_brakePoller) {
         m_brakePoller->stop();
-        m_brakePoller->wait(2000);
         m_brakePoller.reset();
     }
 
@@ -162,6 +158,29 @@ AcquisitionStats AcquisitionScheduler::stats() const {
     s.brakeErrors = m_buffer.brake.errorCount.load();
 
     return s;
+}
+
+void AcquisitionScheduler::setEncoderPollInterval(int intervalMs) {
+    m_encoderIntervalUs = intervalMs * 1000;
+
+    // Restart encoder poller if running
+    if (m_running && m_encoderPoller) {
+        m_encoderPoller->stop();
+        m_encoderPoller.reset();
+
+        if (m_encoderDevice) {
+            m_encoderPoller = std::make_unique<EncoderPoller>(
+                m_encoderDevice,
+                &m_buffer.encoder,
+                m_encoderIntervalUs
+            );
+            m_encoderPoller->start();
+        }
+    }
+}
+
+int AcquisitionScheduler::getEncoderPollInterval() const {
+    return m_encoderIntervalUs / 1000;
 }
 
 } // namespace Acquisition

@@ -2,6 +2,7 @@
 #define DEVICEPOLLER_H
 
 #include <QThread>
+#include <QTimer>
 #include <atomic>
 #include "../bus/IBusController.h"
 #include "../devices/IMotorDriveDevice.h"
@@ -13,42 +14,46 @@
 namespace Infrastructure {
 namespace Acquisition {
 
-class MotorPoller : public QThread {
+class MotorPoller : public QObject {
     Q_OBJECT
 public:
     MotorPoller(Devices::IMotorDriveDevice* device, MotorTelemetry* buffer, int intervalUs, QObject* parent = nullptr)
-        : QThread(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {}
+        : QObject(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {
+        m_timer = new QTimer(this);
+        connect(m_timer, &QTimer::timeout, this, &MotorPoller::poll);
+    }
 
-    void stop() { m_running.store(false); }
+    void start() {
+        m_timer->start(m_intervalUs / 1000);
+    }
+
+    void stop() {
+        m_timer->stop();
+    }
 
 signals:
     void errorOccurred(const QString& error);
 
-protected:
-    void run() override {
-        m_running.store(true);
-        while (m_running.load()) {
-            double currentA = 0.0;
-            bool ai1 = true;
+private slots:
+    void poll() {
+        double currentA = 0.0;
+        bool ai1 = true;
 
-            bool ok = true;
-            if (!m_device->readCurrent(currentA)) ok = false;
-            if (!m_device->readAI1Level(ai1)) ok = false;
+        bool ok = true;
+        if (!m_device->readCurrent(currentA)) ok = false;
+        if (!m_device->readAI1Level(ai1)) ok = false;
 
-            uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->timestampNs.store(ts);
+        uint64_t ts = TelemetryBuffer::nowNs();
+        m_buffer->timestampNs.store(ts);
 
-            if (ok) {
-                m_buffer->currentA.store(currentA);
-                m_buffer->ai1Level.store(ai1);
-                m_buffer->valid.store(true);
-                m_buffer->successCount.fetch_add(1);
-            } else {
-                m_buffer->valid.store(false);
-                m_buffer->errorCount.fetch_add(1);
-            }
-
-            usleep(m_intervalUs);
+        if (ok) {
+            m_buffer->currentA.store(currentA);
+            m_buffer->ai1Level.store(ai1);
+            m_buffer->valid.store(true);
+            m_buffer->successCount.fetch_add(1);
+        } else {
+            m_buffer->valid.store(false);
+            m_buffer->errorCount.fetch_add(1);
         }
     }
 
@@ -56,46 +61,46 @@ private:
     Devices::IMotorDriveDevice* m_device;
     MotorTelemetry* m_buffer;
     int m_intervalUs;
-    std::atomic<bool> m_running{false};
-
-    void usleep(int us) {
-        QThread::usleep(std::max(us, 100));
-    }
+    QTimer* m_timer;
 };
 
-class TorquePoller : public QThread {
+class TorquePoller : public QObject {
     Q_OBJECT
 public:
     TorquePoller(Devices::ITorqueSensorDevice* device, TorqueTelemetry* buffer, int intervalUs, QObject* parent = nullptr)
-        : QThread(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {}
+        : QObject(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {
+        m_timer = new QTimer(this);
+        connect(m_timer, &QTimer::timeout, this, &TorquePoller::poll);
+    }
 
-    void stop() { m_running.store(false); }
+    void start() {
+        m_timer->start(m_intervalUs / 1000);
+    }
+
+    void stop() {
+        m_timer->stop();
+    }
 
 signals:
     void errorOccurred(const QString& error);
 
-protected:
-    void run() override {
-        m_running.store(true);
-        while (m_running.load()) {
-            double torqueNm = 0.0, speedRpm = 0.0, powerW = 0.0;
-            bool ok = m_device->readAll(torqueNm, speedRpm, powerW);
+private slots:
+    void poll() {
+        double torqueNm = 0.0, speedRpm = 0.0, powerW = 0.0;
+        bool ok = m_device->readAll(torqueNm, speedRpm, powerW);
 
-            uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->timestampNs.store(ts);
+        uint64_t ts = TelemetryBuffer::nowNs();
+        m_buffer->timestampNs.store(ts);
 
-            if (ok) {
-                m_buffer->torqueNm.store(torqueNm);
-                m_buffer->speedRpm.store(speedRpm);
-                m_buffer->powerW.store(powerW);
-                m_buffer->valid.store(true);
-                m_buffer->successCount.fetch_add(1);
-            } else {
-                m_buffer->valid.store(false);
-                m_buffer->errorCount.fetch_add(1);
-            }
-
-            usleep(m_intervalUs);
+        if (ok) {
+            m_buffer->torqueNm.store(torqueNm);
+            m_buffer->speedRpm.store(speedRpm);
+            m_buffer->powerW.store(powerW);
+            m_buffer->valid.store(true);
+            m_buffer->successCount.fetch_add(1);
+        } else {
+            m_buffer->valid.store(false);
+            m_buffer->errorCount.fetch_add(1);
         }
     }
 
@@ -103,51 +108,51 @@ private:
     Devices::ITorqueSensorDevice* m_device;
     TorqueTelemetry* m_buffer;
     int m_intervalUs;
-    std::atomic<bool> m_running{false};
-
-    void usleep(int us) {
-        QThread::usleep(std::max(us, 100));
-    }
+    QTimer* m_timer;
 };
 
-class EncoderPoller : public QThread {
+class EncoderPoller : public QObject {
     Q_OBJECT
 public:
     EncoderPoller(Devices::IEncoderDevice* device, EncoderTelemetry* buffer, int intervalUs, QObject* parent = nullptr)
-        : QThread(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {}
+        : QObject(parent), m_device(device), m_buffer(buffer), m_intervalUs(intervalUs) {
+        m_timer = new QTimer(this);
+        connect(m_timer, &QTimer::timeout, this, &EncoderPoller::poll);
+    }
 
-    void stop() { m_running.store(false); }
+    void start() {
+        m_timer->start(m_intervalUs / 1000); // Convert us to ms
+    }
+
+    void stop() {
+        m_timer->stop();
+    }
 
 signals:
     void errorOccurred(const QString& error);
 
-protected:
-    void run() override {
-        m_running.store(true);
-        while (m_running.load()) {
-            double angleDeg = 0.0;
-            double totalAngleDeg = 0.0;
-            double velocityRpm = 0.0;
+private slots:
+    void poll() {
+        double angleDeg = 0.0;
+        double totalAngleDeg = 0.0;
+        double velocityRpm = 0.0;
 
-            bool angleOk = m_device->readAngle(angleDeg);
-            m_device->readVirtualMultiTurn(totalAngleDeg);
-            m_device->readAngularVelocity(velocityRpm);
+        bool angleOk = m_device->readAngle(angleDeg);
+        m_device->readVirtualMultiTurn(totalAngleDeg);
+        m_device->readAngularVelocity(velocityRpm);
 
-            uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->timestampNs.store(ts);
+        uint64_t ts = TelemetryBuffer::nowNs();
+        m_buffer->timestampNs.store(ts);
 
-            if (angleOk) {
-                m_buffer->angleDeg.store(angleDeg);
-                m_buffer->totalAngleDeg.store(totalAngleDeg);
-                m_buffer->velocityRpm.store(velocityRpm);
-                m_buffer->valid.store(true);
-                m_buffer->successCount.fetch_add(1);
-            } else {
-                m_buffer->valid.store(false);
-                m_buffer->errorCount.fetch_add(1);
-            }
-
-            usleep(m_intervalUs);
+        if (angleOk) {
+            m_buffer->angleDeg.store(angleDeg);
+            m_buffer->totalAngleDeg.store(totalAngleDeg);
+            m_buffer->velocityRpm.store(velocityRpm);
+            m_buffer->valid.store(true);
+            m_buffer->successCount.fetch_add(1);
+        } else {
+            m_buffer->valid.store(false);
+            m_buffer->errorCount.fetch_add(1);
         }
     }
 
@@ -155,52 +160,52 @@ private:
     Devices::IEncoderDevice* m_device;
     EncoderTelemetry* m_buffer;
     int m_intervalUs;
-    std::atomic<bool> m_running{false};
-
-    void usleep(int us) {
-        QThread::usleep(std::max(us, 100));
-    }
+    QTimer* m_timer;
 };
 
-class BrakePoller : public QThread {
+class BrakePoller : public QObject {
     Q_OBJECT
 public:
     BrakePoller(Devices::IBrakePowerDevice* device, int channel, BrakeTelemetry* buffer, int intervalUs, QObject* parent = nullptr)
-        : QThread(parent), m_device(device), m_channel(channel), m_buffer(buffer), m_intervalUs(intervalUs) {}
+        : QObject(parent), m_device(device), m_channel(channel), m_buffer(buffer), m_intervalUs(intervalUs) {
+        m_timer = new QTimer(this);
+        connect(m_timer, &QTimer::timeout, this, &BrakePoller::poll);
+    }
 
-    void stop() { m_running.store(false); }
+    void start() {
+        m_timer->start(m_intervalUs / 1000);
+    }
+
+    void stop() {
+        m_timer->stop();
+    }
 
 signals:
     void errorOccurred(const QString& error);
 
-protected:
-    void run() override {
-        m_running.store(true);
-        while (m_running.load()) {
-            double currentA = 0.0;
-            double voltageV = 0.0;
-            double powerW = 0.0;
+private slots:
+    void poll() {
+        double currentA = 0.0;
+        double voltageV = 0.0;
+        double powerW = 0.0;
 
-            bool ok = true;
-            if (!m_device->readCurrent(m_channel, currentA)) ok = false;
-            if (!m_device->readVoltage(m_channel, voltageV)) ok = false;
-            if (!m_device->readPower(m_channel, powerW)) ok = false;
+        bool ok = true;
+        if (!m_device->readCurrent(m_channel, currentA)) ok = false;
+        if (!m_device->readVoltage(m_channel, voltageV)) ok = false;
+        if (!m_device->readPower(m_channel, powerW)) ok = false;
 
-            uint64_t ts = TelemetryBuffer::nowNs();
-            m_buffer->timestampNs.store(ts);
+        uint64_t ts = TelemetryBuffer::nowNs();
+        m_buffer->timestampNs.store(ts);
 
-            if (ok) {
-                m_buffer->currentA.store(currentA);
-                m_buffer->voltageV.store(voltageV);
-                m_buffer->powerW.store(powerW);
-                m_buffer->valid.store(true);
-                m_buffer->successCount.fetch_add(1);
-            } else {
-                m_buffer->valid.store(false);
-                m_buffer->errorCount.fetch_add(1);
-            }
-
-            usleep(m_intervalUs);
+        if (ok) {
+            m_buffer->currentA.store(currentA);
+            m_buffer->voltageV.store(voltageV);
+            m_buffer->powerW.store(powerW);
+            m_buffer->valid.store(true);
+            m_buffer->successCount.fetch_add(1);
+        } else {
+            m_buffer->valid.store(false);
+            m_buffer->errorCount.fetch_add(1);
         }
     }
 
@@ -209,11 +214,7 @@ private:
     int m_channel;
     BrakeTelemetry* m_buffer;
     int m_intervalUs;
-    std::atomic<bool> m_running{false};
-
-    void usleep(int us) {
-        QThread::usleep(std::max(us, 100));
-    }
+    QTimer* m_timer;
 };
 
 } // namespace Acquisition

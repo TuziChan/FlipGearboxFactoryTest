@@ -45,6 +45,28 @@ public:
     virtual bool setZeroPoint() = 0;
 
     /**
+     * @brief Set encoder resolution (pulses per revolution)
+     */
+    virtual bool setResolution(uint16_t resolution) = 0;
+
+    /**
+     * @brief Get current resolution
+     */
+    virtual uint16_t getResolution() const = 0;
+
+    /**
+     * @brief Get current communication mode
+     */
+    virtual int getCommunicationMode() const = 0;
+
+    /**
+     * @brief Set auto-report mode at runtime
+     * @param mode 0x00=off, 0x01=single-turn, 0x04=multi-turn, 0x05=velocity
+     * @param intervalMs Report interval in milliseconds
+     */
+    virtual bool setAutoReportMode(uint16_t mode, int intervalMs) = 0;
+
+    /**
      * @brief Get last error message
      */
     virtual QString lastError() const = 0;

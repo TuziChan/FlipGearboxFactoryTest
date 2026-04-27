@@ -45,6 +45,9 @@ public:
     bool readVirtualMultiTurn(double& totalAngleDeg) override;
     bool readAngularVelocity(double& velocityRpm) override;
     bool setZeroPoint() override;
+    bool setResolution(uint16_t resolution) override;
+    uint16_t getResolution() const override;
+    int getCommunicationMode() const override;
     QString lastError() const override;
 
     /**
@@ -74,6 +77,7 @@ private:
     static constexpr uint16_t REG_AUTO_REPORT_MODE = 0x0006;       // Auto-report mode
     static constexpr uint16_t REG_AUTO_REPORT_INTERVAL = 0x0007;   // Auto-report interval (ms)
     static constexpr uint16_t REG_SET_ZERO = 0x0008;               // Write 1 to set zero
+    static constexpr uint16_t REG_RESOLUTION = 0x0009;             // Resolution (pulses per revolution)
 
     bool readRegisters(uint16_t address, uint16_t count, QVector<uint16_t>& values);
     bool writeRegister(uint16_t address, uint16_t value);

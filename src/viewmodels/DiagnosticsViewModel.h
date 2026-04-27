@@ -18,6 +18,9 @@ class DiagnosticsViewModel : public QObject {
     Q_PROPERTY(QVariantMap torqueTelemetry READ torqueTelemetry NOTIFY torqueTelemetryChanged)
     Q_PROPERTY(QVariantMap encoderTelemetry READ encoderTelemetry NOTIFY encoderTelemetryChanged)
     Q_PROPERTY(QVariantMap brakeTelemetry READ brakeTelemetry NOTIFY brakeTelemetryChanged)
+    Q_PROPERTY(int encoderResolution READ encoderResolution NOTIFY encoderParamsChanged)
+    Q_PROPERTY(int encoderCommMode READ encoderCommMode NOTIFY encoderParamsChanged)
+    Q_PROPERTY(int encoderPollInterval READ encoderPollInterval NOTIFY encoderParamsChanged)
 
 public:
     explicit DiagnosticsViewModel(Infrastructure::Config::StationRuntime* runtime,
@@ -32,6 +35,9 @@ public:
     QVariantMap torqueTelemetry() const { return m_torqueTelemetry; }
     QVariantMap encoderTelemetry() const { return m_encoderTelemetry; }
     QVariantMap brakeTelemetry() const { return m_brakeTelemetry; }
+    int encoderResolution() const;
+    int encoderCommMode() const;
+    int encoderPollInterval() const;
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshIncremental();
@@ -43,6 +49,9 @@ public:
     Q_INVOKABLE void setBrakeVoltage(double voltageV);
     Q_INVOKABLE void setBrakeMode(const QString& mode);
     Q_INVOKABLE void setEncoderZero();
+    Q_INVOKABLE void setEncoderResolution(int resolution);
+    Q_INVOKABLE void setEncoderCommMode(int mode);
+    Q_INVOKABLE void setEncoderPollInterval(int intervalMs);
     Q_INVOKABLE void clearLog();
 
 signals:
@@ -53,6 +62,7 @@ signals:
     void torqueTelemetryChanged();
     void encoderTelemetryChanged();
     void brakeTelemetryChanged();
+    void encoderParamsChanged();
 
 private:
     Infrastructure::Config::StationRuntime* m_runtime;

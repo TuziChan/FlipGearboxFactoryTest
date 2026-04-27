@@ -2,6 +2,7 @@
 #include "../infrastructure/devices/IMotorDriveDevice.h"
 #include "../infrastructure/devices/ITorqueSensorDevice.h"
 #include "../infrastructure/devices/IEncoderDevice.h"
+#include "../infrastructure/devices/SingleTurnEncoderDevice.h"
 #include "../infrastructure/devices/IBrakePowerDevice.h"
 #include <QDateTime>
 #include <QRegularExpression>
@@ -196,20 +197,6 @@ void DiagnosticsViewModel::clearLog() {
     setStatusMessage(QStringLiteral("通信日志已清空"));
 }
 
-
-void DiagnosticsViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
-    qDebug() << "DiagnosticsViewModel: Runtime recreated, updating reference";
-    m_runtime = newRuntime;
-
-    // Clear logs and reinitialize
-    m_communicationLogs.clear();
-    emit communicationLogsChanged();
-
-    initializeStatuses();
-    refresh();
-
-    emit deviceStatusesChanged();
-}
 
 void DiagnosticsViewModel::initializeStatuses() {
     m_deviceStatuses = {
@@ -490,6 +477,84 @@ void DiagnosticsViewModel::setStatusMessage(const QString& message) {
         m_statusMessage = message;
         emit statusMessageChanged();
     }
+}
+
+int DiagnosticsViewModel::encoderResolution() const {
+    if (!m_runtime || !m_runtime->encoder()) {
+        return 32768; // Default resolution
+    }
+    return m_runtime->encoder()->getResolution();
+}
+
+int DiagnosticsViewModel::encoderCommMode() const {
+    if (!m_runtime || !m_runtime->encoder()) {
+        return 0; // Default: query mode
+    }
+    return m_runtime->encoder()->getCommunicationMode();
+}
+
+int DiagnosticsViewModel::encoderPollInterval() const {
+    if (!m_runtime || !m_runtime->acquisitionScheduler()) {
+        return 5; // Default: 5ms
+    }
+    return m_runtime->acquisitionScheduler()->getEncoderPollInterval();
+}
+
+void DiagnosticsViewModel::setEncoderResolution(int resolution) {
+    if (!m_runtime || !m_runtime->encoder()) {
+        appendLog("配置", "编码器", "设备未初始化", false);
+        return;
+    }
+
+    bool success = m_runtime->encoder()->setResolution(static_cast<uint16_t>(resolution));
+    appendLog("配置", "编码器",
+              success ? QString("分辨率设置为 %1 脉冲/圈").arg(resolution)
+                      : QString("分辨率设置失败: %1").arg(m_runtime->encoder()->lastError()),
+              success);
+
+    if (success) {
+        emit encoderParamsChanged();
+    }
+}
+
+void DiagnosticsViewModel::setEncoderCommMode(int mode) {
+    if (!m_runtime || !m_runtime->encoder()) {
+        appendLog("配置", "编码器", "设备未初始化", false);
+        return;
+    }
+
+    // Map UI mode (0=query, 1=auto-report) to device register value
+    uint16_t regValue = (mode == 0) ? 0x00 : 0x01;
+    int intervalMs = 20; // Default interval for auto-report
+
+    bool success = m_runtime->encoder()->setAutoReportMode(regValue, intervalMs);
+    QString modeStr = (mode == 0) ? "查询模式" : "自动上报模式";
+    appendLog("配置", "编码器",
+              success ? QString("通信模式设置为 %1").arg(modeStr)
+                      : QString("通信模式设置失败: %1").arg(m_runtime->encoder()->lastError()),
+              success);
+
+    if (success) {
+        emit encoderParamsChanged();
+    }
+}
+
+void DiagnosticsViewModel::setEncoderPollInterval(int intervalMs) {
+    if (!m_runtime || !m_runtime->acquisitionScheduler()) {
+        appendLog("配置", "编码器", "采集调度器未初始化", false);
+        return;
+    }
+
+    m_runtime->acquisitionScheduler()->setEncoderPollInterval(intervalMs);
+    appendLog("配置", "编码器", QString("轮询间隔设置为 %1 ms").arg(intervalMs), true);
+    emit encoderParamsChanged();
+}
+
+void DiagnosticsViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
+    m_runtime = newRuntime;
+    initializeStatuses();
+    refresh();
+    emit encoderParamsChanged();
 }
 
 } // namespace ViewModels

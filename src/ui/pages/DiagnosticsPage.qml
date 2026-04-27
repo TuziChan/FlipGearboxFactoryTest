@@ -19,6 +19,9 @@ Item {
     property string brakeCurrentInput: ""
     property string brakeVoltageInput: ""
     property string brakeModeValue: root.brakeTel.mode || "CC"
+    property string encoderResolutionInput: "32768"
+    property string encoderCommModeInput: "0"
+    property string encoderPollIntervalInput: "5"
 
     property var motorTel: viewModel ? viewModel.motorTelemetry : ({"currentA": 0, "ai1Level": false, "online": false})
     property var torqueTel: viewModel ? viewModel.torqueTelemetry : ({"torqueNm": 0, "speedRpm": 0, "powerW": 0, "online": false})
@@ -33,6 +36,23 @@ Item {
         onTriggered: {
             if (root.viewModel)
                 root.viewModel.refreshIncremental()
+        }
+    }
+
+    Component.onCompleted: {
+        if (root.viewModel) {
+            root.encoderResolutionInput = root.viewModel.encoderResolution.toString()
+            root.encoderCommModeInput = root.viewModel.encoderCommMode.toString()
+            root.encoderPollIntervalInput = root.viewModel.encoderPollInterval.toString()
+        }
+    }
+
+    Connections {
+        target: root.viewModel
+        function onEncoderParamsChanged() {
+            root.encoderResolutionInput = root.viewModel.encoderResolution.toString()
+            root.encoderCommModeInput = root.viewModel.encoderCommMode.toString()
+            root.encoderPollIntervalInput = root.viewModel.encoderPollInterval.toString()
         }
     }
 
@@ -573,6 +593,128 @@ Item {
                 unit: "deg"
                 subtext: root.encoderTel.online ? "实时" : "离线"
                 accentColor: root.encoderTel.online ? root.theme.ok : root.theme.textMuted
+            }
+
+            // Encoder parameters (editable)
+            Components.AppCard {
+                Layout.fillWidth: true
+                theme: root.theme
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 12
+
+                    Components.AppLabel {
+                        text: "编码器参数"
+                        fontSize: 13
+                        fontWeight: 600
+                        theme: root.theme
+                    }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        rowSpacing: 12
+                        columnSpacing: 16
+
+                        Components.AppLabel {
+                            text: "分辨率:"
+                            fontSize: 12
+                            theme: root.theme
+                        }
+
+                        Components.AppSelect {
+                            Layout.preferredWidth: 200
+                            currentValue: root.encoderResolutionInput
+                            model: [
+                                {value: "4096", label: "4096 脉冲/圈"},
+                                {value: "8192", label: "8192 脉冲/圈"},
+                                {value: "16384", label: "16384 脉冲/圈"},
+                                {value: "32768", label: "32768 脉冲/圈"}
+                            ]
+                            theme: root.theme
+                            onCurrentValueChanged: root.encoderResolutionInput = currentValue
+                        }
+
+                        Components.AppLabel {
+                            text: "通信模式:"
+                            fontSize: 12
+                            theme: root.theme
+                        }
+
+                        Components.AppSelect {
+                            Layout.preferredWidth: 200
+                            currentValue: root.encoderCommModeInput
+                            model: [
+                                {value: "0", label: "查询模式"},
+                                {value: "1", label: "自动上报模式"}
+                            ]
+                            theme: root.theme
+                            onCurrentValueChanged: root.encoderCommModeInput = currentValue
+                        }
+
+                        Components.AppLabel {
+                            text: "轮询间隔:"
+                            fontSize: 12
+                            theme: root.theme
+                        }
+
+                        Components.AppSelect {
+                            Layout.preferredWidth: 200
+                            currentValue: root.encoderPollIntervalInput
+                            model: [
+                                {value: "5", label: "5 ms"},
+                                {value: "10", label: "10 ms"},
+                                {value: "20", label: "20 ms"},
+                                {value: "50", label: "50 ms"},
+                                {value: "100", label: "100 ms"}
+                            ]
+                            theme: root.theme
+                            onCurrentValueChanged: root.encoderPollIntervalInput = currentValue
+                        }
+
+                        Components.AppLabel {
+                            text: "成功率:"
+                            fontSize: 12
+                            theme: root.theme
+                        }
+
+                        Components.AppLabel {
+                            text: {
+                                if (!root.viewModel || root.viewModel.deviceStatuses.length <= 2) return "N/A"
+                                var status = root.viewModel.deviceStatuses[2]
+                                var total = (status.successCount || 0) + (status.errorCount || 0)
+                                if (total === 0) return "N/A"
+                                var rate = ((status.successCount || 0) / total * 100).toFixed(1)
+                                return rate + "%"
+                            }
+                            fontSize: 12
+                            fontWeight: 600
+                            color: {
+                                if (!root.viewModel || root.viewModel.deviceStatuses.length <= 2) return root.theme.textPrimary
+                                var status = root.viewModel.deviceStatuses[2]
+                                var total = (status.successCount || 0) + (status.errorCount || 0)
+                                if (total === 0) return root.theme.textPrimary
+                                var rate = (status.successCount || 0) / total
+                                return rate >= 0.95 ? root.theme.okColor : (rate >= 0.8 ? root.theme.warningColor : root.theme.ngColor)
+                            }
+                            theme: root.theme
+                        }
+                    }
+
+                    Components.AppButton {
+                        text: "写入编码器"
+                        variant: "default"
+                        theme: root.theme
+                        onClicked: {
+                            if (root.viewModel) {
+                                root.viewModel.setEncoderResolution(parseInt(root.encoderResolutionInput))
+                                root.viewModel.setEncoderCommMode(parseInt(root.encoderCommModeInput))
+                                root.viewModel.setEncoderPollInterval(parseInt(root.encoderPollIntervalInput))
+                            }
+                        }
+                    }
+                }
             }
 
             Components.AppCard {

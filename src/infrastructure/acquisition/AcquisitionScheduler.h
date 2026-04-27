@@ -30,6 +30,9 @@ public:
     void stop();
     bool isRunning() const;
 
+    void setEncoderPollInterval(int intervalMs);
+    int getEncoderPollInterval() const;
+
     TelemetryBuffer* buffer() { return &m_buffer; }
     const TelemetryBuffer* buffer() const { return &m_buffer; }
 

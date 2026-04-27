@@ -169,5 +169,9 @@ EncoderProactiveListener::ProtocolMode EncoderProactiveListener::mode() const {
     return m_mode;
 }
 
+void EncoderProactiveListener::setResolution(uint16_t resolution) {
+    m_resolution = resolution;
+}
+
 } // namespace Devices
 } // namespace Infrastructure
