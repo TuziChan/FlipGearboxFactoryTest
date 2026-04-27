@@ -282,22 +282,20 @@ private slots:
     void testSimulationContextEncoderZeroOffset() {
         SimulationContext ctx;
         
-        // Advance angle
+        // Advance angle using the physical absolute reference.
         ctx.setMotorDirection(SimulationContext::MotorDirection::Forward);
         ctx.setMotorDutyCycle(50.0);
         for (int i = 0; i < 100; i++) {
             ctx.advanceTick();
         }
         
-        double angleBeforeZero = ctx.encoderAngleDeg();
-        QVERIFY(angleBeforeZero > 0.0);
+        double absoluteAngle = ctx.encoderAngleDeg();
+        QVERIFY(absoluteAngle > 0.0);
         
-        // Set zero offset
-        ctx.setEncoderZeroOffset(angleBeforeZero);
-        
-        // Angle should now be near zero
-        double angleAfterZero = ctx.encoderAngleDeg();
-        QVERIFY(qAbs(angleAfterZero) < 1.0);
+        // Absolute encoder zero is fixed at installation, so tests should
+        // continue to use the measured absolute angle instead of re-zeroing it.
+        double repeatedAngle = ctx.encoderAngleDeg();
+        QCOMPARE(repeatedAngle, absoluteAngle);
     }
     
     void testSimulationContextReverseDirection() {
@@ -514,12 +512,12 @@ private slots:
         encoder.readAngle(angleBeforeZero);
         QVERIFY(angleBeforeZero > 0.0);
         
-        // Set zero
+        // setZeroPoint() is kept for protocol compatibility only.
         QVERIFY(encoder.setZeroPoint());
         
         double angleAfterZero = 0.0;
         encoder.readAngle(angleAfterZero);
-        QVERIFY(qAbs(angleAfterZero) < 1.0);
+        QCOMPARE(angleAfterZero, angleBeforeZero);
     }
     
     void testSimulatedEncoderReadSpeed() {

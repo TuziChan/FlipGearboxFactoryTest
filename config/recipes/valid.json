@@ -1,0 +1,9 @@
+{
+    "angleTestDutyCycle": 30,
+    "angleTimeoutMs": 15000,
+    "homeDutyCycle": 20,
+    "homeTimeoutMs": 30000,
+    "idleDutyCycle": 50,
+    "loadDutyCycle": 50,
+    "name": "ValidRecipe"
+}

@@ -16,9 +16,13 @@ set(CTEST_PARALLEL_LEVEL 8 CACHE STRING "Number of parallel test jobs")
 set(DART_TESTING_TIMEOUT 300 CACHE STRING "Test timeout in seconds")
 set(CTEST_OUTPUT_ON_FAILURE ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Graphs SerialPort Test Qml)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Charts SerialPort Test Qml Widgets)
 
 qt_standard_project_setup(REQUIRES 6.10)
+
+get_filename_component(QT6_INSTALL_PREFIX "${Qt6_DIR}/../../.." ABSOLUTE)
+set(QT6_RUNTIME_QML_DIR "${QT6_INSTALL_PREFIX}/qml")
+set(QT6_RUNTIME_PLUGINS_DIR "${QT6_INSTALL_PREFIX}/plugins")
 
 # ============================================================================
 # Layer 1: Infrastructure Library (Base Layer - No Dependencies)
@@ -218,8 +222,7 @@ qt_add_library(FlipGearboxUI STATIC
     src/viewmodels/RecipeViewModel.cpp
 
     # UI Components (C++)
-    src/ui/ChartPainter.h
-    src/ui/ChartPainter.cpp
+    # Chart components moved to QML
 )
 
 target_include_directories(FlipGearboxUI
@@ -232,6 +235,7 @@ target_link_libraries(FlipGearboxUI
         FlipGearboxDomain
         Qt6::Core
         Qt6::Quick
+        Qt6::Charts
 )
 
 # ============================================================================
@@ -243,6 +247,8 @@ qt_add_library(FlipGearboxTestLib STATIC
     tests/framework/AutoTestFramework.h
     tests/framework/MockTestRunner.cpp
     tests/framework/MockTestRunner.h
+    tests/mocks/MockDevices.h
+    tests/mocks/MockDevices.cpp
 )
 
 target_link_libraries(FlipGearboxTestLib
@@ -346,6 +352,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/SvgIcon.qml
         src/ui/components/CommandBar.qml
         src/ui/components/MetricCard.qml
+        src/ui/components/MultiYAxisChartView_QML.qml
         src/ui/components/ChartPanel.qml
         src/ui/components/DataTableCard.qml
         src/ui/components/VerdictPanel.qml
@@ -410,7 +417,7 @@ target_link_libraries(appFlipGearboxFactoryTest
         FlipGearboxTestLib
         Qt6::Quick
         Qt6::QuickControls2
-        Qt6::Graphs
+        Qt6::Charts
 )
 
 if(WIN32)
@@ -429,13 +436,14 @@ target_link_libraries(UnifiedTestRunner PRIVATE FlipGearboxUI Qt6::Core)
 
 # Helper macro to create test executables
 macro(add_gearbox_test TEST_NAME TEST_SOURCE)
-    qt_add_executable(${TEST_NAME} ${TEST_SOURCE} tests/mocks/MockDevices.h)
+    qt_add_executable(${TEST_NAME} ${TEST_SOURCE})
     set_target_properties(${TEST_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
     target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_definitions(${TEST_NAME} PRIVATE TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(${TEST_NAME} PRIVATE FlipGearboxTestLib Qt6::Test)
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-    set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;QT_PLUGIN_PATH=${QT6_RUNTIME_PLUGINS_DIR};QML2_IMPORT_PATH=${QT6_RUNTIME_QML_DIR};QML_IMPORT_PATH=${QT6_RUNTIME_QML_DIR};QT_QUICK_CONTROLS_STYLE=Basic")
 endmacro()
 
 # Protocol Layer Tests
@@ -533,6 +541,14 @@ install(TARGETS appFlipGearboxFactoryTest
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# Install runtime resources (config, data, fonts, QML module) alongside the binary
+# so that relative paths like ../config/station.json resolve correctly
+# from install/bin/ to install/config/
+install(DIRECTORY config/ DESTINATION config)
+install(DIRECTORY data/ DESTINATION data)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/fonts/ DESTINATION fonts)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/FlipGearboxFactoryTest/ DESTINATION qml/FlipGearboxFactoryTest)
 
 if(WIN32)
     qt_generate_deploy_qml_app_script(

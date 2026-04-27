@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -9,7 +9,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
-#include <QLoggingCategory>
+#include <QLibraryInfo>
 #include <QMutex>
 #include <QMutexLocker>
 #include <exception>
@@ -32,7 +32,6 @@
 #include "src/viewmodels/DiagnosticsViewModel.h"
 #include "src/viewmodels/HistoryViewModel.h"
 #include "src/viewmodels/RecipeViewModel.h"
-#include "src/ui/ChartPainter.h"
 #include "src/teamops/MockTeamDataProvider.h"
 #include "src/teamops/FileTeamDataProvider.h"
 #include "src/teamops/TeamMonitorService.h"
@@ -226,8 +225,7 @@ int main(int argc, char *argv[])
     SetUnhandledExceptionFilter(unhandledExceptionFilter);
 #endif
 
-    // Enable QML debugging categories
-    QLoggingCategory::setFilterRules(QStringLiteral("qt.qml.*=true\nqt.quick.*=true"));
+
 
     const QStringList rawArgs = [&]() {
         QStringList values;
@@ -270,15 +268,25 @@ int main(int argc, char *argv[])
     qDebug() << "[Startup] QSG_RHI_BACKEND:" << qEnvironmentVariable("QSG_RHI_BACKEND");
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
-    qDebug() << "[Startup] QGuiApplication created";
+    const QString qtPluginsPath = QLibraryInfo::path(QLibraryInfo::PluginsPath);
+    const QString qtQmlImportsPath = QLibraryInfo::path(QLibraryInfo::QmlImportsPath);
+    if (!qtPluginsPath.isEmpty()) {
+        QCoreApplication::addLibraryPath(qtPluginsPath);
+    }
 
-    // Load HarmonyOS Sans fonts
-    QFontDatabase::addApplicationFont("fonts/HarmonyOS_Sans_SC_Regular.ttf");
-    QFontDatabase::addApplicationFont("fonts/HarmonyOS_Sans_SC_Medium.ttf");
-    QFontDatabase::addApplicationFont("fonts/HarmonyOS_Sans_SC_Bold.ttf");
-    QFontDatabase::addApplicationFont("fonts/HarmonyOS_Sans_SC_Light.ttf");
+    qDebug() << "[Startup] QApplication created";
+    qDebug() << "[Startup] Qt plugins path:" << qtPluginsPath;
+    qDebug() << "[Startup] Qt QML imports path:" << qtQmlImportsPath;
+    qDebug() << "[Startup] Qt library paths:" << QCoreApplication::libraryPaths();
+
+    // Load HarmonyOS Sans fonts (look in ../fonts relative to application binary)
+    const QString fontsDir = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../fonts");
+    QFontDatabase::addApplicationFont(fontsDir + "/HarmonyOS_Sans_SC_Regular.ttf");
+    QFontDatabase::addApplicationFont(fontsDir + "/HarmonyOS_Sans_SC_Medium.ttf");
+    QFontDatabase::addApplicationFont(fontsDir + "/HarmonyOS_Sans_SC_Bold.ttf");
+    QFontDatabase::addApplicationFont(fontsDir + "/HarmonyOS_Sans_SC_Light.ttf");
 
     // Set default application font
     QFont defaultFont("HarmonyOS Sans SC");
@@ -289,7 +297,7 @@ int main(int argc, char *argv[])
 
     Infrastructure::Config::StationConfig stationConfig;
 
-    const QString stationConfigPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../../config/station.json");
+    const QString stationConfigPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../config/station.json");
     qDebug() << "[Startup] Loading station config from:" << stationConfigPath;
 
     Infrastructure::Config::ConfigLoader configLoader;
@@ -346,7 +354,7 @@ int main(int argc, char *argv[])
 
     // Try file-based provider first (for real-time external data injection)
     const QString teamStatusPath = QDir(QCoreApplication::applicationDirPath())
-                                       .absoluteFilePath("../../data/team_status.json");
+                                       .absoluteFilePath("../data/team_status.json");
     if (QFile::exists(teamStatusPath)) {
         auto fileProvider = new TeamOps::FileTeamDataProvider(teamStatusPath, &app);
         if (fileProvider->isAvailable()) {
@@ -385,6 +393,17 @@ int main(int argc, char *argv[])
     qDebug() << "[Startup] Creating QML engine...";
     QQmlApplicationEngine engine;
 
+    const QString appQmlDir = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("qml");
+    if (!qtQmlImportsPath.isEmpty()) {
+        engine.addImportPath(qtQmlImportsPath);
+    }
+    if (QDir(appQmlDir).exists()) {
+        engine.addImportPath(appQmlDir);
+    }
+    if (!qtPluginsPath.isEmpty()) {
+        engine.addPluginPath(qtPluginsPath);
+    }
+
     // Connect to QML warnings and errors BEFORE loading
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, &app, [](const QList<QQmlError> &warnings) {
         qWarning() << "[QML] ========== QML WARNINGS DETECTED ==========";
@@ -398,9 +417,7 @@ int main(int argc, char *argv[])
     });
 
     // Register custom QML types
-    qDebug() << "[Startup] Registering QML types...";
-    qmlRegisterType<ChartPainter>("FlipGearboxFactoryTest.UI", 1, 0, "ChartPainter");
-    qDebug() << "[Startup] QML types registered";
+    qDebug() << "[Startup] Registering QML types...";    qDebug() << "[Startup] QML types registered";
 
     // Expose ViewModel to QML
     qDebug() << "[Startup] Setting QML context properties...";

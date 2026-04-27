@@ -128,17 +128,17 @@ Item {
 
                             GridLayout {
                                 width: parent.width
-                                columns: 3
+                                columns: 4
                                 columnSpacing: 12
                                 rowSpacing: 12
 
                                 Repeater {
-                                    model: ["转速", "扭矩", "角度"]
+                                    model: ["转速", "扭矩", "电机电流", "角度"]
 
                                     delegate: MetricCard {
                                         required property string modelData
                                         Layout.fillWidth: true
-                                        compact: true
+                                        compact: false
                                         theme: root.theme
                                         label: modelData
                                         value: root.metricValueProvider(modelData)
@@ -151,12 +151,12 @@ Item {
 
                             GridLayout {
                                 width: parent.width
-                                columns: 3
-                                columnSpacing: 12
-                                rowSpacing: 12
+                                columns: 5
+                                columnSpacing: 10
+                                rowSpacing: 10
 
                                 Repeater {
-                                    model: ["功率", "电机电流", "制动电流"]
+                                    model: ["功率", "制动电流", "制动电压", "制动功率", "累计角度"]
 
                                     delegate: MetricCard {
                                         required property string modelData
@@ -166,30 +166,7 @@ Item {
                                         label: modelData
                                         value: root.metricValueProvider(modelData)
                                         unit: root.metricUnitProvider(modelData)
-                                        subtext: "采样周期 100 ms"
-                                        accentColor: root.metricColorProvider(modelData)
-                                    }
-                                }
-                            }
-
-                            GridLayout {
-                                width: parent.width
-                                columns: 3
-                                columnSpacing: 12
-                                rowSpacing: 12
-
-                                Repeater {
-                                    model: ["制动电压", "制动功率", "累计角度"]
-
-                                    delegate: MetricCard {
-                                        required property string modelData
-                                        Layout.fillWidth: true
-                                        compact: true
-                                        theme: root.theme
-                                        label: modelData
-                                        value: root.metricValueProvider(modelData)
-                                        unit: root.metricUnitProvider(modelData)
-                                        subtext: modelData === "累计角度" ? "虚拟多圈" : "制动参数"
+                                        subtext: modelData === "累计角度" ? "虚拟多圈" : "辅助参数"
                                         accentColor: root.metricColorProvider(modelData)
                                     }
                                 }

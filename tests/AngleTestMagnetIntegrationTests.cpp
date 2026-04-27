@@ -71,14 +71,15 @@ void AngleTestMagnetIntegrationTests::cleanup() {
 }
 
 void AngleTestMagnetIntegrationTests::testCompleteAngleTestSequence() {
-    // Simulate the complete angle test sequence:
-    // 0° -> Position1(3°) -> Position2(49°) -> Position1(3°) -> Position3(113.5°) -> 0°
+    // Simulate the complete angle test sequence with absolute angle targets:
+    // Encoder zero is fixed at installation (~0°)
+    // 0° -> Position1(49°) -> Position2(113.5°) -> Position1 Return(49°) -> Position3(113.5°) -> 0°
 
     QVector<QPair<QString, double>> sequence = {
         {"Start", 0.0},
-        {"Position1", 3.0},
-        {"Position2", 49.0},
-        {"Position1 Return", 3.0},
+        {"Position1", 49.0},
+        {"Position2", 113.5},
+        {"Position1 Return", 49.0},
         {"Position3", 113.5},
         {"Return to Zero", 0.0}
     };
@@ -123,10 +124,10 @@ void AngleTestMagnetIntegrationTests::testCompleteAngleTestSequence() {
         // Verify magnet detection for expected positions
         if (phaseName == "Position1" || phaseName == "Position1 Return") {
             QVERIFY2(magnetDetectedInPhase, "Should detect magnet at Position1");
-            QVERIFY(qAbs(detectionAngle - 3.0) < 1.0);
+            QVERIFY(qAbs(detectionAngle - 49.0) < 1.0);
         } else if (phaseName == "Position2") {
             QVERIFY2(magnetDetectedInPhase, "Should detect magnet at Position2");
-            QVERIFY(qAbs(detectionAngle - 49.0) < 1.0);
+            QVERIFY(qAbs(detectionAngle - 113.5) < 1.0);
         } else if (phaseName == "Position3") {
             QVERIFY2(magnetDetectedInPhase, "Should detect magnet at Position3");
             QVERIFY(qAbs(detectionAngle - 113.5) < 1.0);

@@ -150,16 +150,17 @@ private slots:
     }
 
     void testEncoderZeroSetting() {
-        // Set encoder zero offset
+        // Absolute encoder zero is fixed at installation.
         m_helper->setMotorForward(50.0);
         m_helper->advanceMs(200);
         
-        double angleBeforeZero = m_helper->encoderAngle();
-        m_helper->setEncoderZero(angleBeforeZero);
+        double angleBeforeSetZero = m_helper->encoderAngle();
+        QVERIFY(angleBeforeSetZero > 0.0);
+        QVERIFY(m_runtime->encoder()->setZeroPoint());
         
-        // Angle should now be near zero
-        double angleAfterZero = m_helper->encoderAngle();
-        QVERIFY(std::abs(angleAfterZero) < 1.0);
+        // Runtime setZeroPoint() is a compatibility no-op for absolute encoders.
+        double angleAfterSetZero = m_helper->encoderAngle();
+        QCOMPARE(angleAfterSetZero, angleBeforeSetZero);
     }
 
     void testWaitForEncoderAngle() {

@@ -1,0 +1,180 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "displayName": "Development - Unit Tests Only",
+      "description": "Run only unit tests for daily development",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI - All Tests",
+      "description": "Run all tests with parallel execution for CI environment",
+      "configurePreset": "default",
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "quick",
+      "displayName": "Quick - Fast Tests Only",
+      "description": "Run all tests except long-running stability tests",
+      "configurePreset": "default",
+      "filter": {
+        "exclude": {
+          "name": "LongRunningStabilityTest"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "protocol",
+      "displayName": "Protocol Layer Tests",
+      "description": "Run protocol layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "protocol"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "device",
+      "displayName": "Device Layer Tests",
+      "description": "Run device layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "device"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "domain",
+      "displayName": "Domain Engine Tests",
+      "description": "Run domain engine layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "domain"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "viewmodel",
+      "displayName": "ViewModel Layer Tests",
+      "description": "Run ViewModel layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "viewmodel"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ui",
+      "displayName": "UI Layer Tests",
+      "description": "Run UI layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "ui"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "infrastructure",
+      "displayName": "Infrastructure Layer Tests",
+      "description": "Run infrastructure layer tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "infrastructure"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "integration",
+      "displayName": "Integration Tests",
+      "description": "Run integration and e2e tests only",
+      "configurePreset": "default",
+      "filter": {
+        "include": {
+          "label": "integration"
+        }
+      },
+      "execution": {
+        "jobs": 8
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

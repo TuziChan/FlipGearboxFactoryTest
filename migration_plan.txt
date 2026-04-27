@@ -1,0 +1,23 @@
+# 只使用 Qt Charts 的迁移计划
+
+## 步骤 1: 创建 Qt Charts QML 组件（已完成）
+✅ src/ui/components/MultiYAxisChartView_QML.qml
+
+## 步骤 2: 更新 ChartPanel.qml
+将 ChartPainter 替换为 MultiYAxisChartView_QML
+
+## 步骤 3: 更新 CMakeLists.txt
+- 移除 ChartPainter.h/cpp
+- 移除 MultiYAxisChartView.h/cpp
+- 添加 MultiYAxisChartView_QML.qml
+- 移除 Qt6::Graphs 依赖（只保留 Qt6::Charts）
+
+## 步骤 4: 更新 main.cpp
+- 移除 ChartPainter 的 include 和注册
+- 移除 MultiYAxisChartView 的 include 和注册
+
+## 步骤 5: 删除不需要的文件
+- src/ui/ChartPainter.h
+- src/ui/ChartPainter.cpp
+- src/ui/components/MultiYAxisChartView.h
+- src/ui/components/MultiYAxisChartView.cpp

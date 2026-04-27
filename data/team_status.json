@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-04-23T18:00:00",
+  "roles": [
+    {
+      "roleId": "leader",
+      "displayName": "团队负责人",
+      "state": "executing",
+      "currentTaskId": "task-277d",
+      "currentTaskSummary": "分配任务与协调进度",
+      "taskStartTime": "2026-04-23T14:30:00",
+      "completedToday": 3,
+      "totalCompleted": 45,
+      "blockedCount": 0,
+      "lastError": "",
+      "lastSeen": "2026-04-23T18:00:00"
+    },
+    {
+      "roleId": "domain-dev",
+      "displayName": "领域引擎开发",
+      "state": "executing",
+      "currentTaskId": "task-42a1",
+      "currentTaskSummary": "GearboxTestEngine Phase拆分重构",
+      "taskStartTime": "2026-04-23T15:00:00",
+      "completedToday": 2,
+      "totalCompleted": 28,
+      "blockedCount": 1,
+      "lastError": "",
+      "lastSeen": "2026-04-23T18:00:00"
+    },
+    {
+      "roleId": "protocol-dev",
+      "displayName": "协议与设备开发",
+      "state": "idle",
+      "currentTaskId": "",
+      "currentTaskSummary": "",
+      "taskStartTime": "",
+      "completedToday": 1,
+      "totalCompleted": 35,
+      "blockedCount": 0,
+      "lastError": "",
+      "lastSeen": "2026-04-23T17:50:00"
+    },
+    {
+      "roleId": "viewmodel-dev",
+      "displayName": "ViewModel 开发",
+      "state": "blocked",
+      "currentTaskId": "task-9e3f",
+      "currentTaskSummary": "等待Domain层接口确认",
+      "taskStartTime": "2026-04-23T16:00:00",
+      "completedToday": 0,
+      "totalCompleted": 22,
+      "blockedCount": 2,
+      "lastError": "Blocked: waiting for domain-dev interface definition",
+      "lastSeen": "2026-04-23T18:00:00"
+    },
+    {
+      "roleId": "ui-dev",
+      "displayName": "UI/QML 开发",
+      "state": "executing",
+      "currentTaskId": "task-b88c",
+      "currentTaskSummary": "TestExecutionPage QML StateMachine重构",
+      "taskStartTime": "2026-04-23T13:00:00",
+      "completedToday": 2,
+      "totalCompleted": 30,
+      "blockedCount": 0,
+      "lastError": "",
+      "lastSeen": "2026-04-23T18:00:00"
+    },
+    {
+      "roleId": "infra-dev",
+      "displayName": "基础设施/服务开发",
+      "state": "review_pending",
+      "currentTaskId": "task-d701",
+      "currentTaskSummary": "TeamMonitorService实现",
+      "taskStartTime": "2026-04-23T12:00:00",
+      "completedToday": 1,
+      "totalCompleted": 25,
+      "blockedCount": 0,
+      "lastError": "",
+      "lastSeen": "2026-04-23T18:00:00"
+    },
+    {
+      "roleId": "reviewer",
+      "displayName": "代码审查",
+      "state": "executing",
+      "currentTaskId": "task-f2a0",
+      "currentTaskSummary": "审查Modbus协议层代码",
+      "taskStartTime": "2026-04-23T17:00:00",
+      "completedToday": 4,
+      "totalCompleted": 60,
+      "blockedCount": 0,
+      "lastError": "",
+      "lastSeen": "2026-04-23T18:00:00"
+    }
+  ],
+  "pipeline": [
+    {
+      "taskId": "task-277d",
+      "title": "项目架构分析与迭代方案设计",
+      "currentStage": "done",
+      "ownerRole": "leader",
+      "stageStartTime": "2026-04-23T10:00:00",
+      "estimatedDurationMs": 14400000,
+      "isBlocked": false,
+      "blockReason": ""
+    },
+    {
+      "taskId": "task-42a1",
+      "title": "GearboxTestEngine Phase拆分重构",
+      "currentStage": "development",
+      "ownerRole": "domain-dev",
+      "stageStartTime": "2026-04-23T15:00:00",
+      "estimatedDurationMs": 18000000,
+      "isBlocked": false,
+      "blockReason": ""
+    },
+    {
+      "taskId": "task-b88c",
+      "title": "TestExecutionPage QML StateMachine",
+      "currentStage": "development",
+      "ownerRole": "ui-dev",
+      "stageStartTime": "2026-04-23T13:00:00",
+      "estimatedDurationMs": 21600000,
+      "isBlocked": false,
+      "blockReason": ""
+    },
+    {
+      "taskId": "task-d701",
+      "title": "TeamOps监控服务基础实现",
+      "currentStage": "code_review",
+      "ownerRole": "infra-dev",
+      "stageStartTime": "2026-04-23T16:00:00",
+      "estimatedDurationMs": 14400000,
+      "isBlocked": false,
+      "blockReason": ""
+    },
+    {
+      "taskId": "task-9e3f",
+      "title": "ViewModel绑定优化",
+      "currentStage": "development",
+      "ownerRole": "viewmodel-dev",
+      "stageStartTime": "2026-04-23T16:00:00",
+      "estimatedDurationMs": 10800000,
+      "isBlocked": true,
+      "blockReason": "等待Domain层接口定义"
+    },
+    {
+      "taskId": "task-5c21",
+      "title": "Mock设备故障注入扩展",
+      "currentStage": "test",
+      "ownerRole": "protocol-dev",
+      "stageStartTime": "2026-04-23T14:00:00",
+      "estimatedDurationMs": 7200000,
+      "isBlocked": false,
+      "blockReason": ""
+    },
+    {
+      "taskId": "task-aef3",
+      "title": "QML交互测试框架",
+      "currentStage": "development",
+      "ownerRole": "ui-dev",
+      "stageStartTime": "2026-04-23T11:00:00",
+      "estimatedDurationMs": 25200000,
+      "isBlocked": false,
+      "blockReason": ""
+    }
+  ]
+}

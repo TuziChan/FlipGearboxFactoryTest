@@ -20,13 +20,12 @@ Rectangle {
     border.width: 1
     clip: true
 
-    implicitHeight: root.compact ? 60 : 108
+    implicitHeight: root.compact ? 70 : 108
 
     ColumnLayout {
-        width: parent.width - (root.compact ? 28 : 40)
-        x: root.compact ? 14 : 20
-        y: root.compact ? 10 : 16
-        spacing: root.compact ? 2 : 4
+        anchors.fill: parent
+        anchors.margins: root.compact ? 12 : 20
+        spacing: root.compact ? 4 : 6
 
         Text {
             text: root.label
@@ -35,27 +34,29 @@ Rectangle {
             font.weight: Font.Medium
             Layout.fillWidth: true
             elide: Text.ElideRight
+            wrapMode: Text.NoWrap
         }
 
         RowLayout {
-            spacing: 6
+            spacing: 4
             Layout.fillWidth: true
+            Layout.alignment: Qt.AlignLeft
 
             Text {
                 text: root.value
                 color: root.accentColor
-                font.pixelSize: root.compact ? 20 : 28
+                font.pixelSize: root.compact ? 18 : 28
                 font.weight: Font.DemiBold
                 font.family: "Consolas"
-                Layout.fillWidth: true
                 elide: Text.ElideRight
-                maximumLineCount: 1
+                wrapMode: Text.NoWrap
+                Layout.maximumWidth: root.compact ? parent.width * 0.65 : parent.width * 0.7
             }
 
             Text {
                 text: root.unit
                 color: root.theme.textSecondary
-                font.pixelSize: root.compact ? 11 : 13
+                font.pixelSize: root.compact ? 10 : 13
                 visible: root.unit.length > 0
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -64,9 +65,11 @@ Rectangle {
         Text {
             text: root.subtext
             color: root.theme.textMuted
-            font.pixelSize: root.compact ? 10 : 11
+            font.pixelSize: root.compact ? 9 : 11
             Layout.fillWidth: true
             elide: Text.ElideRight
+            wrapMode: Text.NoWrap
+            visible: root.subtext.length > 0
         }
     }
 }
