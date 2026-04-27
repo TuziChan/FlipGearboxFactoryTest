@@ -14,6 +14,9 @@ private slots:
     void testWriteRequest();
     void testReadResponse();
     void testInvalidFrame();
+    void testExpectedResponseLengthForReadHoldingRegisters();
+    void testExpectedResponseLengthForFixedLengthResponses();
+    void testExpectedResponseLengthForExceptionResponse();
 };
 
 void ModbusCrcTests::testCrcCalculation() {
@@ -109,6 +112,29 @@ void ModbusCrcTests::testInvalidFrame() {
 
     // verifyCRC should reject a frame with incorrect CRC
     QVERIFY(!ModbusFrame::verifyCRC(invalidFrame));
+}
+
+void ModbusCrcTests::testExpectedResponseLengthForReadHoldingRegisters() {
+    const QByteArray request = ModbusFrame::buildReadHoldingRegisters(1, 0x0000, 1);
+
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("01")), -1);
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("0103")), -1);
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("010302")), 7);
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("0103027748")), 7);
+}
+
+void ModbusCrcTests::testExpectedResponseLengthForFixedLengthResponses() {
+    const QByteArray request = ModbusFrame::buildWriteSingleRegister(1, 0x0020, 0x1234);
+
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("01")), -1);
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("0106")), 8);
+}
+
+void ModbusCrcTests::testExpectedResponseLengthForExceptionResponse() {
+    const QByteArray request = ModbusFrame::buildReadHoldingRegisters(1, 0x0000, 1);
+
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("01")), -1);
+    QCOMPARE(ModbusFrame::tryGetExpectedResponseLength(request, QByteArray::fromHex("0183")), 5);
 }
 
 QTEST_MAIN(ModbusCrcTests)

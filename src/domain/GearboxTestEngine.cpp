@@ -1,6 +1,6 @@
 #include "GearboxTestEngine.h"
 #include "RecipeValidator.h"
-#include "../infrastructure/simulation/SimulationContext.h"
+
 #include <QDebug>
 #include <QtMath>
 #include <QThread>
@@ -33,7 +33,7 @@ GearboxTestEngine::GearboxTestEngine(QObject* parent)
 , m_emergencyStopRequested(false)
 , m_violationLogger(new Infrastructure::Validation::PhysicsViolationLogger())
 , m_physicsValidationEnabled(true)
-, m_simulationContext(nullptr)
+
 {
 // 33ms cycle time for 30Hz sampling (per correction document)
 m_cycleTimer->setInterval(33);
@@ -83,9 +83,6 @@ void GearboxTestEngine::setValidationConfig(const Infrastructure::Validation::Ph
     m_validationConfig = config;
 }
 
-void GearboxTestEngine::setSimulationContext(Infrastructure::Simulation::SimulationContext* context) {
-    m_simulationContext = context;
-}
 
 bool GearboxTestEngine::startTest(const QString& serialNumber) {
     if (!m_motor || !m_torque || !m_encoder || !m_brake) {
@@ -188,12 +185,6 @@ void GearboxTestEngine::onCycleTick() {
         return;
     }
 
-    // Advance simulation physics once per cycle tick (for mock mode).
-    // This ensures consistent angle updates regardless of how many
-    // device reads occur within a single tick.
-    if (m_simulationContext) {
-        m_simulationContext->advanceTick();
-    }
 
     // Update elapsed times
     m_state.elapsedMs = m_testTimer.elapsed();
@@ -732,8 +723,7 @@ void GearboxTestEngine::handleSeekingMagnet() {
 
 void GearboxTestEngine::handleAdvancingToEncoderZero() {
     // Homing complete: magnet detected, encoder zero is physically defined at installation.
-    // Send setZeroPoint command for protocol compatibility (acknowledgement on real hardware,
-    // no-op in simulation since encoder zero is fixed).
+    // Send setZeroPoint command for protocol compatibility and hardware acknowledgement.
     // Record the current angle as the homing reference for diagnostics.
     stopMotor();
     if (m_encoder) {

@@ -9,7 +9,7 @@ namespace Infrastructure {
 namespace Validation {
 
 /**
- * @brief Runtime physics validation for mock simulation
+ * @brief Runtime physics validation for the test workflow
  *
  * Validates physical laws during test execution:
  * - R1: Speed consistency (torque sensor vs encoder)

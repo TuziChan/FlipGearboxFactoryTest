@@ -1,41 +1,24 @@
 #include "RuntimeManager.h"
 #include "StationRuntimeFactory.h"
+#include "ConfigLoader.h"
 #include <QDebug>
 #include <QMutexLocker>
 
 namespace Infrastructure {
 namespace Config {
 
-RuntimeManager::RuntimeManager(const StationConfig& config, bool initialMockMode, QObject* parent)
+RuntimeManager::RuntimeManager(const StationConfig& config, const QString& configPath, QObject* parent)
     : QObject(parent)
     , m_config(config)
-    , m_isMockMode(initialMockMode)
+    , m_configPath(configPath)
 {
-    recreateRuntime(initialMockMode);
+    recreateRuntime();
 }
 
-void RuntimeManager::switchMode(bool mockMode) {
-    if (m_isMockMode == mockMode) {
-        qDebug() << "Already in" << (mockMode ? "mock" : "real") << "mode, no switch needed";
-        return;
-    }
+void RuntimeManager::recreateRuntime() {
+    qDebug() << "Creating new runtime...";
+    auto newRuntime = StationRuntimeFactory::create(m_config);
 
-    qDebug() << "Switching from" << (m_isMockMode ? "mock" : "real")
-             << "to" << (mockMode ? "mock" : "real") << "mode";
-
-    recreateRuntime(mockMode);
-    m_isMockMode = mockMode;
-
-    emit mockModeChanged();
-    emit runtimeRecreated(m_runtime.get());
-}
-
-void RuntimeManager::recreateRuntime(bool mockMode) {
-    // Create new runtime first
-    qDebug() << "Creating new runtime in" << (mockMode ? "mock" : "real") << "mode...";
-    auto newRuntime = StationRuntimeFactory::create(m_config, mockMode);
-
-    // Initialize the new runtime
     if (newRuntime) {
         qDebug() << "Initializing new runtime...";
         if (!newRuntime->initialize()) {
@@ -45,18 +28,45 @@ void RuntimeManager::recreateRuntime(bool mockMode) {
         }
     }
 
-    // Critical section: shutdown old runtime and swap atomically
     {
         QMutexLocker locker(&m_mutex);
-
-        // Shutdown old runtime if exists (after new one is ready)
         if (m_runtime) {
             qDebug() << "Shutting down old runtime...";
             m_runtime->shutdown();
         }
-
-        // Atomic swap: replace old runtime with new one
         m_runtime = std::move(newRuntime);
+    }
+}
+
+void RuntimeManager::reloadRuntime() {
+    qDebug() << "Reloading runtime with current config from" << m_configPath;
+
+    StationConfig updatedConfig = m_config;
+    ConfigLoader configLoader;
+    if (configLoader.loadStationConfig(m_configPath, updatedConfig)) {
+        m_config = updatedConfig;
+        qDebug() << "Config reloaded from disk";
+    } else {
+        qWarning() << "Failed to reload config from" << m_configPath << ", using cached config";
+    }
+
+    recreateRuntime();
+    emit runtimeRecreated(m_runtime.get());
+}
+
+void RuntimeManager::disconnectDeviceBus(const QString& deviceKey) {
+    QMutexLocker locker(&m_mutex);
+    if (!m_runtime) return;
+
+    Bus::IBusController* bus = nullptr;
+    if (deviceKey == QStringLiteral("aqmd")) bus = m_runtime->aqmdBus();
+    else if (deviceKey == QStringLiteral("dyn200")) bus = m_runtime->dyn200Bus();
+    else if (deviceKey == QStringLiteral("encoder")) bus = m_runtime->encoderBus();
+    else if (deviceKey == QStringLiteral("brake")) bus = m_runtime->brakeBus();
+
+    if (bus && bus->isOpen()) {
+        qDebug() << "Disconnecting bus for" << deviceKey;
+        bus->close();
     }
 }
 

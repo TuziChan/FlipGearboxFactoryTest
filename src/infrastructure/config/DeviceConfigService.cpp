@@ -5,6 +5,8 @@
 #include <QJsonObject>
 #include <QVariantHash>
 #include <QDir>
+#include <QSerialPortInfo>
+#include <QSerialPort>
 
 namespace Infrastructure {
 namespace Config {
@@ -145,6 +147,44 @@ QString DeviceConfigService::lastError() const {
 
 QString DeviceConfigService::configPath() const {
     return m_stationConfigPath;
+}
+
+QStringList DeviceConfigService::availableSerialPorts() const {
+    QStringList ports;
+    const auto availablePorts = QSerialPortInfo::availablePorts();
+    for (const auto& info : availablePorts) {
+        ports.append(info.portName());
+    }
+    return ports;
+}
+
+QString DeviceConfigService::testSerialPort(const QString& portName, int baudRate, const QString& parity, int stopBits, int timeoutMs) const {
+    if (portName.isEmpty()) {
+        return QStringLiteral("串口号为空");
+    }
+
+    QSerialPort port;
+    port.setPortName(portName);
+    port.setBaudRate(baudRate);
+    port.setDataBits(QSerialPort::Data8);
+
+    const QString normalized = parity.trimmed().toLower();
+    if (normalized == QStringLiteral("even"))
+        port.setParity(QSerialPort::EvenParity);
+    else if (normalized == QStringLiteral("odd"))
+        port.setParity(QSerialPort::OddParity);
+    else
+        port.setParity(QSerialPort::NoParity);
+
+    port.setStopBits(stopBits == 2 ? QSerialPort::TwoStop : QSerialPort::OneStop);
+    port.setFlowControl(QSerialPort::NoFlowControl);
+
+    if (!port.open(QIODevice::ReadWrite)) {
+        return QStringLiteral("%1 打开失败：%2").arg(portName, port.errorString());
+    }
+
+    port.close();
+    return QString();
 }
 
 } // namespace Config

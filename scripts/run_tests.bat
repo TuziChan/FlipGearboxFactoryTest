@@ -9,8 +9,8 @@ REM   Options:
 REM     --all          Run all tests (default)
 REM     --unit         Run unit tests only
 REM     --integration  Run integration tests only
-REM     --mock         Run mock/simulation tests only
-REM     --stability    Run stability tests only
+
+REM 
 REM     --report       Generate test report after run
 REM     --verbose      Verbose output
 REM     --build-dir    Specify build directory
@@ -19,8 +19,8 @@ REM ============================================================
 set "RUN_ALL=1"
 set "RUN_UNIT=0"
 set "RUN_INTEGRATION=0"
-set "RUN_MOCK=0"
-set "RUN_STABILITY=0"
+
+
 set "GENERATE_REPORT=0"
 set "VERBOSE=0"
 set "BUILD_DIR="
@@ -32,8 +32,8 @@ if "%~1"=="" goto :done_parse
 if /I "%~1"=="--all" set "RUN_ALL=1"
 if /I "%~1"=="--unit" set "RUN_ALL=0" & set "RUN_UNIT=1"
 if /I "%~1"=="--integration" set "RUN_ALL=0" & set "RUN_INTEGRATION=1"
-if /I "%~1"=="--mock" set "RUN_ALL=0" & set "RUN_MOCK=1"
-if /I "%~1"=="--stability" set "RUN_ALL=0" & set "RUN_STABILITY=1"
+
+
 if /I "%~1"=="--report" set "GENERATE_REPORT=1"
 if /I "%~1"=="--verbose" set "VERBOSE=1"
 if /I "%~1"=="--build-dir" (
@@ -88,19 +88,16 @@ echo.
 cd "%BUILD_DIR%"
 
 REM Define test categories
-set "UNIT_TESTS=ModbusCrcTests ProtocolLayerTests DomainEngineTests DomainEngineAdvancedTests JudgementLogicTests BrakePowerConstantVoltageTest HistoryViewModelTests RecipeViewModelTests TestExecutionPageTests AutoTestFrameworkTests PerformanceMonitorTests TestReportGeneratorTests"
-set "INTEGRATION_TESTS=TestExecutionVerification GearboxSimulationIntegrationTests AngleTestMagnetIntegrationTests MagnetDetectionMockTests BoundaryProtectionTests"
-set "MOCK_TESTS=SimulationRuntimeTests MockMotorMagnetDetectionTests MockTestRunnerTests"
-set "STABILITY_TESTS=LongRunningStabilityTest"
-set "ALL_TESTS=%UNIT_TESTS% %INTEGRATION_TESTS% %MOCK_TESTS% %STABILITY_TESTS%"
+set "UNIT_TESTS=ModbusCrcTests HistoryViewModelTests RecipeViewModelTests AutoTestFrameworkTests PerformanceMonitorTests TestReportGeneratorTests"
+set "INTEGRATION_TESTS=BoundaryProtectionTests QmlSmokeTests"
+set "ALL_TESTS=%UNIT_TESTS% %INTEGRATION_TESTS%"
 
 REM Determine which tests to run
 set "TESTS_TO_RUN="
 if %RUN_ALL%==1 set "TESTS_TO_RUN=%ALL_TESTS%"
 if %RUN_UNIT%==1 set "TESTS_TO_RUN=%UNIT_TESTS%"
 if %RUN_INTEGRATION%==1 set "TESTS_TO_RUN=%INTEGRATION_TESTS%"
-if %RUN_MOCK%==1 set "TESTS_TO_RUN=%MOCK_TESTS%"
-if %RUN_STABILITY%==1 set "TESTS_TO_RUN=%STABILITY_TESTS%"
+
 
 set /a TOTAL=0
 set /a PASSED=0

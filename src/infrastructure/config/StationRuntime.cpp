@@ -28,7 +28,6 @@ if (m_acquisitionScheduler) {
 m_acquisitionScheduler->stop();
 }
 
-QStringList errors;
 QStringList warnings;
 
 const bool motorEnabled = (m_motor != nullptr);
@@ -42,50 +41,54 @@ qDebug() << " - Torque (DYN200):" << (torqueEnabled ? "enabled" : "disabled");
 qDebug() << " - Encoder:" << (encoderEnabled ? "enabled" : "disabled");
 qDebug() << " - Brake:" << (brakeEnabled ? "enabled" : "disabled");
 
+int enabledCount = (motorEnabled ? 1 : 0) + (torqueEnabled ? 1 : 0)
+                 + (encoderEnabled ? 1 : 0) + (brakeEnabled ? 1 : 0);
+int deviceOkCount = 0;
+
 // Phase 1: Initialize buses
 qDebug() << "Phase 1: Initializing communication buses...";
 m_initStage = InitStage::BusesOpening;
 
-const bool motorBusOk = initializeBus("AQMD", m_aqmdBusConfig, m_aqmdBus, motorEnabled);
+bool motorBusOk = initializeBus("AQMD", m_aqmdBusConfig, m_aqmdBus, motorEnabled);
 if (motorEnabled && !motorBusOk) {
-QString error = QStringLiteral("AQMD 总线打开失败 (%1): %2")
+QString msg = QStringLiteral("AQMD 总线打开失败 (%1): %2")
 .arg(m_aqmdBusConfig.portName,
 m_aqmdBus ? m_aqmdBus->lastError() : QStringLiteral("bus not configured"));
-errors << error;
-qCritical() << " [FAILED]" << error;
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
 } else if (motorEnabled) {
 qDebug() << " [OK] AQMD bus opened on" << m_aqmdBusConfig.portName;
 }
 
-const bool torqueBusOk = initializeBus("DYN200", m_dyn200BusConfig, m_dyn200Bus, torqueEnabled);
+bool torqueBusOk = initializeBus("DYN200", m_dyn200BusConfig, m_dyn200Bus, torqueEnabled);
 if (torqueEnabled && !torqueBusOk) {
-QString error = QStringLiteral("DYN200 总线打开失败 (%1): %2")
+QString msg = QStringLiteral("DYN200 总线打开失败 (%1): %2")
 .arg(m_dyn200BusConfig.portName,
 m_dyn200Bus ? m_dyn200Bus->lastError() : QStringLiteral("bus not configured"));
-errors << error;
-qCritical() << " [FAILED]" << error;
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
 } else if (torqueEnabled) {
 qDebug() << " [OK] DYN200 bus opened on" << m_dyn200BusConfig.portName;
 }
 
-const bool encoderBusOk = initializeBus("encoder", m_encoderBusConfig, m_encoderBus, encoderEnabled);
+bool encoderBusOk = initializeBus("encoder", m_encoderBusConfig, m_encoderBus, encoderEnabled);
 if (encoderEnabled && !encoderBusOk) {
-QString error = QStringLiteral("编码器 总线打开失败 (%1): %2")
+QString msg = QStringLiteral("编码器 总线打开失败 (%1): %2")
 .arg(m_encoderBusConfig.portName,
 m_encoderBus ? m_encoderBus->lastError() : QStringLiteral("bus not configured"));
-errors << error;
-qCritical() << " [FAILED]" << error;
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
 } else if (encoderEnabled) {
 qDebug() << " [OK] Encoder bus opened on" << m_encoderBusConfig.portName;
 }
 
-const bool brakeBusOk = initializeBus("brake", m_brakeBusConfig, m_brakeBus, brakeEnabled);
+bool brakeBusOk = initializeBus("brake", m_brakeBusConfig, m_brakeBus, brakeEnabled);
 if (brakeEnabled && !brakeBusOk) {
-QString error = QStringLiteral("制动电源 总线打开失败 (%1): %2")
+QString msg = QStringLiteral("制动电源 总线打开失败 (%1): %2")
 .arg(m_brakeBusConfig.portName,
 m_brakeBus ? m_brakeBus->lastError() : QStringLiteral("bus not configured"));
-errors << error;
-qCritical() << " [FAILED]" << error;
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
 } else if (brakeEnabled) {
 qDebug() << " [OK] Brake bus opened on" << m_brakeBusConfig.portName;
 }
@@ -96,57 +99,59 @@ m_initStage = InitStage::BusesOpened;
 qDebug() << "Phase 2: Initializing devices...";
 m_initStage = InitStage::DevicesInitializing;
 
-if (m_motor && motorBusOk && !m_motor->initialize()) {
-QString error = QStringLiteral("AQMD 初始化失败：%1").arg(m_motor->lastError());
-errors << error;
-qCritical() << " [FAILED]" << error;
-} else if (m_motor && motorBusOk) {
+if (m_motor && motorBusOk) {
+if (m_motor->initialize()) {
 qDebug() << " [OK] AQMD motor initialized";
+deviceOkCount++;
+} else {
+QString msg = QStringLiteral("AQMD 初始化失败：%1").arg(m_motor->lastError());
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
+}
 }
 
-if (m_torque && torqueBusOk && !m_torque->initialize()) {
-QString error = QStringLiteral("DYN200 初始化失败：%1").arg(m_torque->lastError());
-errors << error;
-qCritical() << " [FAILED]" << error;
-} else if (m_torque && torqueBusOk) {
+if (m_torque && torqueBusOk) {
+if (m_torque->initialize()) {
 qDebug() << " [OK] DYN200 torque sensor initialized";
+deviceOkCount++;
+} else {
+QString msg = QStringLiteral("DYN200 初始化失败：%1").arg(m_torque->lastError());
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
+}
 }
 
-if (m_encoder && encoderBusOk && !m_encoder->initialize()) {
-QString error = QStringLiteral("编码器 初始化失败：%1").arg(m_encoder->lastError());
-errors << error;
-qCritical() << " [FAILED]" << error;
-} else if (m_encoder && encoderBusOk) {
+if (m_encoder && encoderBusOk) {
+if (m_encoder->initialize()) {
 qDebug() << " [OK] Encoder initialized";
+deviceOkCount++;
+} else {
+QString msg = QStringLiteral("编码器 初始化失败：%1").arg(m_encoder->lastError());
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
+}
 }
 
-if (m_brake && brakeBusOk && !m_brake->initialize()) {
-QString error = QStringLiteral("制动电源 初始化失败：%1").arg(m_brake->lastError());
-errors << error;
-qCritical() << " [FAILED]" << error;
-} else if (m_brake && brakeBusOk) {
+if (m_brake && brakeBusOk) {
+if (m_brake->initialize()) {
 qDebug() << " [OK] Brake power supply initialized";
+deviceOkCount++;
+} else {
+QString msg = QStringLiteral("制动电源 初始化失败：%1").arg(m_brake->lastError());
+warnings << msg;
+qWarning() << " [WARNING]" << msg;
+}
 }
 
 m_initStage = InitStage::DevicesInitialized;
 
-// Check for fatal errors
-if (!errors.isEmpty()) {
-m_lastError = QStringLiteral("runtime 初始化未完成：%1").arg(errors.join(QStringLiteral("；")));
+if (enabledCount > 0 && deviceOkCount == 0) {
+m_lastError = QStringLiteral("runtime 初始化失败：全部 %1 个设备均初始化未通过").arg(enabledCount);
 qCritical() << "========================================";
-qCritical() << "INITIALIZATION FAILED";
+qCritical() << "INITIALIZATION FAILED - no devices online";
 qCritical() << "========================================";
-qCritical() << "Errors encountered:" << errors.size();
-for (const QString& error : errors) {
-qCritical() << " -" << error;
-}
-qCritical() << "========================================";
-qCritical() << "Performing rollback of partially initialized resources...";
-
-// Perform staged rollback based on current init stage
 rollback();
-
-qCritical() << "Rollback complete. System is NOT operational.";
+qCritical() << "Rollback complete.";
 qCritical() << "========================================";
 return false;
 }
@@ -155,9 +160,8 @@ return false;
 qDebug() << "Phase 3: Starting acquisition scheduler...";
 m_initStage = InitStage::SchedulerStarting;
 if (m_acquisitionScheduler && !m_acquisitionScheduler->start()) {
-QString warning = "Failed to start acquisition scheduler (non-fatal, will use synchronous fallback)";
-warnings << warning;
-qWarning() << " [WARNING]" << warning;
+warnings << QStringLiteral("Failed to start acquisition scheduler (non-fatal)");
+qWarning() << " [WARNING] Acquisition scheduler failed to start";
 } else if (m_acquisitionScheduler) {
 qDebug() << " [OK] Acquisition scheduler started";
 }
@@ -168,10 +172,11 @@ m_lastError.clear();
 
 qDebug() << "========================================";
 qDebug() << "Station runtime initialized successfully";
+qDebug() << " Devices online:" << deviceOkCount << "/" << enabledCount;
 if (!warnings.isEmpty()) {
 qDebug() << "Warnings:" << warnings.size();
-for (const QString& warning : warnings) {
-qDebug() << " -" << warning;
+for (const QString& w : warnings) {
+qDebug() << " -" << w;
 }
 }
 qDebug() << "========================================";

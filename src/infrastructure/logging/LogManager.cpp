@@ -13,13 +13,17 @@ LogManager& LogManager::instance() {
 }
 
 LogManager::LogManager()
-    : m_logDir("logs")
+    : QObject(nullptr)
+    , m_logDir("logs")
     , m_maxDays(30)
     , m_logFile(nullptr)
     , m_logStream(nullptr)
     , m_currentDate()
     , m_initialized(false)
+    , m_flushTimer(new QTimer(this))
 {
+    // Flush logs every 1 second to balance performance and data safety
+    connect(m_flushTimer, &QTimer::timeout, this, &LogManager::flushLogs);
 }
 
 LogManager::~LogManager() {
@@ -45,6 +49,7 @@ void LogManager::initialize(const QString& logDir, int maxDays) {
     cleanOldLogs();
 
     qInstallMessageHandler(LogManager::messageHandler);
+    m_flushTimer->start(1000); // Flush every 1 second
     m_initialized = true;
 
     qInfo() << "Log system initialized. Log directory:" << QDir(m_logDir).absolutePath();
@@ -57,6 +62,7 @@ void LogManager::shutdown() {
         return;
     }
 
+    m_flushTimer->stop();
     qInstallMessageHandler(nullptr);
 
     if (m_logStream) {
@@ -72,6 +78,13 @@ void LogManager::shutdown() {
     }
 
     m_initialized = false;
+}
+
+void LogManager::flushLogs() {
+    QMutexLocker locker(&m_mutex);
+    if (m_logStream) {
+        m_logStream->flush();
+    }
 }
 
 void LogManager::rotateLogFile() {
@@ -164,7 +177,10 @@ void LogManager::messageHandler(QtMsgType type, const QMessageLogContext& contex
 
     if (manager.m_logStream) {
         *manager.m_logStream << logLine;
-        manager.m_logStream->flush();
+        // Only flush on critical/fatal messages, not on every log
+        if (type >= QtCriticalMsg) {
+            manager.m_logStream->flush();
+        }
     }
 
     std::cout << logLine.toStdString();

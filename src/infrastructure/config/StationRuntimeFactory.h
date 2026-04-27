@@ -16,7 +16,7 @@ public:
     /**
      * @brief Create runtime from station configuration
      */
-    static std::unique_ptr<StationRuntime> create(const StationConfig& config, bool mockMode = false);
+    static std::unique_ptr<StationRuntime> create(const StationConfig& config);
 
 private:
     StationRuntimeFactory() = delete;

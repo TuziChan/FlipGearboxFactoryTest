@@ -21,14 +21,7 @@ Column {
 
     spacing: 6
 
-    onCurrentIndexChanged: {
-        const item = itemAt(currentIndex)
-        if (item && typeof item === "object" && item.value !== undefined) {
-            root.currentValue = item.value
-        }
-    }
-
-    onCurrentValueChanged: {
+    function syncCurrentIndexFromValue() {
         if (root.currentValue === undefined)
             return
         for (let i = 0; i < itemCount(); i++) {
@@ -39,8 +32,18 @@ Column {
                 }
                 return
             }
+            if (typeof item === "string" && item === root.currentValue) {
+                if (root.currentIndex !== i) {
+                    root.currentIndex = i
+                }
+                return
+            }
         }
     }
+
+    onCurrentValueChanged: syncCurrentIndexFromValue()
+    onModelChanged: syncCurrentIndexFromValue()
+    Component.onCompleted: syncCurrentIndexFromValue()
 
     function isArrayLikeModel(model) {
         return model !== undefined
@@ -115,6 +118,12 @@ Column {
         if (index < 0 || index >= itemCount())
             return false
         root.currentIndex = index
+        const item = itemAt(index)
+        if (item && typeof item === "object" && item.value !== undefined) {
+            root.currentValue = item.value
+        } else if (typeof item === "string") {
+            root.currentValue = item
+        }
         root.highlightedIndex = index
         popup.close()
         root.activated(index)

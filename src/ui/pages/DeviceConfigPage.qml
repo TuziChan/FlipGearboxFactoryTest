@@ -12,7 +12,23 @@ Item {
     required property Components.AppTheme theme
 
     property bool isModified: false
-    property string connectionStatus: "disconnected"
+    readonly property string connectionStatus: {
+        if (typeof diagnosticsViewModel === "undefined" || !diagnosticsViewModel)
+            return "disconnected"
+        var statuses = diagnosticsViewModel.deviceStatuses
+        if (!statuses || statuses.length === 0)
+            return "disconnected"
+        var anyOnline = false
+        var anyEnabled = false
+        var keys = ["aqmd", "dyn200", "encoder", "brake"]
+        for (var i = 0; i < keys.length; i++) {
+            if (!root.deviceConfig[keys[i]].enabled) continue
+            anyEnabled = true
+            if (root.isDeviceOnline(keys[i])) anyOnline = true
+        }
+        if (!anyEnabled) return "disconnected"
+        return anyOnline ? "connected" : "error"
+    }
 
     // DYN200 mode switch confirmation state
     property bool dyn200ModeConfirmVisible: false
@@ -20,11 +36,24 @@ Item {
     property string dyn200PendingModeLabel: ""
     property int dyn200SavedCurrentIndex: -1
     property bool dyn200ConfirmAccepted: false
+    property bool testDialogOpen: false
+    property string testResultTitle: ""
+    property string testResultText: ""
+    property string testResultType: "info"
     readonly property real pagePadding: 16
     readonly property real cardMinWidth: 360
     readonly property int gridColumns: Math.max(1, Math.floor((width - pagePadding * 2 + 16) / (cardMinWidth + 16)))
     readonly property real gridCellWidth: Math.max(cardMinWidth, Math.floor((width - pagePadding * 2 - 20 - Math.max(0, gridColumns - 1) * 16) / gridColumns))
     readonly property bool compactHeader: width < 1100
+
+    readonly property var availablePorts: {
+        if (typeof deviceConfigService !== "undefined" && deviceConfigService) {
+            var ports = deviceConfigService.availableSerialPorts()
+            if (ports && ports.length > 0)
+                return ports
+        }
+        return ["COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8"]
+    }
 
     property var deviceConfig: ({
         aqmd: {
@@ -71,12 +100,35 @@ Item {
         }
     })
 
+    property var deviceNames: ({
+        "aqmd": "AQMD 电机驱动器",
+        "dyn200": "DYN200 扭矩传感器",
+        "encoder": "单圈绝对值编码器",
+        "brake": "制动电源"
+    })
+
+    function isDeviceOnline(deviceKey) {
+        if (typeof diagnosticsViewModel === "undefined" || !diagnosticsViewModel)
+            return false
+        var statuses = diagnosticsViewModel.deviceStatuses
+        if (!statuses || statuses.length === 0)
+            return false
+        for (var i = 0; i < statuses.length; i++) {
+            var s = statuses[i]
+            if (s.name === root.deviceNames[deviceKey])
+                return s.status === "online"
+        }
+        return false
+    }
+
     function saveConfig() {
         if (typeof deviceConfigService !== "undefined" && deviceConfigService.saveDeviceConfig(deviceConfig)) {
             isModified = false
             console.log("Config saved to", deviceConfigService.configPath())
+            return true
         } else {
             console.warn("Config save failed", typeof deviceConfigService !== "undefined" ? deviceConfigService.lastError() : "deviceConfigService unavailable")
+            return false
         }
     }
 
@@ -88,26 +140,158 @@ Item {
         console.log("Config reset")
     }
 
-    function testConnection() {
-        if (typeof stationRuntime === "undefined" || !stationRuntime) {
-            connectionStatus = "error"
+    function connectDevice(deviceKey) {
+        var label = root.deviceNames[deviceKey] || deviceKey
+        var cfg = root.deviceConfig[deviceKey]
+
+        if (!cfg || !cfg.enabled) {
+            root.testResultTitle = label
+            root.testResultText = "设备未启用，无法连接"
+            root.testResultType = "warning"
+            root.testDialogOpen = true
             return
         }
-        connectionStatus = "connecting"
-        if (stationRuntime.initialize()) {
-            connectionStatus = "connected"
-        } else {
-            connectionStatus = "error"
+
+        if (!saveConfig()) {
+            root.testResultTitle = label
+            root.testResultText = "配置保存失败"
+            root.testResultType = "error"
+            root.testDialogOpen = true
+            return
+        }
+
+        root.testResultTitle = label
+        root.testResultText = "正在连接..."
+        root.testResultType = "info"
+        root.testDialogOpen = true
+
+        if (typeof runtimeManager !== "undefined" && runtimeManager) {
+            runtimeManager.reloadRuntime()
+        }
+
+        deviceConnectTimer.deviceKey = deviceKey
+        deviceConnectTimer.restart()
+    }
+
+    function disconnectDevice(deviceKey) {
+        var label = root.deviceNames[deviceKey] || deviceKey
+
+        if (typeof runtimeManager !== "undefined" && runtimeManager) {
+            runtimeManager.disconnectDeviceBus(deviceKey)
+        }
+        if (typeof diagnosticsViewModel !== "undefined" && diagnosticsViewModel) {
+            diagnosticsViewModel.refresh()
+        }
+
+        root.testResultTitle = label
+        root.testResultText = "已断开连接"
+        root.testResultType = "info"
+        root.testDialogOpen = true
+    }
+
+    Timer {
+        id: deviceConnectTimer
+        property string deviceKey: ""
+        interval: 600
+        onTriggered: {
+            var label = root.deviceNames[deviceKey] || deviceKey
+            if (root.isDeviceOnline(deviceKey)) {
+                root.testResultTitle = label
+                root.testResultText = "连接成功"
+                root.testResultType = "success"
+            } else {
+                root.testResultTitle = label
+                root.testResultText = "连接失败，请检查串口配置"
+                root.testResultType = "error"
+            }
+            root.testDialogOpen = true
+            deviceKey = ""
         }
     }
 
-    function testDevice(deviceName) {
-        testConnection()
+    function testDevice(deviceKey) {
+        var label = root.deviceNames[deviceKey] || deviceKey
+
+        if (!root.isDeviceOnline(deviceKey)) {
+            root.testResultTitle = label
+            root.testResultText = "设备未连接，请先连接设备"
+            root.testResultType = "warning"
+            root.testDialogOpen = true
+            return
+        }
+
+        if (typeof diagnosticsViewModel === "undefined" || !diagnosticsViewModel) {
+            root.testResultTitle = label
+            root.testResultText = "diagnosticsViewModel 不可用"
+            root.testResultType = "error"
+            root.testDialogOpen = true
+            return
+        }
+
+        root.testResultTitle = label
+        root.testResultText = "正在测试..."
+        root.testResultType = "info"
+        root.testDialogOpen = true
+
+        diagnosticsViewModel.refresh()
+        testDeviceTimer.deviceKey = deviceKey
+        testDeviceTimer.restart()
+    }
+
+    Timer {
+        id: testDeviceTimer
+        property string deviceKey: ""
+        interval: 300
+        onTriggered: {
+            var label = root.deviceNames[deviceKey] || deviceKey
+            if (typeof diagnosticsViewModel === "undefined" || !diagnosticsViewModel) {
+                root.testResultTitle = label
+                root.testResultText = "diagnosticsViewModel 不可用"
+                root.testResultType = "error"
+                root.testDialogOpen = true
+                deviceKey = ""
+                return
+            }
+
+            var statuses = diagnosticsViewModel.deviceStatuses
+            var found = null
+            for (var i = 0; i < statuses.length; i++) {
+                if (statuses[i].name === label) {
+                    found = statuses[i]
+                    break
+                }
+            }
+
+            root.testResultTitle = label + " 测试"
+            if (found && found.status === "online") {
+                root.testResultText = "✅ 设备响应正常\n" + (found.summary || "")
+                root.testResultType = "success"
+            } else if (found) {
+                root.testResultText = "❌ 设备无响应\n" + (found.summary || "")
+                root.testResultType = "error"
+            } else {
+                root.testResultText = "❌ 未找到设备状态"
+                root.testResultType = "error"
+            }
+            root.testDialogOpen = true
+            deviceKey = ""
+        }
     }
 
     Component.onCompleted: {
         if (typeof deviceConfigService !== "undefined") {
             deviceConfig = deviceConfigService.loadDeviceConfig()
+            console.log("DeviceConfig loaded:",
+                        "aqmd=", deviceConfig.aqmd.baudRate,
+                        "dyn200=", deviceConfig.dyn200.baudRate,
+                        "encoder=", deviceConfig.encoder.baudRate,
+                        "brake=", deviceConfig.brake.baudRate)
+        }
+    }
+
+    Component.onDestruction: {
+        if (isModified) {
+            saveConfig()
         }
     }
 
@@ -177,11 +361,16 @@ Item {
                         spacing: 12
 
                         Components.AppButton {
-                            text: "测试连接"
+                            text: "全部连接"
                             variant: "outline"
                             size: "sm"
                             theme: root.theme
-                            onClicked: root.testConnection()
+                            onClicked: {
+                                if (!root.saveConfig()) return
+                                if (typeof runtimeManager !== "undefined" && runtimeManager) {
+                                    runtimeManager.reloadRuntime()
+                                }
+                            }
                         }
 
                         Components.AppButton {
@@ -326,7 +515,7 @@ Item {
                                     Components.AppSelect {
                                         Layout.fillWidth: true
                                         currentValue: root.deviceConfig[modelData.key].portName
-                                        model: ["COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8"]
+                                        model: root.availablePorts
                                         theme: root.theme
                                         onCurrentValueChanged: {
                                             root.deviceConfig[modelData.key].portName = currentValue
@@ -475,14 +664,22 @@ Item {
                                         text: "分辨率:"
                                         theme: root.theme
                                     }
-                                    Components.AppInput {
+                                    Components.AppSelect {
                                         visible: modelData.hasResolution
                                         Layout.fillWidth: true
-                                        text: modelData.hasResolution ? String(root.deviceConfig[modelData.key].resolution) : ""
+                                        currentValue: modelData.hasResolution ? String(root.deviceConfig[modelData.key].resolution) : "4096"
+                                        model: [
+                                            {value: "1024", label: "1024 (10bit)"},
+                                            {value: "4096", label: "4096 (12bit)"},
+                                            {value: "16384", label: "16384 (14bit)"},
+                                            {value: "32768", label: "32768 (15bit)"},
+                                            {value: "65536", label: "65536 (16bit)"},
+                                            {value: "131072", label: "131072 (17bit)"}
+                                        ]
                                         theme: root.theme
-                                        onTextChanged: {
+                                        onCurrentValueChanged: {
                                             if (modelData.hasResolution) {
-                                                root.deviceConfig[modelData.key].resolution = parseInt(text) || 4096
+                                                root.deviceConfig[modelData.key].resolution = parseInt(currentValue)
                                                 root.isModified = true
                                             }
                                         }
@@ -522,13 +719,34 @@ Item {
                                     }
                                 }
 
-                                Components.AppButton {
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    text: "测试设备"
-                                    variant: "outline"
-                                    size: "sm"
-                                    theme: root.theme
-                                    onClicked: root.testDevice(modelData.key)
+                                    spacing: 8
+
+                                    Components.AppButton {
+                                        Layout.fillWidth: true
+                                        text: root.isDeviceOnline(modelData.key) ? "断开设备" : "连接设备"
+                                        variant: root.isDeviceOnline(modelData.key) ? "destructive" : "outline"
+                                        size: "sm"
+                                        theme: root.theme
+                                        onClicked: {
+                                            if (root.isDeviceOnline(modelData.key)) {
+                                                root.disconnectDevice(modelData.key)
+                                            } else {
+                                                root.connectDevice(modelData.key)
+                                            }
+                                        }
+                                    }
+
+                                    Components.AppButton {
+                                        Layout.fillWidth: true
+                                        text: "测试"
+                                        variant: "outline"
+                                        size: "sm"
+                                        enabled: root.isDeviceOnline(modelData.key)
+                                        theme: root.theme
+                                        onClicked: root.testDevice(modelData.key)
+                                    }
                                 }
                             }
                         }
@@ -565,5 +783,19 @@ Item {
             root.dyn200PendingModeValue = ""
             root.dyn200PendingModeLabel = ""
         }
+    }
+
+    Components.AppAlertDialog {
+        id: testResultDialog
+        anchors.fill: parent
+        theme: root.theme
+        open: root.testDialogOpen
+        title: root.testResultTitle
+        description: root.testResultText
+        variant: root.testResultType === "error" ? "destructive" : "default"
+        confirmText: "确定"
+        cancelText: "关闭"
+        onConfirmed: root.testDialogOpen = false
+        onCancelled: root.testDialogOpen = false
     }
 }

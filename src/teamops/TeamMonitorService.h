@@ -17,7 +17,7 @@ namespace TeamOps {
  *
  * Runs on its own QThread to avoid blocking the UI thread.
  * Uses ITeamDataProvider abstraction to support multiple data sources
- * (MCP tools, files, mock data).
+ * (MCP tools and files).
  *
  * @note All data access is protected by QMutex for thread safety.
  */

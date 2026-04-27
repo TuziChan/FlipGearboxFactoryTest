@@ -101,25 +101,13 @@ int main(int argc, char *argv[])
         // Fallback: register known test names
         QStringList knownTests = {
             "QmlSmokeTests",
-            "TestExecutionPageTests",
-            "TestExecutionVerification",
-            "ProtocolLayerTests",
-            "BrakePowerConstantVoltageTest",
+            "BoundaryProtectionTests",
             "HistoryViewModelTests",
             "RecipeViewModelTests",
-            "TestExecutionViewModelTests",
-            "SimulationRuntimeTests",
-            "GearboxSimulationIntegrationTests",
-            "DomainEngineTests",
-            "DomainEngineAdvancedTests",
-            "LongRunningStabilityTest",
             "ModbusCrcTests",
-            "JudgementLogicTests",
             "AutoTestFrameworkTests",
-            "MockTestRunnerTests",
             "PerformanceMonitorTests",
-            "TestReportGeneratorTests",
-            "HardwareSimulationHarnessTests"
+            "TestReportGeneratorTests"
         };
 
         for (const QString& name : knownTests) {

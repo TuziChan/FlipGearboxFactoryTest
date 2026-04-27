@@ -3,7 +3,7 @@
 
 #include "IBusController.h"
 #include <QSerialPort>
-#include <QTimer>
+#include <QMutex>
 
 namespace Infrastructure {
 namespace Bus {
@@ -11,7 +11,12 @@ namespace Bus {
 /**
  * @brief Modbus RTU bus controller using Qt Serial Port
  *
- * Implements synchronous request/response pattern with timeout handling.
+ * Thread-safe synchronous implementation. QSerialPort is created in the main thread
+ * and accessed through a mutex to prevent concurrent access from Poller threads.
+ *
+ * Note: According to Qt best practices, QSerialPort is already asynchronous and
+ * typically doesn't require a separate thread. This implementation uses a mutex
+ * to serialize access from multiple Poller threads.
  */
 class ModbusRtuBusController : public IBusController {
     Q_OBJECT
@@ -30,47 +35,19 @@ public:
     bool sendRequest(const QByteArray& request, QByteArray& response) override;
     QString lastError() const override;
 
-    /**
-     * @brief Reconfigure serial port parameters at runtime
-     * @param baudRate New baud rate
-     * @param parity New parity setting ("None", "Even", "Odd")
-     * @param stopBits New stop bits (1 or 2)
-     * @return true if reconfiguration succeeded
-     */
-bool reconfigure(int baudRate, const QString& parity, int stopBits);
-
-/**
-* @brief Set inter-frame delay (T3.5 character times)
-* Default is calculated based on baud rate
-*/
-void setInterFrameDelayMs(int delayMs);
-
-/**
-* @brief Get underlying serial port for advanced operations
-*/
-QSerialPort* underlyingSerialPort() const override;
+    bool reconfigure(int baudRate, const QString& parity, int stopBits);
+    void setInterFrameDelayMs(int delayMs);
+    QSerialPort* underlyingSerialPort() const override;
 
 private:
-QSerialPort* m_serialPort;
+    QSerialPort* m_serialPort;
     int m_timeoutMs;
     int m_interFrameDelayMs;
     QString m_lastError;
-    
-    // Cached parameters for reconfiguration when port is not open
-    int m_cachedBaudRate;
-    QString m_cachedParity;
-    int m_cachedStopBits;
+    mutable QMutex m_mutex; // Protects all serial port operations
 
-    /**
-     * @brief Calculate inter-frame delay based on baud rate
-     * Modbus RTU requires 3.5 character times between frames
-     */
     int calculateInterFrameDelay(int baudRate) const;
-
-    /**
-     * @brief Wait for response with timeout
-     */
-    bool waitForResponse(QByteArray& response, int expectedMinBytes);
+    bool waitForResponse(const QByteArray& request, QByteArray& response);
     QSerialPort::Parity parseParity(const QString& parity) const;
     QSerialPort::StopBits parseStopBits(int stopBits) const;
 };

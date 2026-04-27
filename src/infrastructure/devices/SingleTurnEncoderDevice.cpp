@@ -125,12 +125,23 @@ bool SingleTurnEncoderDevice::readAngle(double& angleDeg) {
     }
 
     // Fallback to Modbus polling for Mode 0, 3, 4
+    // Query mode (Mode 0) returns 1 register, auto-report modes return 2 registers
     QVector<uint16_t> values;
-    if (!readRegisters(REG_ANGLE, 1, values)) {
+    uint16_t registerCount = (m_communicationMode == 0) ? 1 : 2;
+
+    if (!readRegisters(REG_ANGLE, registerCount, values) || values.isEmpty()) {
         m_lastError = QString("Failed to read angle: %1").arg(m_lastError);
         return false;
     }
-    angleDeg = (static_cast<double>(values[0]) / static_cast<double>(m_resolution)) * 360.0;
+
+    uint32_t rawCount = 0;
+    if (values.size() >= 2) {
+        rawCount = (static_cast<uint32_t>(values[0]) << 16) | static_cast<uint32_t>(values[1]);
+    } else {
+        rawCount = static_cast<uint32_t>(values[0]);
+    }
+
+    angleDeg = (static_cast<double>(rawCount) / static_cast<double>(m_resolution)) * 360.0;
     return true;
 }
 

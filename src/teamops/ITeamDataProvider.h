@@ -59,7 +59,7 @@ struct TaskPipelineItem {
  * @brief Abstract interface for team data sources
  *
  * Implementations can fetch data from MCP tools, files,
- * network APIs, or mock data for testing.
+ * network APIs, or test data for development.
  */
 class ITeamDataProvider : public QObject {
     Q_OBJECT

@@ -193,58 +193,76 @@ Item {
                     }
 
                     SectionCard {
-                        visible: root.currentPhaseIndex === 1
-                                 || root.currentPhaseIndex === 2
-                                 || root.currentPhaseIndex === 3
-                                 || (root.idleModel.count > 0 && root.idleModel.get(0).result !== "待测")
-                                 || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
-                                 || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
+                        visible: true
                         Layout.fillWidth: true
                         theme: root.theme
-                        title: "阶段明细"
-                        subtitle: root.currentPhaseIndex === 1 ? "空载测试结果"
-                                   : root.currentPhaseIndex === 2 ? "角度定位结果"
-                                   : root.currentPhaseIndex === 3 ? "负载测试结果"
-                                   : "测试结果汇总"
+                        title: "全流程测试数据"
 
                         ColumnLayout {
-                            width: parent.width
+                            Layout.fillWidth: true
                             spacing: 12
 
-                            DataTableCard {
-                                visible: root.currentPhaseIndex === 1
-                                         || (root.idleModel.count > 0 && root.idleModel.get(0).result !== "待测")
-                                width: parent.width
-                                theme: root.theme
-                                headers: ["方向", "电流平均", "电流峰值", "转速平均", "转速峰值", "判定"]
-                                rowModel: root.idleModel
-                                columnKeys: ["direction", "currentAvg", "currentMax", "speedAvg", "speedMax", "result"]
-                                resultKey: "result"
-                                pendingText: "待测"
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                AppLabel {
+                                    text: "空载测试结果"
+                                    fontSize: 12
+                                    fontWeight: 600
+                                    muted: true
+                                    theme: root.theme
+                                }
+                                DataTableCard {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+                                    headers: ["方向", "电流平均", "电流峰值", "转速平均", "转速峰值", "判定"]
+                                    rowModel: root.idleModel
+                                    columnKeys: ["direction", "currentAvg", "currentMax", "speedAvg", "speedMax", "result"]
+                                    resultKey: "result"
+                                    pendingText: "待测"
+                                }
                             }
 
-                            DataTableCard {
-                                visible: root.currentPhaseIndex === 2
-                                         || (root.angleModel.count > 0 && root.angleModel.get(0).result !== "待测")
-                                width: parent.width
-                                theme: root.theme
-                                headers: ["目标位", "目标角度", "当前角度", "偏差", "公差", "判定"]
-                                rowModel: root.angleModel
-                                columnKeys: ["target", "targetAngle", "currentAngle", "deviation", "tolerance", "result"]
-                                resultKey: "result"
-                                pendingText: "待测"
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                AppLabel {
+                                    text: "角度定位结果"
+                                    fontSize: 12
+                                    fontWeight: 600
+                                    muted: true
+                                    theme: root.theme
+                                }
+                                DataTableCard {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+                                    headers: ["目标位", "目标角度", "当前角度", "偏差", "公差", "判定"]
+                                    rowModel: root.angleModel
+                                    columnKeys: ["target", "targetAngle", "currentAngle", "deviation", "tolerance", "result"]
+                                    resultKey: "result"
+                                    pendingText: "待测"
+                                }
                             }
 
-                            DataTableCard {
-                                visible: root.currentPhaseIndex === 3
-                                         || (root.loadModel.count > 0 && root.loadModel.get(0).result !== "待测")
-                                width: parent.width
-                                theme: root.theme
-                                headers: ["方向", "制动电流", "锁止扭矩", "下限", "判定"]
-                                rowModel: root.loadModel
-                                columnKeys: ["direction", "brakeCurrent", "torque", "limit", "result"]
-                                resultKey: "result"
-                                pendingText: "待测"
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                AppLabel {
+                                    text: "负载测试结果"
+                                    fontSize: 12
+                                    fontWeight: 600
+                                    muted: true
+                                    theme: root.theme
+                                }
+                                DataTableCard {
+                                    Layout.fillWidth: true
+                                    theme: root.theme
+                                    headers: ["方向", "制动电流", "锁止扭矩", "下限", "判定"]
+                                    rowModel: root.loadModel
+                                    columnKeys: ["direction", "brakeCurrent", "torque", "limit", "result"]
+                                    resultKey: "result"
+                                    pendingText: "待测"
+                                }
                             }
                         }
                     }

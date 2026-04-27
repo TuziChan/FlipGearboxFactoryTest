@@ -18,12 +18,11 @@ class DiagnosticsViewModel : public QObject {
     Q_PROPERTY(QVariantMap torqueTelemetry READ torqueTelemetry NOTIFY torqueTelemetryChanged)
     Q_PROPERTY(QVariantMap encoderTelemetry READ encoderTelemetry NOTIFY encoderTelemetryChanged)
     Q_PROPERTY(QVariantMap brakeTelemetry READ brakeTelemetry NOTIFY brakeTelemetryChanged)
-    Q_PROPERTY(bool isMockMode READ isMockMode NOTIFY isMockModeChanged)
 
 public:
     explicit DiagnosticsViewModel(Infrastructure::Config::StationRuntime* runtime,
-                                   Infrastructure::Config::RuntimeManager* runtimeManager,
-                                   QObject* parent = nullptr);
+                                  Infrastructure::Config::RuntimeManager* runtimeManager,
+                                  QObject* parent = nullptr);
 
     QVariantList deviceStatuses() const { return m_deviceStatuses; }
     QVariantList communicationLogs() const { return m_communicationLogs; }
@@ -33,7 +32,6 @@ public:
     QVariantMap torqueTelemetry() const { return m_torqueTelemetry; }
     QVariantMap encoderTelemetry() const { return m_encoderTelemetry; }
     QVariantMap brakeTelemetry() const { return m_brakeTelemetry; }
-    bool isMockMode() const;
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshIncremental();
@@ -46,7 +44,6 @@ public:
     Q_INVOKABLE void setBrakeMode(const QString& mode);
     Q_INVOKABLE void setEncoderZero();
     Q_INVOKABLE void clearLog();
-    Q_INVOKABLE void switchMockMode(bool mockMode);
 
 signals:
     void deviceStatusesChanged();
@@ -56,7 +53,6 @@ signals:
     void torqueTelemetryChanged();
     void encoderTelemetryChanged();
     void brakeTelemetryChanged();
-    void isMockModeChanged();
 
 private:
     Infrastructure::Config::StationRuntime* m_runtime;

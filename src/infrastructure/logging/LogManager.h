@@ -6,11 +6,14 @@
 #include <QTextStream>
 #include <QMutex>
 #include <QDateTime>
+#include <QTimer>
 
 namespace Infrastructure {
 namespace Logging {
 
-class LogManager {
+class LogManager : public QObject {
+    Q_OBJECT
+
 public:
     static LogManager& instance();
 
@@ -18,6 +21,9 @@ public:
     void shutdown();
 
     static void messageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg);
+
+private slots:
+    void flushLogs();
 
 private:
     LogManager();
@@ -36,6 +42,7 @@ private:
     QMutex m_mutex;
     QString m_currentDate;
     bool m_initialized;
+    QTimer* m_flushTimer;
 };
 
 } // namespace Logging

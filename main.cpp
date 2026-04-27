@@ -32,7 +32,7 @@
 #include "src/viewmodels/DiagnosticsViewModel.h"
 #include "src/viewmodels/HistoryViewModel.h"
 #include "src/viewmodels/RecipeViewModel.h"
-#include "src/teamops/MockTeamDataProvider.h"
+
 #include "src/teamops/FileTeamDataProvider.h"
 #include "src/teamops/TeamMonitorService.h"
 #include "src/teamops/TeamOpsViewModel.h"
@@ -318,20 +318,16 @@ int main(int argc, char *argv[])
             qCritical() << "Config file does not exist. Creating default config is recommended.";
         }
 
-        // In production mode (no --mock flag), config failure should be more严格
+        // In production mode, config failure should be more严格
         // For now, we continue with defaults but log prominently
     } else {
         qDebug() << "[Startup] Station config loaded successfully";
     }
 
-    // Detect mock mode from command line
-    const QStringList args = app.arguments();
-    bool mockMode = args.contains("--mock");
-    qDebug() << "[Startup] Mock mode:" << (mockMode ? "ENABLED" : "DISABLED");
 
     // Create runtime manager
     qDebug() << "[Startup] Creating RuntimeManager...";
-    auto runtimeManager = new Infrastructure::Config::RuntimeManager(stationConfig, mockMode, &app);
+    auto runtimeManager = new Infrastructure::Config::RuntimeManager(stationConfig, stationConfigPath, &app);
     qDebug() << "[Startup] RuntimeManager created";
 
     // Create ViewModel
@@ -351,6 +347,8 @@ int main(int argc, char *argv[])
     // Create TeamOps monitoring subsystem
     qDebug() << "[Startup] Creating TeamOps subsystem...";
     TeamOps::ITeamDataProvider* teamDataProvider = nullptr;
+    TeamOps::TeamMonitorService* teamMonitorService = nullptr;
+    TeamOps::TeamOpsViewModel* teamOpsViewModel = nullptr;
 
     // Try file-based provider first (for real-time external data injection)
     const QString teamStatusPath = QDir(QCoreApplication::applicationDirPath())
@@ -365,15 +363,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Fall back to mock provider if file not available
-    if (!teamDataProvider) {
-        teamDataProvider = new TeamOps::MockTeamDataProvider(&app);
-        qDebug() << "[TeamOps] Using MockTeamDataProvider (fallback)";
+    if (teamDataProvider) {
+        teamMonitorService = new TeamOps::TeamMonitorService(teamDataProvider, 5000, &app);
+        teamOpsViewModel = new TeamOps::TeamOpsViewModel(teamMonitorService, &app);
+        teamMonitorService->startMonitoring();
+        qDebug() << "[Startup] TeamOps subsystem created";
+    } else {
+        qDebug() << "[Startup] TeamOps subsystem disabled: no file provider available";
     }
-
-    auto teamMonitorService = new TeamOps::TeamMonitorService(teamDataProvider, 5000, &app);
-    auto teamOpsViewModel = new TeamOps::TeamOpsViewModel(teamMonitorService, &app);
-    qDebug() << "[Startup] TeamOps subsystem created";
 
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &app, [teamMonitorService, runtimeManager]() {
         qDebug() << "[Shutdown] Application about to quit, cleaning up...";
@@ -386,8 +383,6 @@ int main(int argc, char *argv[])
         qDebug() << "[Shutdown] Cleanup complete";
     });
 
-    // Start monitoring automatically
-    teamMonitorService->startMonitoring();
 
     // Create QML engine
     qDebug() << "[Startup] Creating QML engine...";

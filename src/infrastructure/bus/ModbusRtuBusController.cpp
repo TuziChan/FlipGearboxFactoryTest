@@ -1,6 +1,8 @@
 #include "ModbusRtuBusController.h"
+#include "ModbusFrame.h"
 #include <QThread>
 #include <QElapsedTimer>
+#include <QMutexLocker>
 #include <QDebug>
 
 namespace Infrastructure {
@@ -12,10 +14,8 @@ ModbusRtuBusController::ModbusRtuBusController(QObject* parent)
     , m_timeoutMs(500)
     , m_interFrameDelayMs(2)
     , m_lastError()
-    , m_cachedBaudRate(9600)
-    , m_cachedParity("None")
-    , m_cachedStopBits(1)
 {
+    qDebug() << "[ModbusRtuBusController] Created in thread" << QThread::currentThreadId();
 }
 
 ModbusRtuBusController::~ModbusRtuBusController() {
@@ -23,6 +23,8 @@ ModbusRtuBusController::~ModbusRtuBusController() {
 }
 
 bool ModbusRtuBusController::open(const QString& portName, int baudRate, int timeoutMs, const QString& parity, int stopBits) {
+    QMutexLocker locker(&m_mutex);
+
     if (m_serialPort->isOpen()) {
         close();
     }
@@ -36,11 +38,6 @@ bool ModbusRtuBusController::open(const QString& portName, int baudRate, int tim
 
     m_timeoutMs = timeoutMs;
     m_interFrameDelayMs = calculateInterFrameDelay(baudRate);
-    
-    // Cache parameters
-    m_cachedBaudRate = baudRate;
-    m_cachedParity = parity;
-    m_cachedStopBits = stopBits;
 
     if (!m_serialPort->open(QIODevice::ReadWrite)) {
         m_lastError = QString("Failed to open port %1: %2")
@@ -52,7 +49,7 @@ bool ModbusRtuBusController::open(const QString& portName, int baudRate, int tim
 
     m_serialPort->clear();
 
-    qDebug() << "Modbus RTU bus opened:" << portName
+    qDebug() << "[ModbusRtuBusController] Port opened:" << portName
              << "at" << baudRate << "baud"
              << "parity" << parity
              << "stopBits" << stopBits
@@ -62,16 +59,20 @@ bool ModbusRtuBusController::open(const QString& portName, int baudRate, int tim
 }
 
 void ModbusRtuBusController::close() {
+    QMutexLocker locker(&m_mutex);
     if (m_serialPort->isOpen()) {
         m_serialPort->close();
     }
 }
 
 bool ModbusRtuBusController::isOpen() const {
+    QMutexLocker locker(&m_mutex);
     return m_serialPort->isOpen();
 }
 
 bool ModbusRtuBusController::sendRequest(const QByteArray& request, QByteArray& response) {
+    QMutexLocker locker(&m_mutex);
+
     if (!m_serialPort->isOpen()) {
         m_lastError = "Serial port is not open";
         return false;
@@ -79,6 +80,13 @@ bool ModbusRtuBusController::sendRequest(const QByteArray& request, QByteArray& 
 
     m_serialPort->clear();
     QThread::msleep(m_interFrameDelayMs);
+
+    // Log raw request frame
+    QString requestHex;
+    for (int i = 0; i < request.size(); ++i) {
+        requestHex += QString("%1 ").arg(static_cast<uint8_t>(request[i]), 2, 16, QChar('0')).toUpper();
+    }
+    qDebug() << "[Modbus TX]" << requestHex.trimmed();
 
     qint64 bytesWritten = m_serialPort->write(request);
     if (bytesWritten != request.size()) {
@@ -93,102 +101,109 @@ bool ModbusRtuBusController::sendRequest(const QByteArray& request, QByteArray& 
         return false;
     }
 
-    if (!waitForResponse(response, 5)) {
+    if (!waitForResponse(request, response)) {
         return false;
     }
+
+    // Log raw response frame
+    QString responseHex;
+    for (int i = 0; i < response.size(); ++i) {
+        responseHex += QString("%1 ").arg(static_cast<uint8_t>(response[i]), 2, 16, QChar('0')).toUpper();
+    }
+    qDebug() << "[Modbus RX]" << responseHex.trimmed();
 
     return true;
 }
 
 QString ModbusRtuBusController::lastError() const {
+    QMutexLocker locker(&m_mutex);
     return m_lastError;
 }
 
 bool ModbusRtuBusController::reconfigure(int baudRate, const QString& parity, int stopBits) {
-    // Cache parameters for future use
-    m_cachedBaudRate = baudRate;
-    m_cachedParity = parity;
-    m_cachedStopBits = stopBits;
-    
-    if (m_serialPort->isOpen()) {
-        // Apply immediately if port is open
-        if (!m_serialPort->setBaudRate(baudRate)) {
-            m_lastError = QString("Failed to set baud rate to %1").arg(baudRate);
-            return false;
-        }
-        
-        if (!m_serialPort->setParity(parseParity(parity))) {
-            m_lastError = QString("Failed to set parity to %1").arg(parity);
-            return false;
-        }
-        
-        if (!m_serialPort->setStopBits(parseStopBits(stopBits))) {
-            m_lastError = QString("Failed to set stop bits to %1").arg(stopBits);
-            return false;
-        }
-        
-        // Update inter-frame delay based on new baud rate
-        m_interFrameDelayMs = calculateInterFrameDelay(baudRate);
-        
-        qDebug() << "Modbus RTU bus reconfigured:"
-                 << "baudRate" << baudRate
-                 << "parity" << parity
-                 << "stopBits" << stopBits
-                 << "interFrameDelay" << m_interFrameDelayMs << "ms";
-    } else {
-        // Port not open, parameters will be used on next open()
-        qDebug() << "Modbus RTU bus parameters cached for next open:"
-                 << "baudRate" << baudRate
-                 << "parity" << parity
-                 << "stopBits" << stopBits;
+    QMutexLocker locker(&m_mutex);
+
+    if (!m_serialPort->isOpen()) {
+        m_lastError = "Port is not open";
+        return false;
     }
-    
+
+    if (!m_serialPort->setBaudRate(baudRate)) {
+        m_lastError = QString("Failed to set baud rate to %1").arg(baudRate);
+        return false;
+    }
+
+    if (!m_serialPort->setParity(parseParity(parity))) {
+        m_lastError = QString("Failed to set parity to %1").arg(parity);
+        return false;
+    }
+
+    if (!m_serialPort->setStopBits(parseStopBits(stopBits))) {
+        m_lastError = QString("Failed to set stop bits to %1").arg(stopBits);
+        return false;
+    }
+
+    m_interFrameDelayMs = calculateInterFrameDelay(baudRate);
+
+    qDebug() << "[ModbusRtuBusController] Reconfigured:"
+             << "baudRate" << baudRate
+             << "parity" << parity
+             << "stopBits" << stopBits
+             << "interFrameDelay" << m_interFrameDelayMs << "ms";
+
     return true;
 }
 
 void ModbusRtuBusController::setInterFrameDelayMs(int delayMs) {
+    QMutexLocker locker(&m_mutex);
     m_interFrameDelayMs = delayMs;
 }
 
 int ModbusRtuBusController::calculateInterFrameDelay(int baudRate) const {
-if (baudRate >= 19200) {
-return 2;
-}
-
-int delayMs = (3.5 * 11 * 1000) / baudRate;
-return qMax(2, delayMs);
+    if (baudRate >= 19200) {
+        return 2;
+    }
+    int delayMs = (3.5 * 11 * 1000) / baudRate;
+    return qMax(2, delayMs);
 }
 
 QSerialPort* ModbusRtuBusController::underlyingSerialPort() const {
-return m_serialPort;
+    return m_serialPort;
 }
 
-bool ModbusRtuBusController::waitForResponse(QByteArray& response, int expectedMinBytes) {
+bool ModbusRtuBusController::waitForResponse(const QByteArray& request, QByteArray& response) {
     response.clear();
 
     QElapsedTimer timer;
     timer.start();
 
-    while (timer.elapsed() < m_timeoutMs) {
-        if (m_serialPort->waitForReadyRead(50)) {
-            response.append(m_serialPort->readAll());
+    int expectedLength = -1;
 
-            if (response.size() >= expectedMinBytes) {
-                QThread::msleep(5);
-                if (m_serialPort->bytesAvailable() > 0) {
-                    response.append(m_serialPort->readAll());
-                }
-                return true;
-            }
+    while (timer.elapsed() < m_timeoutMs) {
+        if (!m_serialPort->waitForReadyRead(50)) {
+            continue;
+        }
+
+        response.append(m_serialPort->readAll());
+        while (m_serialPort->bytesAvailable() > 0) {
+            response.append(m_serialPort->readAll());
+        }
+
+        expectedLength = ModbusFrame::tryGetExpectedResponseLength(request, response);
+        if (expectedLength > 0 && response.size() >= expectedLength) {
+            return true;
         }
     }
 
     if (response.isEmpty()) {
         m_lastError = QString("Timeout: no response received within %1 ms").arg(m_timeoutMs);
-    } else {
-        m_lastError = QString("Timeout: incomplete response (received %1 bytes, expected at least %2)")
+    } else if (expectedLength > 0) {
+        m_lastError = QString("Timeout: incomplete response (received %1 bytes, expected %2)")
                           .arg(response.size())
-                          .arg(expectedMinBytes);
+                          .arg(expectedLength);
+    } else {
+        m_lastError = QString("Timeout: incomplete response (received %1 bytes, frame length undetermined)")
+                          .arg(response.size());
     }
 
     return false;

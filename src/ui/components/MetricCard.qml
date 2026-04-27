@@ -48,9 +48,11 @@ Rectangle {
                 font.pixelSize: root.compact ? 18 : 28
                 font.weight: Font.DemiBold
                 font.family: "Consolas"
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: root.compact ? 12 : 16
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
-                Layout.maximumWidth: root.compact ? parent.width * 0.65 : parent.width * 0.7
+                Layout.fillWidth: true
             }
 
             Text {
@@ -58,7 +60,7 @@ Rectangle {
                 color: root.theme.textSecondary
                 font.pixelSize: root.compact ? 10 : 13
                 visible: root.unit.length > 0
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignBaseline
             }
         }
 

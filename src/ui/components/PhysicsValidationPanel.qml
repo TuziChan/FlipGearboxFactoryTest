@@ -43,7 +43,7 @@ Rectangle {
         return "正常"
     }
 
-    // Compatibility helpers for different stats formats (mock vs ViewModel)
+    // Compatibility helpers for different stats formats
     function statTotal() {
         const s = root.violationStats || {}
         return s.totalCount !== undefined ? s.totalCount : (s.totalViolations !== undefined ? s.totalViolations : 0)

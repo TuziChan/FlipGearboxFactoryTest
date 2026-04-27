@@ -6,7 +6,6 @@
 #include "../devices/ITorqueSensorDevice.h"
 #include "../devices/IEncoderDevice.h"
 #include "../devices/IBrakePowerDevice.h"
-#include "../simulation/SimulationContext.h"
 #include "../acquisition/AcquisitionScheduler.h"
 #include "../../domain/GearboxTestEngine.h"
 #include <QObject>
@@ -16,7 +15,7 @@ namespace Infrastructure {
 namespace Config {
 
 /**
- * @brief Runtime assembly of all devices and test engine
+ * @brief Runtime assembly of all devices and the test engine
  */
 class StationRuntime : public QObject {
     Q_OBJECT
@@ -37,34 +36,32 @@ public:
     Acquisition::AcquisitionScheduler* acquisitionScheduler() const { return m_acquisitionScheduler.get(); }
     int brakeChannel() const { return m_brakeChannel; }
     Q_INVOKABLE bool isInitialized() const { return m_initialized; }
-    Q_INVOKABLE bool isMockMode() const { return m_isMockMode; }
 
     Q_INVOKABLE bool initialize();
     void shutdown();
 
-QString lastError() const { return m_lastError; }
+    QString lastError() const { return m_lastError; }
 
-// Initialization state tracking for proper rollback
-enum class InitStage {
-Uninitialized = 0,
-BusesOpening = 1,
-BusesOpened = 2,
-DevicesInitializing = 3,
-DevicesInitialized = 4,
-SchedulerStarting = 5,
-SchedulerStarted = 6,
-FullyInitialized = 7
-};
+    enum class InitStage {
+        Uninitialized = 0,
+        BusesOpening = 1,
+        BusesOpened = 2,
+        DevicesInitializing = 3,
+        DevicesInitialized = 4,
+        SchedulerStarting = 5,
+        SchedulerStarted = 6,
+        FullyInitialized = 7
+    };
 
 private:
-void rollback(); // Properly rollback based on current init stage
+    void rollback();
 
-friend class StationRuntimeFactory;
+    friend class StationRuntimeFactory;
 
-std::unique_ptr<Bus::IBusController> m_aqmdBus;
-std::unique_ptr<Bus::IBusController> m_dyn200Bus;
-std::unique_ptr<Bus::IBusController> m_encoderBus;
-std::unique_ptr<Bus::IBusController> m_brakeBus;
+    std::unique_ptr<Bus::IBusController> m_aqmdBus;
+    std::unique_ptr<Bus::IBusController> m_dyn200Bus;
+    std::unique_ptr<Bus::IBusController> m_encoderBus;
+    std::unique_ptr<Bus::IBusController> m_brakeBus;
 
     struct BusConfig {
         QString portName;
@@ -74,6 +71,7 @@ std::unique_ptr<Bus::IBusController> m_brakeBus;
         QString parity;
         int stopBits;
     };
+
     BusConfig m_aqmdBusConfig;
     BusConfig m_dyn200BusConfig;
     BusConfig m_encoderBusConfig;
@@ -84,19 +82,17 @@ std::unique_ptr<Bus::IBusController> m_brakeBus;
     std::unique_ptr<Devices::IEncoderDevice> m_encoder;
     std::unique_ptr<Devices::IBrakePowerDevice> m_brake;
     std::unique_ptr<Domain::GearboxTestEngine> m_testEngine;
-    std::shared_ptr<Simulation::SimulationContext> m_simulationContext;
     std::unique_ptr<Acquisition::AcquisitionScheduler> m_acquisitionScheduler;
 
-QString m_lastError;
-int m_brakeChannel = 1;
-bool m_initialized = false;
-bool m_isMockMode = false;
-InitStage m_initStage = InitStage::Uninitialized;
+    QString m_lastError;
+    int m_brakeChannel = 1;
+    bool m_initialized = false;
+    InitStage m_initStage = InitStage::Uninitialized;
 
-bool initializeBus(const QString& displayName,
-const BusConfig& config,
-const std::unique_ptr<Bus::IBusController>& bus,
-bool enabled);
+    bool initializeBus(const QString& displayName,
+                       const BusConfig& config,
+                       const std::unique_ptr<Bus::IBusController>& bus,
+                       bool enabled);
 };
 
 } // namespace Config

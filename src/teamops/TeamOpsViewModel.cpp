@@ -245,9 +245,9 @@ void TeamOpsViewModel::buildRoleStatusCards()
             }
         }
 
-        // Progress indicator (mock based on state)
+        // Progress indicator based on state
         if (state == QStringLiteral("executing")) {
-            map[QStringLiteral("progressPercent")] = 65; // Mock progress
+            map[QStringLiteral("progressPercent")] = 65; // Example progress
         } else if (state == QStringLiteral("review_pending")) {
             map[QStringLiteral("progressPercent")] = 90;
         } else if (state == QStringLiteral("idle")) {

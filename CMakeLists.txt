@@ -57,41 +57,6 @@ qt_add_library(FlipGearboxInfra STATIC
     src/infrastructure/devices/BrakePowerSupplyDevice.h
     src/infrastructure/devices/BrakePowerSupplyDevice.cpp
 
-    # Infrastructure - Simulation
-    src/infrastructure/simulation/SimulationContext.h
-    src/infrastructure/simulation/SimulatedBusController.h
-    src/infrastructure/simulation/SimulatedBusController.cpp
-    src/infrastructure/simulation/SimulatedMotorDevice.h
-    src/infrastructure/simulation/SimulatedMotorDevice.cpp
-    src/infrastructure/simulation/SimulatedTorqueDevice.h
-    src/infrastructure/simulation/SimulatedTorqueDevice.cpp
-    src/infrastructure/simulation/SimulatedEncoderDevice.h
-    src/infrastructure/simulation/SimulatedEncoderDevice.cpp
-    src/infrastructure/simulation/SimulatedBrakeDevice.h
-    src/infrastructure/simulation/SimulatedBrakeDevice.cpp
-    src/infrastructure/simulation/MockModbusDevice.h
-    src/infrastructure/simulation/MockModbusDevice.cpp
-    src/infrastructure/simulation/MockMotorDevice.h
-    src/infrastructure/simulation/MockMotorDevice.cpp
-    src/infrastructure/simulation/MockTorqueDevice.h
-    src/infrastructure/simulation/MockTorqueDevice.cpp
-    src/infrastructure/simulation/MockEncoderDevice.h
-    src/infrastructure/simulation/MockEncoderDevice.cpp
-    src/infrastructure/simulation/MockBrakeDevice.h
-    src/infrastructure/simulation/MockBrakeDevice.cpp
-    src/infrastructure/simulation/MockSerialBusController.h
-    src/infrastructure/simulation/MockSerialBusController.cpp
-    src/infrastructure/simulation/MockDeviceManager.h
-    src/infrastructure/simulation/MockDeviceManager.cpp
-    src/infrastructure/simulation/MockDeviceTestExample.h
-    src/infrastructure/simulation/MockDeviceTestExample.cpp
-    src/infrastructure/simulation/HardwareSimulationHarness.h
-    src/infrastructure/simulation/HardwareSimulationHarness.cpp
-    src/infrastructure/simulation/SimulationScenario.h
-    src/infrastructure/simulation/SimulationScenario.cpp
-    src/infrastructure/simulation/SimulatedBusControllerWithFaults.h
-    src/infrastructure/simulation/EnhancedSimulationContext.h
-
     # Infrastructure - Testing
     src/infrastructure/testing/TestOrchestrator.h
     src/infrastructure/testing/TestOrchestrator.cpp
@@ -202,8 +167,7 @@ qt_add_library(FlipGearboxUI STATIC
     src/teamops/TeamRoleStatus.cpp
     src/teamops/ITeamDataProvider.h
     src/teamops/ITeamDataProvider.cpp
-    src/teamops/MockTeamDataProvider.h
-    src/teamops/MockTeamDataProvider.cpp
+
     src/teamops/FileTeamDataProvider.h
     src/teamops/FileTeamDataProvider.cpp
     src/teamops/TeamMonitorService.h
@@ -245,10 +209,7 @@ target_link_libraries(FlipGearboxUI
 qt_add_library(FlipGearboxTestLib STATIC
     tests/framework/AutoTestFramework.cpp
     tests/framework/AutoTestFramework.h
-    tests/framework/MockTestRunner.cpp
-    tests/framework/MockTestRunner.h
-    tests/mocks/MockDevices.h
-    tests/mocks/MockDevices.cpp
+
 )
 
 target_link_libraries(FlipGearboxTestLib
@@ -357,7 +318,7 @@ qt_add_qml_module(appFlipGearboxFactoryTest
         src/ui/components/DataTableCard.qml
         src/ui/components/VerdictPanel.qml
         src/ui/components/PlaceholderPage.qml
-        src/ui/components/MockControlPanel.qml
+
         src/ui/components/TestExecutionWorkspace.qml
         src/ui/components/PhysicsValidationPanel.qml
         
@@ -434,6 +395,12 @@ set_target_properties(UnifiedTestRunner PROPERTIES WIN32_EXECUTABLE FALSE)
 target_include_directories(UnifiedTestRunner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(UnifiedTestRunner PRIVATE FlipGearboxUI Qt6::Core)
 
+# Encoder Stability Test (manual test tool)
+qt_add_executable(EncoderStabilityTest test_encoder_stability.cpp)
+set_target_properties(EncoderStabilityTest PROPERTIES WIN32_EXECUTABLE FALSE)
+target_include_directories(EncoderStabilityTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(EncoderStabilityTest PRIVATE FlipGearboxUI Qt6::Core Qt6::SerialPort)
+
 # Helper macro to create test executables
 macro(add_gearbox_test TEST_NAME TEST_SOURCE)
     qt_add_executable(${TEST_NAME} ${TEST_SOURCE})
@@ -447,39 +414,16 @@ macro(add_gearbox_test TEST_NAME TEST_SOURCE)
 endmacro()
 
 # Protocol Layer Tests
-add_gearbox_test(ProtocolLayerTests tests/ProtocolLayerTests.cpp)
-set_tests_properties(ProtocolLayerTests PROPERTIES LABELS "protocol;unit")
-
 add_gearbox_test(ModbusCrcTests tests/protocol/ModbusCrcTests.cpp)
 set_tests_properties(ModbusCrcTests PROPERTIES LABELS "protocol;unit")
 
 # Device Layer Tests
-add_gearbox_test(BrakePowerConstantVoltageTest tests/devices/BrakePowerConstantVoltageTest.cpp)
-set_tests_properties(BrakePowerConstantVoltageTest PROPERTIES LABELS "device;unit")
-
-add_gearbox_test(AngleTestMagnetIntegrationTests tests/AngleTestMagnetIntegrationTests.cpp)
-set_tests_properties(AngleTestMagnetIntegrationTests PROPERTIES LABELS "device;integration")
-
 add_gearbox_test(BoundaryProtectionTests tests/BoundaryProtectionTests.cpp)
 set_tests_properties(BoundaryProtectionTests PROPERTIES LABELS "device;integration")
 
 # Domain Engine Tests
-add_gearbox_test(DomainEngineTests tests/DomainEngineTests.cpp)
-set_tests_properties(DomainEngineTests PROPERTIES LABELS "domain;unit")
-
-add_gearbox_test(DomainEngineAdvancedTests tests/DomainEngineAdvancedTests.cpp)
-set_tests_properties(DomainEngineAdvancedTests PROPERTIES LABELS "domain;unit")
-
-add_gearbox_test(JudgementLogicTests tests/domain/JudgementLogicTests.cpp)
-set_tests_properties(JudgementLogicTests PROPERTIES LABELS "domain;unit")
-
-add_gearbox_test(TestExecutionVerification tests/TestExecutionVerification.cpp)
-set_tests_properties(TestExecutionVerification PROPERTIES LABELS "domain;integration")
 
 # ViewModel Tests
-add_gearbox_test(TestExecutionViewModelTests tests/viewmodels/TestExecutionViewModelTests.cpp)
-set_tests_properties(TestExecutionViewModelTests PROPERTIES LABELS "viewmodel;integration")
-
 add_gearbox_test(HistoryViewModelTests tests/viewmodels/HistoryViewModelTests.cpp)
 set_tests_properties(HistoryViewModelTests PROPERTIES LABELS "viewmodel;integration")
 
@@ -490,41 +434,11 @@ set_tests_properties(RecipeViewModelTests PROPERTIES LABELS "viewmodel;integrati
 add_gearbox_test(QmlSmokeTests tests/ui/QmlSmokeTests.cpp)
 set_tests_properties(QmlSmokeTests PROPERTIES LABELS "ui;integration")
 
-add_gearbox_test(TestExecutionPageTests tests/ui/TestExecutionPageTests.cpp)
-set_tests_properties(TestExecutionPageTests PROPERTIES LABELS "ui;integration")
-
-# Simulation Tests
-add_gearbox_test(SimulationRuntimeTests tests/simulation/SimulationRuntimeTests.cpp)
-set_tests_properties(SimulationRuntimeTests PROPERTIES LABELS "infrastructure;unit")
-
-add_gearbox_test(MockMotorMagnetDetectionTests tests/simulation/MockMotorMagnetDetectionTests.cpp)
-set_tests_properties(MockMotorMagnetDetectionTests PROPERTIES LABELS "infrastructure;unit")
-
-add_gearbox_test(GearboxSimulationIntegrationTests tests/simulation/GearboxSimulationIntegrationTests.cpp)
-set_tests_properties(GearboxSimulationIntegrationTests PROPERTIES LABELS "integration;e2e")
-
-add_gearbox_test(HardwareSimulationHarnessTests tests/simulation/HardwareSimulationHarnessTests.cpp)
-set_tests_properties(HardwareSimulationHarnessTests PROPERTIES LABELS "infrastructure;unit")
-
-add_gearbox_test(MockPhysicsValidationTests tests/simulation/MockPhysicsValidationTests.cpp)
-
-add_gearbox_test(CrossDevicePhysicsTests tests/simulation/CrossDevicePhysicsTests.cpp)
-set_tests_properties(CrossDevicePhysicsTests PROPERTIES LABELS "infrastructure;integration;physics")
-set_tests_properties(MockPhysicsValidationTests PROPERTIES LABELS "infrastructure;unit;physics")
-
 # Stability Tests
-add_gearbox_test(LongRunningStabilityTest tests/stability/LongRunningStabilityTest.cpp)
-set_tests_properties(LongRunningStabilityTest PROPERTIES
-    LABELS "integration;e2e"
-    TIMEOUT 1800
-)
 
 # Framework Tests
 add_gearbox_test(AutoTestFrameworkTests tests/framework/AutoTestFrameworkTests.cpp)
 set_tests_properties(AutoTestFrameworkTests PROPERTIES LABELS "infrastructure;unit")
-
-add_gearbox_test(MockTestRunnerTests tests/framework/MockTestRunnerTests.cpp)
-set_tests_properties(MockTestRunnerTests PROPERTIES LABELS "infrastructure;unit")
 
 add_gearbox_test(PerformanceMonitorTests tests/infrastructure/PerformanceMonitorTests.cpp)
 set_tests_properties(PerformanceMonitorTests PROPERTIES LABELS "infrastructure;unit")

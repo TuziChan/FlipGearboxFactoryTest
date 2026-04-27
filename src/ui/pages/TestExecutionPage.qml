@@ -36,7 +36,12 @@ Item {
     property bool torqueOnlineValue: viewModel ? viewModel.torqueOnline : false
     property real ai1Value: viewModel ? (viewModel.ai1Level ? 1.0 : 0.0) : 0
     property real ai2Value: 0
-    property string verdictState: viewModel ? (viewModel.testPassed ? "ok" : "pending") : "pending"
+    property string verdictState: {
+        if (!viewModel) return "pending"
+        if (viewModel.testPassed) return "ok"
+        if (viewModel.overallVerdict === "FAILED") return "ng"
+        return "pending"
+    }
     property string verdictText: viewModel ? viewModel.overallVerdict : "待测试"
     property string phaseTitle: viewModel ? viewModel.currentPhase : "等待开始"
 
@@ -114,101 +119,19 @@ Item {
     property string anomalyMessage: ""
     property string anomalyType: ""
 
-    // Physics validation data (from ViewModel if available, otherwise mock)
+    // Physics validation data (from ViewModel if available)
     property var physicsViolations: viewModel && viewModel.physicsViolations !== undefined
                                     ? viewModel.physicsViolations
-                                    : mockPhysicsViolations
+                                    : []
     property var physicsViolationStats: viewModel && viewModel.physicsViolationStats !== undefined
                                         ? viewModel.physicsViolationStats
-                                        : mockPhysicsViolationStats
-    property var mockPhysicsViolations: []
-    property var mockPhysicsViolationStats: ({})
+                                        : ({})
 
     ListModel { id: stepModel }
     ListModel { id: angleModel }
     ListModel { id: loadModel }
     ListModel { id: idleModel }
 
-    // Mock physics validation generator for UI demonstration
-    Timer {
-        id: physicsMockTimer
-        interval: 2000
-        running: root.running
-        repeat: true
-        onTriggered: root.generateMockPhysicsViolations()
-    }
-
-    function generateMockPhysicsViolations() {
-        const rules = [
-            { name: "功率守恒定律", range: "P = T×ω", prob: 0.15 },
-            { name: "扭矩组成一致性", range: "T_total = T_motor + T_brake + 0.3", prob: 0.1 },
-            { name: "转速一致性", range: "|speed_torque - speed_encoder| < 5%", prob: 0.08 },
-            { name: "制动扭矩单调性", range: "dT_brake/dI_brake > 0", prob: 0.05 },
-            { name: "角度积分连续性", range: "|Δθ - ω×Δt| < 1°", prob: 0.12 },
-            { name: "电机电流负载关系", range: "I = 0.5 + 1.5×duty + 0.3×brake", prob: 0.1 }
-        ]
-
-        const now = new Date()
-        const timeStr = now.getHours().toString().padStart(2, '0') + ":" +
-                        now.getMinutes().toString().padStart(2, '0') + ":" +
-                        now.getSeconds().toString().padStart(2, '0')
-
-        let violations = root.mockPhysicsViolations.slice()
-        let newViolation = null
-
-        for (let i = 0; i < rules.length; i++) {
-            if (Math.random() < rules[i].prob) {
-                const severities = ["warning", "warning", "critical", "info"]
-                const sev = severities[Math.floor(Math.random() * severities.length)]
-                newViolation = {
-                    ruleName: rules[i].name,
-                    severity: sev,
-                    actualValue: (Math.random() * 100).toFixed(2),
-                    expectedRange: rules[i].range,
-                    timestamp: timeStr,
-                    details: "物理量偏离期望值，建议检查传感器校准"
-                }
-                violations.unshift(newViolation)
-                break
-            }
-        }
-
-        if (violations.length > 50) {
-            violations = violations.slice(0, 50)
-        }
-
-        root.mockPhysicsViolations = violations
-
-        let criticalCount = 0, warningCount = 0, infoCount = 0
-        for (let i = 0; i < violations.length; i++) {
-            if (violations[i].severity === "critical") criticalCount++
-            else if (violations[i].severity === "warning") warningCount++
-            else if (violations[i].severity === "info") infoCount++
-        }
-
-        let trend = root.mockPhysicsViolationStats.trendData || [0,0,0,0,0,0,0,0,0,0]
-        trend = trend.slice(1)
-        trend.push(newViolation ? 1 : 0)
-
-        root.mockPhysicsViolationStats = {
-            totalCount: violations.length,
-            criticalCount: criticalCount,
-            warningCount: warningCount,
-            infoCount: infoCount,
-            trendData: trend
-        }
-    }
-
-    function resetPhysicsViolations() {
-        root.mockPhysicsViolations = []
-        root.mockPhysicsViolationStats = {
-            totalCount: 0,
-            criticalCount: 0,
-            warningCount: 0,
-            infoCount: 0,
-            trendData: [0,0,0,0,0,0,0,0,0,0]
-        }
-    }
 
     // Connect to ViewModel signals (optimized - reduced from 5 handlers to 2)
     Connections {
@@ -237,6 +160,10 @@ Item {
             root.errorMessage = message
             errorMessageTimer.restart()
         }
+
+        function onResultsChanged() {
+            populateResultModels()
+        }
     }
 
     Connections {
@@ -257,7 +184,10 @@ Item {
     }
 
     // Property change handlers (replaces Connections logic)
-    onCurrentPhaseIndexChanged: applyStepStates()
+    onCurrentPhaseIndexChanged: {
+        applyStepStates()
+        populateResultModels()
+    }
     onRunningChanged: applyStepStates()
     onVerdictStateChanged: {
         if (verdictState !== "pending") {
@@ -514,7 +444,7 @@ Item {
 
     function appendPoint(array, value) {
         const next = array ? array.slice() : []
-        next.push(value)
+        next.push({x: Date.now(), y: value})
         if (next.length > 120)
             next.shift()
         return next
@@ -659,7 +589,6 @@ Item {
         commandBar.serialNumber = ""
         commandBar.backlashValue = ""
         initializeModels()
-        root.resetPhysicsViolations()
 
         if (recipeVM)
             recipeVM.loadAll()

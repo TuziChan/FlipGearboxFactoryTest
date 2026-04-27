@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVariantMap>
 #include <QString>
+#include <QStringList>
 #include "StationConfig.h"
 
 namespace Infrastructure {
@@ -20,6 +21,8 @@ public:
     Q_INVOKABLE bool saveDeviceConfig(const QVariantMap& deviceConfig);
     Q_INVOKABLE QString lastError() const;
     Q_INVOKABLE QString configPath() const;
+    Q_INVOKABLE QStringList availableSerialPorts() const;
+    Q_INVOKABLE QString testSerialPort(const QString& portName, int baudRate, const QString& parity, int stopBits, int timeoutMs) const;
 
 private:
     QString m_stationConfigPath;

@@ -11,7 +11,6 @@ Item {
 
     required property Components.AppTheme theme
     property var viewModel: typeof diagnosticsViewModel !== "undefined" ? diagnosticsViewModel : null
-    property var mockControlWindowController: null
 
     property bool autoRefresh: true
     property int refreshInterval: 2000
@@ -63,38 +62,6 @@ Item {
                         theme: root.theme
                     }
 
-                    Components.AppBadge {
-                        text: root.viewModel && root.viewModel.isMockMode ? "模拟模式" : "真实硬件"
-                        variant: root.viewModel && root.viewModel.isMockMode ? "secondary" : "default"
-                        theme: root.theme
-                    }
-
-                    Components.AppButton {
-                        text: root.viewModel && root.viewModel.isMockMode ? "切换到真实硬件" : "切换到模拟模式"
-                        variant: "outline"
-                        size: "sm"
-                        theme: root.theme
-                        onClicked: {
-                            if (root.viewModel) {
-                                var newMode = !root.viewModel.isMockMode
-                                root.viewModel.switchMockMode(newMode)
-                            }
-                        }
-                    }
-
-                    Components.AppButton {
-                        visible: root.viewModel && root.viewModel.isMockMode && root.mockControlWindowController !== null
-                        text: root.mockControlWindowController && root.mockControlWindowController.visible
-                              ? "激活 Mock 控制窗口"
-                              : "显示 Mock 控制窗口"
-                        variant: "outline"
-                        size: "sm"
-                        theme: root.theme
-                        onClicked: {
-                            if (root.mockControlWindowController)
-                                root.mockControlWindowController.openWindow()
-                        }
-                    }
 
                     Item { Layout.fillWidth: true }
 

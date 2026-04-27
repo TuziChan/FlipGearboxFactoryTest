@@ -64,8 +64,7 @@ DiagnosticsViewModel::DiagnosticsViewModel(Infrastructure::Config::StationRuntim
     if (m_runtimeManager) {
         connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::runtimeRecreated,
                 this, &DiagnosticsViewModel::onRuntimeRecreated);
-        connect(m_runtimeManager, &Infrastructure::Config::RuntimeManager::mockModeChanged,
-                this, &DiagnosticsViewModel::isMockModeChanged);
+
     }
 }
 
@@ -73,9 +72,6 @@ bool DiagnosticsViewModel::runtimeInitialized() const {
     return m_runtime && m_runtime->isInitialized();
 }
 
-bool DiagnosticsViewModel::isMockMode() const {
-    return m_runtime && m_runtime->isMockMode();
-}
 
 void DiagnosticsViewModel::refresh() {
     updateDeviceStatus(0);
@@ -84,7 +80,7 @@ void DiagnosticsViewModel::refresh() {
     updateDeviceStatus(3);
     emit deviceStatusesChanged();
     if (runtimeInitialized()) {
-        setStatusMessage(QStringLiteral("已刷新真实设备状态"));
+        setStatusMessage(QStringLiteral("已刷新设备状态"));
         return;
     }
 
@@ -200,20 +196,10 @@ void DiagnosticsViewModel::clearLog() {
     setStatusMessage(QStringLiteral("通信日志已清空"));
 }
 
-void DiagnosticsViewModel::switchMockMode(bool mockMode) {
-    if (!m_runtimeManager) {
-        qWarning() << "RuntimeManager not available, cannot switch mode";
-        return;
-    }
-
-    m_runtimeManager->switchMode(mockMode);
-    setStatusMessage(mockMode ? QStringLiteral("已切换到模拟模式") : QStringLiteral("已切换到真实硬件模式"));
-}
 
 void DiagnosticsViewModel::onRuntimeRecreated(Infrastructure::Config::StationRuntime* newRuntime) {
     qDebug() << "DiagnosticsViewModel: Runtime recreated, updating reference";
     m_runtime = newRuntime;
-    emit isMockModeChanged();
 
     // Clear logs and reinitialize
     m_communicationLogs.clear();

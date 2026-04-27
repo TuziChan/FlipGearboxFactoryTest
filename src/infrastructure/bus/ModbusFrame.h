@@ -73,6 +73,15 @@ public:
     static QByteArray buildReadDeviceIdentification(uint8_t slaveId);
 
     /**
+     * @brief Infer total response frame length from a partial Modbus RTU response
+     * @param request Original request frame
+     * @param responsePrefix Bytes received so far
+     * @return Total expected response length, or -1 if not enough bytes are available yet
+     */
+    static int tryGetExpectedResponseLength(const QByteArray& request,
+                                            const QByteArray& responsePrefix);
+
+    /**
      * @brief Parse Read Holding Registers response
      * @param response Raw response frame
      * @param expectedCount Expected number of registers

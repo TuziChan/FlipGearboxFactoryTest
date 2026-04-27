@@ -16,18 +16,11 @@
 #include "../infrastructure/validation/PhysicsValidator.h"
 #include "../infrastructure/validation/PhysicsViolationLogger.h"
 
-// Forward declaration for optional simulation context
-namespace Infrastructure {
-namespace Simulation {
-class SimulationContext;
-}
-}
-
 namespace Domain {
 
 /**
  * @brief Core test engine state machine
- * 
+ *
  * Orchestrates the complete gearbox factory test flow:
  * 1. Homing with magnet detection
  * 2. Idle run (forward/reverse)
@@ -70,15 +63,6 @@ public:
     void setValidationConfig(const Infrastructure::Validation::PhysicsValidator::ValidationConfig& config);
 
     /**
-     * @brief Set simulation context for mock mode tick advancement
-     * 
-     * When set, the engine will advance the simulation physics once per
-     * cycle tick, ensuring consistent angle updates regardless of how
-     * many device reads occur within a single tick.
-     */
-    void setSimulationContext(Infrastructure::Simulation::SimulationContext* context);
-
-    /**
      * @brief Start test with given serial number
      */
     bool startTest(const QString& serialNumber);
@@ -112,7 +96,6 @@ private slots:
     void onCycleTick();
 
 private:
-    // Device references
     Infrastructure::Devices::IMotorDriveDevice* m_motor;
     Infrastructure::Devices::ITorqueSensorDevice* m_torque;
     Infrastructure::Devices::IEncoderDevice* m_encoder;
@@ -120,76 +103,57 @@ private:
 
     Infrastructure::Acquisition::AcquisitionScheduler* m_acquisitionScheduler;
 
-    // Configuration
     TestRecipe m_recipe;
     QString m_stationName;
-    int m_brakeChannel;  // Which channel to use for brake
+    int m_brakeChannel;
 
-    // Runtime state
     TestRunState m_state;
     QTimer* m_cycleTimer;
     QElapsedTimer m_testTimer;
     QElapsedTimer m_phaseTimer;
 
-    // Magnet detection state
     bool m_lastAi1Level;
     bool m_magnetEventDetected;
 
-    // Sampling buffers
     QVector<double> m_currentSamples;
     QVector<double> m_speedSamples;
     QVector<double> m_torqueSamples;
-    static constexpr int MAX_SAMPLE_BUFFER_SIZE = 10000; // Max samples (~5 min at 33ms)
+    static constexpr int MAX_SAMPLE_BUFFER_SIZE = 10000;
 
-    // Impact test state
     int m_impactCycleCount;
     QVector<double> m_impactCurrentSamples;
     QVector<double> m_impactTorqueSamples;
 
-// Lock detection state - improved state machine
-enum class LockDetectionState {
-Idle,        // Waiting for lock condition
-WindowCheck, // Checking if speed is within window
-HoldCheck,   // Holding for required duration
-Locked       // Lock confirmed
-};
-LockDetectionState m_lockState;
-QElapsedTimer m_lockTimer;
-double m_lockReferenceAngle;
-bool m_lockConditionMet = false;
+    enum class LockDetectionState {
+        Idle,
+        WindowCheck,
+        HoldCheck,
+        Locked
+    };
+    LockDetectionState m_lockState;
+    QElapsedTimer m_lockTimer;
+    double m_lockReferenceAngle;
+    bool m_lockConditionMet = false;
 
-    // Brake ramp state
     double m_currentBrakeCurrent;
     double m_currentBrakeVoltage = 0.0;
     quint64 m_settlingTargetMs = 0;
-
-    // Phase time accumulator (total time across sub-states within a phase)
     qint64 m_phaseAccumulatedMs = 0;
 
-    // Emergency stop flag (ADR-001: atomic for thread-safe interrupt)
     std::atomic<bool> m_emergencyStopRequested;
 
-    // Physics validation (runtime monitoring)
     Infrastructure::Validation::PhysicsValidator::ValidationConfig m_validationConfig;
     Infrastructure::Validation::PhysicsViolationLogger* m_violationLogger;
     TelemetrySnapshot m_lastSnapshot;
     bool m_physicsValidationEnabled;
 
-    // Simulation context (optional, for mock mode tick advancement)
-    Infrastructure::Simulation::SimulationContext* m_simulationContext;
-
-    // Phase management
     void transitionToPhase(TestPhase newPhase, TestSubState newSubState);
     void transitionToSubState(TestSubState newSubState);
     void updateProgress();
 
-    // Telemetry acquisition
     bool acquireTelemetry(TelemetrySnapshot& snapshot);
-
-    // Magnet event detection
     bool checkMagnetEvent(const TelemetrySnapshot& snapshot);
 
-    // Phase handlers
     void handleImpactTestPhase();
     void handleHomingPhase();
     void handleIdleRunPhase();
@@ -197,7 +161,6 @@ bool m_lockConditionMet = false;
     void handleLoadTestPhase();
     void handleReturnToZeroPhase();
 
-    // Sub-state handlers
     void handleImpactForwardSpinup();
     void handleImpactForwardBrakeOn();
     void handleImpactForwardBrakeOff();
@@ -231,7 +194,6 @@ bool m_lockConditionMet = false;
     void handleSettlingLoadForwardDelay();
     void handleSettlingLoadReverseDelay();
 
-    // Judgment helpers
     void evaluateImpactResult(const QString& direction,
                               const QVector<ImpactCycleResult>& cycles,
                               ImpactDirectionResult& result,
@@ -250,14 +212,10 @@ bool m_lockConditionMet = false;
                             double lockTorque,
                             LoadTestResult& result);
 
-    // Lock detection
     bool checkLockCondition(const TelemetrySnapshot& snapshot);
-
-    // Failure handling
     void failTest(FailureCategory category, const QString& description);
     void completeTest();
 
-    // Motor control helpers
     bool setMotorForward(double dutyCycle);
     bool setMotorReverse(double dutyCycle);
     bool stopMotor();

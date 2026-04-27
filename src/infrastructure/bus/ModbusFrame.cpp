@@ -167,6 +167,73 @@ QByteArray ModbusFrame::buildReadDeviceIdentification(uint8_t slaveId) {
     return frame;
 }
 
+int ModbusFrame::tryGetExpectedResponseLength(const QByteArray& request,
+                                              const QByteArray& responsePrefix) {
+    if (responsePrefix.size() < 2) {
+        return -1;
+    }
+
+    const uint8_t functionCode = static_cast<uint8_t>(responsePrefix[1]);
+    if (functionCode & 0x80) {
+        return 5;
+    }
+
+    switch (functionCode) {
+    case static_cast<uint8_t>(FunctionCode::ReadCoils):
+    case static_cast<uint8_t>(FunctionCode::ReadHoldingRegisters):
+    case static_cast<uint8_t>(FunctionCode::ReadInputRegisters):
+        if (responsePrefix.size() < 3) {
+            return -1;
+        }
+        return 3 + static_cast<uint8_t>(responsePrefix[2]) + 2;
+
+    case static_cast<uint8_t>(FunctionCode::WriteSingleCoil):
+    case static_cast<uint8_t>(FunctionCode::WriteSingleRegister):
+    case static_cast<uint8_t>(FunctionCode::WriteMultipleRegisters):
+        return 8;
+
+    case static_cast<uint8_t>(FunctionCode::ReadDeviceIdentification): {
+        if (responsePrefix.size() < 8) {
+            return -1;
+        }
+
+        const int numObjects = static_cast<uint8_t>(responsePrefix[7]);
+        int offset = 8;
+        for (int i = 0; i < numObjects; ++i) {
+            if (responsePrefix.size() < offset + 2) {
+                return -1;
+            }
+
+            const int objectLength = static_cast<uint8_t>(responsePrefix[offset + 1]);
+            offset += 2;
+            if (responsePrefix.size() < offset + objectLength) {
+                return -1;
+            }
+            offset += objectLength;
+        }
+
+        return offset + 2;
+    }
+
+    default:
+        break;
+    }
+
+    if (request.size() >= 2) {
+        const uint8_t requestFunctionCode = static_cast<uint8_t>(request[1]);
+        switch (requestFunctionCode) {
+        case static_cast<uint8_t>(FunctionCode::WriteSingleCoil):
+        case static_cast<uint8_t>(FunctionCode::WriteSingleRegister):
+        case static_cast<uint8_t>(FunctionCode::WriteMultipleRegisters):
+            return 8;
+        default:
+            break;
+        }
+    }
+
+    return -1;
+}
+
 bool ModbusFrame::parseReadHoldingRegistersResponse(const QByteArray& response, 
                                                      uint16_t expectedCount,
                                                      QVector<uint16_t>& outValues) {

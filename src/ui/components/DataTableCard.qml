@@ -29,7 +29,6 @@ Rectangle {
 
     ColumnLayout {
         id: tableColumn
-        width: parent.width
         anchors.margins: 6
         anchors.fill: parent
         spacing: 0
@@ -50,10 +49,13 @@ Rectangle {
                     delegate: Text {
                         required property string modelData
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 1
                         text: modelData
                         color: root.theme.textSecondary
                         font.pixelSize: 10
                         font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }
@@ -83,6 +85,7 @@ Rectangle {
                         delegate: Text {
                             required property string modelData
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 1
                             property string cellKey: modelData
                             property string cellValue: rowItem[cellKey] !== undefined ? String(rowItem[cellKey]) : ""
                             text: cellValue
@@ -91,6 +94,8 @@ Rectangle {
                                    : root.theme.textPrimary
                             font.pixelSize: 11
                             font.bold: cellKey === root.resultKey && cellValue !== root.pendingText
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
                         }
                     }
                 }

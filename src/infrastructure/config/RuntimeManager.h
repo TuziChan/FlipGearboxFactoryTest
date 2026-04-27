@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QMutex>
 #include <memory>
+#include <QString>
 #include "StationRuntime.h"
 #include "StationConfig.h"
 
@@ -11,35 +12,33 @@ namespace Infrastructure {
 namespace Config {
 
 /**
- * @brief Manages StationRuntime lifecycle and mode switching
+ * @brief Manages StationRuntime lifecycle
  */
 class RuntimeManager : public QObject {
     Q_OBJECT
-    Q_PROPERTY(bool isMockMode READ isMockMode NOTIFY mockModeChanged)
 
 public:
-    explicit RuntimeManager(const StationConfig& config, bool initialMockMode, QObject* parent = nullptr);
+    explicit RuntimeManager(const StationConfig& config, const QString& configPath, QObject* parent = nullptr);
     ~RuntimeManager() override = default;
 
     StationRuntime* runtime() const {
         QMutexLocker locker(&m_mutex);
         return m_runtime.get();
     }
-    bool isMockMode() const { return m_isMockMode; }
 
-    Q_INVOKABLE void switchMode(bool mockMode);
+    Q_INVOKABLE void reloadRuntime();
+    Q_INVOKABLE void disconnectDeviceBus(const QString& deviceKey);
 
 signals:
-    void mockModeChanged();
     void runtimeRecreated(StationRuntime* newRuntime);
 
 private:
     StationConfig m_config;
+    QString m_configPath;
     std::unique_ptr<StationRuntime> m_runtime;
-    bool m_isMockMode;
-    mutable QMutex m_mutex;  // Protects m_runtime access
+    mutable QMutex m_mutex;
 
-    void recreateRuntime(bool mockMode);
+    void recreateRuntime();
 };
 
 } // namespace Config
